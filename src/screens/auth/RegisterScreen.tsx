@@ -1,22 +1,27 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 
 export default function RegisterScreen({ navigation }: any) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.titulo}>Crea tu Cuenta</Text>
-      <Text style={{textAlign: 'center', marginBottom: 20}}>Pantalla de registro en construcción...</Text>
-      
-      <CustomButton 
-        title="Ya tengo cuenta (Volver)" 
-        onPress={() => navigation.goBack()} // Esto quita la carta superior del mazo
-      />
-    </View>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.titulo}>Crear Cuenta</Text>
+      <Text style={styles.subtitulo}>Únete a la comunidad de Riders</Text>
+
+      <CustomInput label="Nombre Completo" placeholder="Ej. Juan Pérez" />
+      <CustomInput label="Correo Electrónico" placeholder="correo@ejemplo.com" keyboardType="email-address" />
+      <CustomInput label="Contraseña" placeholder="********" secureTextEntry />
+      <CustomInput label="Confirmar Contraseña" placeholder="********" secureTextEntry />
+
+      <CustomButton title="Registrarme" onPress={() => {}} />
+      <CustomButton title="Volver al Login" tipo="secundario" onPress={() => navigation.goBack()} />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: '#fff' },
-  titulo: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' }
+  container: { padding: 25, backgroundColor: '#fff', flexGrow: 1, justifyContent: 'center' },
+  titulo: { fontSize: 32, fontWeight: 'bold', color: '#0f172a', textAlign: 'center' },
+  subtitulo: { fontSize: 16, color: '#64748b', textAlign: 'center', marginBottom: 30 }
 });
