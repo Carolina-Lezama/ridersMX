@@ -17,6 +17,7 @@ import ForoScreen from './src/screens/menu_options/ForoScreen';
 import ResenasScreen from './src/screens/menu_options/ResenasScreen';
 import AyudaScreen from './src/screens/menu_options/AyudaScreen';
 import ConfiguracionScreen from './src/screens/menu_options/ConfiguracionScreen';
+import ForoCrearPublicacion from './src/screens/menu_options/foro_crear_publicacion';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -47,6 +48,7 @@ export default function App() {
         <Stack.Screen name="Mantenimiento" component={MantenimientoScreen} />
         <Stack.Screen name="Diagnostico" component={DiagnosticoScreen} />
         <Stack.Screen name="Foro" component={ForoScreen} />
+        <Stack.Screen name="ForoCrearPublicacion" component={ForoCrearPublicacion}/>
         <Stack.Screen name="Resenas" component={ResenasScreen} />
         <Stack.Screen name="Ayuda" component={AyudaScreen} />
         <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
