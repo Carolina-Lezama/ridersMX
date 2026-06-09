@@ -11,6 +11,13 @@ import InicioScreen from './src/screens/main/InicioScreen';
 import MenuScreen from './src/screens/main/MenuScreen';
 import PerfilScreen from './src/screens/main/PerfilScreen';
 
+import MantenimientoScreen from './src/screens/menu_options/MantenimientoScreen';
+import DiagnosticoScreen from './src/screens/menu_options/DiagnosticoScreen';
+import ForoScreen from './src/screens/menu_options/ForoScreen';
+import ResenasScreen from './src/screens/menu_options/ResenasScreen';
+import AyudaScreen from './src/screens/menu_options/AyudaScreen';
+import ConfiguracionScreen from './src/screens/menu_options/ConfiguracionScreen';
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -27,15 +34,22 @@ function MainTabs() {
     </Tab.Navigator>
   );
 }
-
 export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
-        {/* Al "Iniciar Sesión", navegaremos a MainApp */}
         <Stack.Screen name="MainApp" component={MainTabs} />
+        
+        {/* 2. AGREGA LAS NUEVAS PANTALLAS AL STACK AQUÍ */}
+        {/* Ponerlas aquí hace que al abrirlas, oculten el menú inferior de pestañas, lo cual es ideal */}
+        <Stack.Screen name="Mantenimiento" component={MantenimientoScreen} />
+        <Stack.Screen name="Diagnostico" component={DiagnosticoScreen} />
+        <Stack.Screen name="Foro" component={ForoScreen} />
+        <Stack.Screen name="Resenas" component={ResenasScreen} />
+        <Stack.Screen name="Ayuda" component={AyudaScreen} />
+        <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
