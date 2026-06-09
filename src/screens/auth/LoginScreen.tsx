@@ -41,3 +41,4 @@ const styles = StyleSheet.create({
   titulo: { fontSize: 28, fontWeight: 'bold', marginBottom: 30, textAlign: 'center' },
   input: { borderWidth: 1, borderColor: '#ccc', padding: 15, borderRadius: 8, marginBottom: 15 }
 });
+

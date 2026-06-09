@@ -1,20 +1,41 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import AuthNavigator from './src/navigation/AuthNavigator';
-import DashboardScreen from './src/screens/main/DashboardScreen';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+
+// Importar todas tus pantallas
+import LoginScreen from './src/screens/auth/LoginScreen';
+import RegisterScreen from './src/screens/auth/RegisterScreen';
+import InicioScreen from './src/screens/main/InicioScreen';
+import MenuScreen from './src/screens/main/MenuScreen';
+import PerfilScreen from './src/screens/main/PerfilScreen';
 
 const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
+
+// Este es el menú de abajo que verás al iniciar sesión
+function MainTabs() {
+  return (
+    <Tab.Navigator screenOptions={{ headerShown: false, tabBarActiveTintColor: '#007bff' }}>
+      <Tab.Screen name="Inicio" component={InicioScreen} 
+        options={{ tabBarIcon: ({color}) => <Ionicons name="home" size={24} color={color} /> }} />
+      <Tab.Screen name="Menu" component={MenuScreen} 
+        options={{ tabBarIcon: ({color}) => <Ionicons name="menu" size={24} color={color} /> }} />
+      <Tab.Screen name="Perfil" component={PerfilScreen} 
+        options={{ tabBarIcon: ({color}) => <Ionicons name="person" size={24} color={color} /> }} />
+    </Tab.Navigator>
+  );
+}
 
 export default function App() {
   return (
     <NavigationContainer>
-      {/* Este es el Stack principal de toda la app */}
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {/* Primero mostramos el flujo de Login/Registro */}
-        <Stack.Screen name="Auth" component={AuthNavigator} />
-        {/* Si el login es exitoso, viajamos aquí */}
-        <Stack.Screen name="MainApp" component={DashboardScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
+        {/* Al "Iniciar Sesión", navegaremos a MainApp */}
+        <Stack.Screen name="MainApp" component={MainTabs} />
       </Stack.Navigator>
     </NavigationContainer>
   );
