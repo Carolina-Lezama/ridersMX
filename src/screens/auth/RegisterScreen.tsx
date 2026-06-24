@@ -11,25 +11,30 @@ export default function RegisterScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleRegister = async () => {
+const handleRegister = async () => {
     if (!email || !password || !username) {
-      Alert.alert('Error', 'El correo, contraseña y nombre de usuario son obligatorios.');
+      alert('El correo, contraseña y nombre de usuario son obligatorios.'); // Usamos alert nativo web por si acaso
       return;
     }
 
     setLoading(true);
 
     try {
-      // 1. Crear el usuario en la bóveda de autenticación de Supabase
+      console.log("PASO 1: Contactando a Supabase Auth...");
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email,
         password: password,
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        console.error("❌ ERROR EN PASO 1 (Auth):", authError);
+        throw authError;
+      }
 
-      // 2. Si se creó correctamente, insertamos sus datos en nuestra tabla 'perfiles'
+      console.log("PASO 2: Usuario creado en secreto. ID:", authData.user?.id);
+
       if (authData.user) {
+        console.log("PASO 3: Intentando guardar en tu tabla 'perfiles'...");
         const { error: profileError } = await supabase.from('perfiles').insert([
           { 
             id: authData.user.id, 
@@ -38,13 +43,18 @@ export default function RegisterScreen({ navigation }: any) {
           }
         ]);
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error("❌ ERROR EN PASO 3 (Tabla Perfiles):", profileError);
+          throw profileError;
+        }
 
-        Alert.alert('¡Éxito!', 'Tu cuenta ha sido creada. Por favor inicia sesión.');
-        navigation.goBack(); // Regresa al Login
+        console.log("✅ PASO 4: ¡Registro 100% exitoso!");
+        alert('¡Éxito! Tu cuenta ha sido creada.'); 
+        navigation.goBack();
       }
     } catch (error: any) {
-      Alert.alert('Error en el registro', error.message);
+      console.error("🚨 ERROR GENERAL CAPTURADO:", error);
+      alert(`Error: ${error?.message || 'Algo salió mal'}`);
     } finally {
       setLoading(false);
     }
