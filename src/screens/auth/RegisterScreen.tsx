@@ -27,7 +27,7 @@ const handleRegister = async () => {
       });
 
       if (authError) {
-        console.error("❌ ERROR EN PASO 1 (Auth):", authError);
+        console.error(" ERROR EN PASO 1 (Auth):", authError);
         throw authError;
       }
 
@@ -44,7 +44,7 @@ const handleRegister = async () => {
         ]);
 
         if (profileError) {
-          console.error("❌ ERROR EN PASO 3 (Tabla Perfiles):", profileError);
+          console.error(" ERROR EN PASO 3 (Tabla Perfiles):", profileError);
           throw profileError;
         }
 
@@ -53,7 +53,7 @@ const handleRegister = async () => {
         navigation.goBack();
       }
     } catch (error: any) {
-      console.error("🚨 ERROR GENERAL CAPTURADO:", error);
+      console.error(" ERROR GENERAL CAPTURADO:", error);
       alert(`Error: ${error?.message || 'Algo salió mal'}`);
     } finally {
       setLoading(false);
