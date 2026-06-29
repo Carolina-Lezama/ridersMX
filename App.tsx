@@ -18,6 +18,10 @@ import ResenasScreen from './src/screens/menu_options/ResenasScreen';
 import AyudaScreen from './src/screens/menu_options/AyudaScreen';
 import ConfiguracionScreen from './src/screens/menu_options/ConfiguracionScreen';
 
+// 1. IMPORTA TUS DOS NUEVAS PANTALLAS AQUÍ
+import SimuladorEditorScreen from './src/screens/menu_options/SimuladorEditorScreen';
+import SimuladorLibreriaScreen from './src/screens/menu_options/SimuladorLibreriaScreen';
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -34,6 +38,7 @@ function MainTabs() {
     </Tab.Navigator>
   );
 }
+
 export default function App() {
   return (
     <NavigationContainer>
@@ -50,6 +55,10 @@ export default function App() {
         <Stack.Screen name="Resenas" component={ResenasScreen} />
         <Stack.Screen name="Ayuda" component={AyudaScreen} />
         <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
+        
+{/* LAS PANTALLAS DEL SIMULADOR DE STICKERS */}
+        <Stack.Screen name="SimuladorEditor" component={SimuladorEditorScreen} />
+        <Stack.Screen name="SimuladorLibreria" component={SimuladorLibreriaScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
