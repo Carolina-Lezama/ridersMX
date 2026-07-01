@@ -5,8 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
 import EventoCard from '../../components/EventoCard';
 
+// 1. Configuración del idioma del calendario a Español (COMPLETA)
 LocaleConfig.locales['es'] = {
   monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+  monthNamesShort: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+  dayNames: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
   dayNamesShort: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
   today: 'Hoy'
 };
@@ -112,8 +115,12 @@ export default function CalendarioScreen({ navigation }: any) {
             contentContainerStyle={{ paddingBottom: 80 }}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
-              <EventoCard evento={item} onPress={() => console.log('Editar', item.id)} />
-            )}
+                <EventoCard 
+                  evento={item} 
+                  // Ahora enviamos el ID y la fecha para activar el "Modo Edición"
+                  onPress={() => navigation.navigate('EventoForm', { eventoId: item.id, fechaBase: item.fecha })} 
+                />
+              )}
           />
         )}
       </View>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
@@ -128,35 +128,59 @@ export default function MotoFormScreen({ navigation, route }: any) {
   };
 
   // FUNCIÓN PARA ELIMINAR (DELETE)
-  const handleEliminar = () => {
-    Alert.alert(
-      'Eliminar Vehículo',
-      '¿Estás completamente segura de que deseas quitar esta moto de tu garaje? Esta acción no se puede deshacer.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Sí, Eliminar', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setSaving(true);
-              const { error } = await supabase
-                .from('motocicletas')
-                .delete()
-                .eq('id', motoId);
+// FUNCIÓN PARA EJECUTAR EL BORRADO REAL EN LA BASE DE DATOS
+  const ejecutarBorrado = async () => {
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('motocicletas')
+        .delete()
+        .eq('id', motoId);
 
-              if (error) throw error;
-              Alert.alert('Eliminado', 'El vehículo ha sido removido.');
-              navigation.goBack();
-            } catch (error: any) {
-              Alert.alert('Error al eliminar', error.message);
-            } finally {
-              setSaving(false);
-            }
+      if (error) throw error;
+      
+      // Mensaje de éxito adaptado
+      if (Platform.OS === 'web') {
+        window.alert('El vehículo ha sido removido.');
+      } else {
+        Alert.alert('Eliminado', 'El vehículo ha sido removido.');
+      }
+      
+      navigation.goBack();
+    } catch (error: any) {
+      if (Platform.OS === 'web') {
+        window.alert('Error al eliminar: ' + error.message);
+      } else {
+        Alert.alert('Error al eliminar', error.message);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // FUNCIÓN QUE DISPARA LA PREGUNTA (INTELIGENTE: WEB VS CELULAR)
+  const handleEliminar = () => {
+    if (Platform.OS === 'web') {
+      // En la web usamos el confirm nativo del navegador
+      const confirmar = window.confirm('¿Estás completamente segura de que deseas quitar esta moto de tu garaje? Esta acción no se puede deshacer.');
+      if (confirmar) {
+        ejecutarBorrado();
+      }
+    } else {
+      // En el celular usamos la alerta nativa de iOS/Android
+      Alert.alert(
+        'Eliminar Vehículo',
+        '¿Estás completamente segura de que deseas quitar esta moto de tu garaje? Esta acción no se puede deshacer.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { 
+            text: 'Sí, Eliminar', 
+            style: 'destructive',
+            onPress: ejecutarBorrado
           }
-        }
-      ]
-    );
+        ]
+      );
+    }
   };
 
   if (loading) {
