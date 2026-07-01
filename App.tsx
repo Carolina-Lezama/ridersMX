@@ -10,6 +10,10 @@ import RegisterScreen from './src/screens/auth/RegisterScreen';
 import InicioScreen from './src/screens/main/InicioScreen';
 import MenuScreen from './src/screens/main/MenuScreen';
 import PerfilScreen from './src/screens/main/PerfilScreen';
+import MisMotosScreen from './src/screens/main/MisMotosScreen';
+import MotoFormScreen from './src/screens/main/MotoFormScreen'; // Ajusta la ruta si es diferente
+import CalendarioScreen from './src/screens/main/CalendarioScreen'; // Ajusta la ruta si es diferente
+import EventoFormScreen from './src/screens/main/EventoFormScreen';
 
 import MantenimientoScreen from './src/screens/menu_options/MantenimientoScreen';
 import DiagnosticoScreen from './src/screens/menu_options/DiagnosticoScreen';
@@ -50,15 +54,19 @@ export default function App() {
         {/* 2. AGREGA LAS NUEVAS PANTALLAS AL STACK AQUÍ */}
         {/* Ponerlas aquí hace que al abrirlas, oculten el menú inferior de pestañas, lo cual es ideal */}
         <Stack.Screen name="Mantenimiento" component={MantenimientoScreen} />
+        <Stack.Screen name="MisMotos" component={MisMotosScreen} />
+        <Stack.Screen name="MotoForm" component={MotoFormScreen} />
         <Stack.Screen name="Diagnostico" component={DiagnosticoScreen} />
         <Stack.Screen name="Foro" component={ForoScreen} />
         <Stack.Screen name="Resenas" component={ResenasScreen} />
         <Stack.Screen name="Ayuda" component={AyudaScreen} />
         <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
         
-{/* LAS PANTALLAS DEL SIMULADOR DE STICKERS */}
+    {/* LAS PANTALLAS DEL SIMULADOR DE STICKERS */}
         <Stack.Screen name="SimuladorEditor" component={SimuladorEditorScreen} />
         <Stack.Screen name="SimuladorLibreria" component={SimuladorLibreriaScreen} />
+        <Stack.Screen name="Calendario" component={CalendarioScreen} />
+        <Stack.Screen name="EventoForm" component={EventoFormScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

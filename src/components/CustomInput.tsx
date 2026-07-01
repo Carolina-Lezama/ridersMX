@@ -6,9 +6,20 @@ interface Props {
   placeholder: string;
   secureTextEntry?: boolean;
   keyboardType?: 'default' | 'email-address' | 'numeric';
+  value?: string;
+  onChangeText?: (text: string) => void;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }
 
-export default function CustomInput({ label, placeholder, secureTextEntry, keyboardType }: Props) {
+export default function CustomInput({ 
+  label, 
+  placeholder, 
+  secureTextEntry, 
+  keyboardType, 
+  value, 
+  onChangeText,
+  autoCapitalize = 'none' 
+}: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
@@ -18,6 +29,9 @@ export default function CustomInput({ label, placeholder, secureTextEntry, keybo
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         placeholderTextColor="#94a3b8"
+        value={value}
+        onChangeText={onChangeText}
+        autoCapitalize={autoCapitalize}
       />
     </View>
   );

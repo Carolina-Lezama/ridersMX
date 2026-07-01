@@ -1,44 +1,72 @@
-import React from 'react';
-import { View, Text, StyleSheet, TextInput } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
+import { supabase } from '../../services/supabase';
 
-// "navigation: any" es para ir rápido ahora, luego lo tiparemos estrictamente con TS
 export default function LoginScreen({ navigation }: any) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Por favor ingresa tu correo y contraseña.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+
+      if (error) throw error;
+
+      // Si no hay error, el inicio de sesión fue exitoso
+      navigation.replace('MainApp'); // Usamos replace para que no pueda volver atrás con el botón de Android
+      
+    } catch (error: any) {
+      Alert.alert('Error de acceso', 'Credenciales incorrectas o el usuario no existe.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.titulo}>Bienvenido a Riders</Text>
       
-      <TextInput 
-        style={styles.input} 
-        placeholder="Correo electrónico" 
+      <CustomInput 
+        label="Correo electrónico" 
+        placeholder="ejemplo@correo.com" 
         keyboardType="email-address"
-        autoCapitalize="none"
+        value={email}
+        onChangeText={setEmail}
       />
-      <TextInput 
-        style={styles.input} 
-        placeholder="Contraseña" 
+      <CustomInput 
+        label="Contraseña" 
+        placeholder="********" 
         secureTextEntry 
+        value={password}
+        onChangeText={setPassword}
       />
 
-      {/* Navegación al Dashboard (simulando un login exitoso) */}
-      <CustomButton 
-        title="Iniciar Sesión" 
-        onPress={() => navigation.navigate('MainApp')} 
-      />
-      
-      {/* Navegación a la pantalla de Registro */}
-      <CustomButton 
-        title="Crear cuenta nueva" 
-        tipo="secundario" 
-        onPress={() => navigation.navigate('Register')} 
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#007bff" style={{ marginVertical: 20 }} />
+      ) : (
+        <>
+          <CustomButton title="Iniciar Sesión" onPress={handleLogin} />
+          <CustomButton title="Crear cuenta nueva" tipo="secundario" onPress={() => navigation.navigate('Register')} />
+        </>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: '#fff' },
-  titulo: { fontSize: 28, fontWeight: 'bold', marginBottom: 30, textAlign: 'center' },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 15, borderRadius: 8, marginBottom: 15 }
+  titulo: { fontSize: 28, fontWeight: 'bold', marginBottom: 30, textAlign: 'center' }
 });
-
