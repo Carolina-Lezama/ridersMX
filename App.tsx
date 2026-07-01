@@ -12,6 +12,8 @@ import MenuScreen from './src/screens/main/MenuScreen';
 import PerfilScreen from './src/screens/main/PerfilScreen';
 import MisMotosScreen from './src/screens/main/MisMotosScreen';
 import MotoFormScreen from './src/screens/main/MotoFormScreen'; // Ajusta la ruta si es diferente
+import CalendarioScreen from './src/screens/main/CalendarioScreen'; // Ajusta la ruta si es diferente
+import EventoFormScreen from './src/screens/main/EventoFormScreen';
 
 import MantenimientoScreen from './src/screens/menu_options/MantenimientoScreen';
 import DiagnosticoScreen from './src/screens/menu_options/DiagnosticoScreen';
@@ -54,6 +56,9 @@ export default function App() {
         <Stack.Screen name="Resenas" component={ResenasScreen} />
         <Stack.Screen name="Ayuda" component={AyudaScreen} />
         <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
+        <Stack.Screen name="Calendario" component={CalendarioScreen} />
+        <Stack.Screen name="EventoForm" component={EventoFormScreen} />
+
       </Stack.Navigator>
     </NavigationContainer>
   );
