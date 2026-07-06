@@ -18,24 +18,12 @@ Acción: Agregaremos un botón rojo de "Eliminar Vehículo" al final de MotoForm
 
 Justificación: Borrar registros de una base de datos es una acción destructiva. Implementaremos un Alert de doble confirmación nativo del celular ("¿Estás seguro de que deseas eliminar esta moto?") antes de ejecutar el borrado real en Supabase para prevenir toques accidentales.
 
-
-
-
-
-
-
-
-
-
 Nuevos Módulos que puedes construir (Frontend puro)
-
-
-Onboarding (Carrusel de Bienvenida): Son esas 3 o 4 pantallas deslizables que aparecen la primera vez que un usuario instala la aplicación (antes del Login). Sirven para explicar de forma visual y atractiva qué hace la app. Es un excelente ejercicio de diseño frontend y animaciones.
 
 Pantalla de Ajustes (Settings): Un menú donde el usuario pueda configurar sus preferencias visuales (preparar la estructura para un Modo Oscuro/Claro), preferencias de notificaciones, y políticas de privacidad.
 
 2. Mejoras de UI/UX a tus módulos actuales
-Ya tienes la estructura funcional de varios apartados. Ahora podemos hacer que se sientan como una aplicación Premium:
+   Ya tienes la estructura funcional de varios apartados. Ahora podemos hacer que se sientan como una aplicación Premium:
 
 Skeletons Loaders (Dashboard y Perfil): En lugar de mostrar la clásica ruedita azul girando (ActivityIndicator) cuando la app cargue datos, podemos construir "Skeletons". Son esos bloques de color gris claro que parpadean y simulan la forma que tendrá el contenido (como hace YouTube o Facebook antes de cargar un video).
 
@@ -44,3 +32,26 @@ Validación de Formularios "En Vivo" (Login, Register, Moto): Actualmente, la ap
 Micro-animaciones (Barra de opciones / Menú): Podemos agregar efectos visuales para que, cuando el usuario toque un icono de la barra de navegación inferior, este haga un pequeño rebote o cambie de tamaño suavemente.
 
 Estados Vacíos Ilustrados (Empty States): Ya hicimos uno básico en el Garaje (cuando no hay motos), pero podemos mejorarlo en el Dashboard. Diseñar componentes atractivos que guíen al usuario sobre qué hacer cuando no tiene datos registrados aún.
+
+sigamos con el paso 3:
+
+Etapa 3: Diseño UI y Componentización (Tarjetas e Indicadores)
+
+¿Qué haremos? Diseñar el componente individual de cada "página" (imagen centrada, textos estilizados). Además, crearemos los "Paginators" (los puntitos en la parte inferior) que indican en qué paso del onboarding está el usuario, y los botones de "Saltar" (Skip) y "Siguiente/Empezar".
+
+Justificación: Esta es la etapa puramente visual. Los indicadores son cruciales para la experiencia de usuario (UX), ya que le dan al piloto un mapa mental de cuánto falta para terminar la introducción.
+
+Etapa 4: Animaciones y Microinteracciones (Opcional pero recomendado)
+¿Qué haremos? Utilizaremos la API Animated nativa de React Native o la librería react-native-reanimated para hacer que los puntitos indicadores crezcan o cambien de color suavemente conforme el usuario desliza la pantalla.
+
+Justificación: Este es el "excelente ejercicio de diseño" que mencionaste. Las transiciones fluidas marcan la diferencia entre una app que se siente "de juguete" y una app que se siente "premium".
+
+Etapa 5: Lógica de Persistencia (AsyncStorage)
+¿Qué haremos? Instalaremos e integraremos @react-native-async-storage/async-storage. Cuando el usuario presione "Empezar" en la última pantalla, guardaremos un valor (ej. hasViewedOnboarding = true) en el almacenamiento local del teléfono.
+
+Justificación: ¡Fundamental! Un onboarding solo debe aparecer la primera vez que se abre la app. Sin esta lógica, tus usuarios tendrían que saltar el carrusel cada vez que abran la aplicación, lo cual sería muy frustrante.
+
+Etapa 6: Integración con las Rutas (React Navigation)
+¿Qué haremos? Modificaremos el archivo de navegación principal de la app. Antes de mostrar la pantalla de Login, la app leerá el AsyncStorage. Si es la primera vez, renderiza el Onboarding; si no, manda al usuario directo al Login.
+
+Justificación: Es el paso final que conecta este nuevo módulo aislado con el flujo real de la aplicación, dándole sentido y funcionalidad dentro del ecosistema que ya construimos.

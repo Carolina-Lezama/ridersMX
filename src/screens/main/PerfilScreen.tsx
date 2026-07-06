@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';import { Ionicons } from '@expo/vector-icons';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import { supabase } from '../../services/supabase';
@@ -65,16 +64,22 @@ export default function PerfilScreen({ navigation }: any) {
     }
   };
 
-  const guardarPerfil = async () => {
-    if (!userId) return;
+const guardarPerfil = async () => {
+    // 1. Prevenir el fallo silencioso
+    if (!userId) {
+      const msg = 'No se pudo obtener la sesión del usuario. Intenta reiniciar la app.';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Error', msg);
+      return;
+    }
 
     try {
       setSaving(true);
-      
-      // Validación rápida de fecha (para evitar que rompa la BD si escriben algo raro)
+      console.log("Iniciando guardado para el usuario:", userId); // Útil para depurar en PC
+
       let fechaValidada = fechaNacimiento.trim();
       if (fechaValidada !== '' && !fechaValidada.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        Alert.alert('Formato incorrecto', 'La fecha debe tener el formato YYYY-MM-DD (Ej. 1998-08-15)');
+        const msg = 'La fecha debe tener el formato YYYY-MM-DD (Ej. 1998-08-15)';
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Formato incorrecto', msg);
         setSaving(false);
         return;
       }
@@ -87,7 +92,7 @@ export default function PerfilScreen({ navigation }: any) {
           telefono: telefono.trim(), 
           ciudad: ciudad.trim(), 
           bio: bio.trim(),
-          fecha_nacimiento: fechaValidada || null, // null si está vacío para evitar errores
+          fecha_nacimiento: fechaValidada || null,
           tipo_sangre: tipoSangre.trim(),
           contacto_emergencia: contactoEmergencia.trim(),
           nivel_experiencia: nivelExperiencia || null,
@@ -96,9 +101,17 @@ export default function PerfilScreen({ navigation }: any) {
         .eq('id', userId);
 
       if (error) throw error;
-      Alert.alert('¡Éxito!', 'Tus datos personales han sido actualizados.');
+
+      console.log("¡Datos guardados correctamente en Supabase!");
+      const exitoMsg = 'Tus datos personales han sido actualizados.';
+      Platform.OS === 'web' ? window.alert(exitoMsg) : Alert.alert('¡Éxito!', exitoMsg);
+
     } catch (error: any) {
-      Alert.alert('Error al guardar', error.message);
+      // 2. Mostrar el error real en la consola del navegador
+      console.error("Error devuelto por Supabase:", error);
+      
+      const errorMsg = error.message || 'Ocurrió un error al guardar.';
+      Platform.OS === 'web' ? window.alert(errorMsg) : Alert.alert('Error al guardar', errorMsg);
     } finally {
       setSaving(false);
     }
