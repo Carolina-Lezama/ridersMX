@@ -33,13 +33,116 @@ Micro-animaciones (Barra de opciones / Menú): Podemos agregar efectos visuales 
 
 Estados Vacíos Ilustrados (Empty States): Ya hicimos uno básico en el Garaje (cuando no hay motos), pero podemos mejorarlo en el Dashboard. Diseñar componentes atractivos que guíen al usuario sobre qué hacer cuando no tiene datos registrados aún.
 
-sigamos con el paso 3:
+codigo de app a revisar:
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // <-- IMPORTANTE
 
-Etapa 3: Diseño UI y Componentización (Tarjetas e Indicadores)
+// Importar todas tus pantallas
+import LoginScreen from './src/screens/auth/LoginScreen';
+import RegisterScreen from './src/screens/auth/RegisterScreen';
+import InicioScreen from './src/screens/main/InicioScreen';
+import MenuScreen from './src/screens/main/MenuScreen';
+import PerfilScreen from './src/screens/main/PerfilScreen';
+import MisMotosScreen from './src/screens/main/MisMotosScreen';
+import MotoFormScreen from './src/screens/main/MotoFormScreen';
+import CalendarioScreen from './src/screens/main/CalendarioScreen';
+import EventoFormScreen from './src/screens/main/EventoFormScreen';
 
-¿Qué haremos? Diseñar el componente individual de cada "página" (imagen centrada, textos estilizados). Además, crearemos los "Paginators" (los puntitos en la parte inferior) que indican en qué paso del onboarding está el usuario, y los botones de "Saltar" (Skip) y "Siguiente/Empezar".
+import MantenimientoScreen from './src/screens/menu_options/MantenimientoScreen';
+import DiagnosticoScreen from './src/screens/menu_options/DiagnosticoScreen';
+import ForoScreen from './src/screens/menu_options/ForoScreen';
+import ResenasScreen from './src/screens/menu_options/ResenasScreen';
+import AyudaScreen from './src/screens/menu_options/AyudaScreen';
+import ConfiguracionScreen from './src/screens/menu_options/ConfiguracionScreen';
 
-Justificación: Esta es la etapa puramente visual. Los indicadores son cruciales para la experiencia de usuario (UX), ya que le dan al piloto un mapa mental de cuánto falta para terminar la introducción.
+import SimuladorEditorScreen from './src/screens/menu_options/SimuladorEditorScreen';
+import SimuladorLibreriaScreen from './src/screens/menu_options/SimuladorLibreriaScreen';
+
+// 1. IMPORTAMOS TU NUEVA PANTALLA (Ajusta la ruta según dónde la guardaste)
+import OnboardingScreen from './src/screens/main/OnboardingScreen';
+
+const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
+
+function MainTabs() {
+return (
+<Tab.Navigator screenOptions={{ headerShown: false, tabBarActiveTintColor: '#007bff' }}>
+<Tab.Screen name="Inicio" component={InicioScreen}
+options={{ tabBarIcon: ({color}) => <Ionicons name="home" size={24} color={color} /> }} />
+<Tab.Screen name="Menu" component={MenuScreen}
+options={{ tabBarIcon: ({color}) => <Ionicons name="menu" size={24} color={color} /> }} />
+<Tab.Screen name="Perfil" component={PerfilScreen}
+options={{ tabBarIcon: ({color}) => <Ionicons name="person" size={24} color={color} /> }} />
+</Tab.Navigator>
+);
+}
+
+export default function App() {
+// Estado para saber si es la primera vez que inicia la app
+const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
+
+useEffect(() => {
+// Función que revisa la memoria del teléfono al abrir la app
+const checkFirstLaunch = async () => {
+try {
+const value = await AsyncStorage.getItem('@ya_vio_onboarding');
+if (value === null) {
+setIsFirstLaunch(true); // Es la primera vez
+} else {
+setIsFirstLaunch(false); // Ya lo vio antes
+}
+} catch (error) {
+setIsFirstLaunch(false); // En caso de error, lo mandamos al Login por seguridad
+}
+};
+checkFirstLaunch();
+}, []);
+
+// Mientras revisa la memoria, mostramos un pequeño loader para que no parpadee la pantalla
+if (isFirstLaunch === null) {
+return (
+<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+<ActivityIndicator size="large" color="#007bff" />
+</View>
+);
+}
+
+return (
+<NavigationContainer>
+{/_ 2. CONFIGURAMOS LA RUTA INICIAL DINÁMICAMENTE _/}
+<Stack.Navigator
+screenOptions={{ headerShown: false }}
+initialRouteName={isFirstLaunch ? 'Onboarding' : 'Login'} >
+{/_ LA NUEVA PANTALLA EN EL STACK _/}
+<Stack.Screen name="Onboarding" component={OnboardingScreen} />
+
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="MainApp" component={MainTabs} />
+
+        <Stack.Screen name="Mantenimiento" component={MantenimientoScreen} />
+        <Stack.Screen name="MisMotos" component={MisMotosScreen} />
+        <Stack.Screen name="MotoForm" component={MotoFormScreen} />
+        <Stack.Screen name="Diagnostico" component={DiagnosticoScreen} />
+        <Stack.Screen name="Foro" component={ForoScreen} />
+        <Stack.Screen name="Resenas" component={ResenasScreen} />
+        <Stack.Screen name="Ayuda" component={AyudaScreen} />
+        <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
+
+        <Stack.Screen name="SimuladorEditor" component={SimuladorEditorScreen} />
+        <Stack.Screen name="SimuladorLibreria" component={SimuladorLibreriaScreen} />
+        <Stack.Screen name="Calendario" component={CalendarioScreen} />
+        <Stack.Screen name="EventoForm" component={EventoFormScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+
+);
+}
 
 Etapa 4: Animaciones y Microinteracciones (Opcional pero recomendado)
 ¿Qué haremos? Utilizaremos la API Animated nativa de React Native o la librería react-native-reanimated para hacer que los puntitos indicadores crezcan o cambien de color suavemente conforme el usuario desliza la pantalla.
