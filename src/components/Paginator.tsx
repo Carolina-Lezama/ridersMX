@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
   dot: {
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#007bff', // Azul principal
+    backgroundColor: '#51a82f', // Azul principal
     marginHorizontal: 8,
   },
 });

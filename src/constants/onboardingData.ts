@@ -35,4 +35,4 @@ export const ONBOARDING_DATA: OnboardingItem[] = [
     image: require('../../assets/images/welcome_moto.png'), 
     backgroundColor: '#ef4444', // Rojo seguridad
   },
-];
+]; 

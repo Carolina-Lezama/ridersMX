@@ -1,38 +1,67 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, useWindowDimensions, Animated, TouchableOpacity, Image } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ONBOARDING_DATA } from '../../constants/onboardingData';
-import Paginator from '../../components/Paginator'; // Asegúrate de importar tu nuevo componente
+import Paginator from '../../components/Paginator'; 
 
-export default function OnboardingScreen() {
+export default function OnboardingScreen({ navigation }: any) {
   const { width } = useWindowDimensions();
   const scrollX = useRef(new Animated.Value(0)).current;
   const slidesRef = useRef<FlatList>(null);
-
-  // NUEVO: Estado para saber en qué página estamos (empezamos en la 0)
+  
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // ACTUALIZADO: Detectamos qué página está visible en la pantalla
+  // Detecta el cambio cuando el usuario desliza arrastrando manualmente
   const viewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems && viewableItems.length > 0) {
-      setCurrentIndex(viewableItems[0].index);
+      const newIdx = viewableItems[0].index;
+      console.log(`[Scroll Manual Detectado] Índice actual: ${newIdx}`);
+      setCurrentIndex(newIdx);
     }
   }).current;
 
   const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
-  // NUEVO: Función para avanzar a la siguiente pantalla
-  const scrollTo = () => {
+  // CORREGIDO: Forzamos la actualización de estado en el botón Siguiente/Empezar
+  const scrollTo = async () => {
+    console.log(`[Clic Siguiente] Índice actual: ${currentIndex}`);
+
     if (currentIndex < ONBOARDING_DATA.length - 1) {
-      slidesRef.current?.scrollToIndex({ index: currentIndex + 1 });
+      const nextIndex = currentIndex + 1;
+      console.log(`[Acción] Moviendo a índice: ${nextIndex}`);
+      
+      // 1. Actualizamos el estado directamente
+      setCurrentIndex(nextIndex);
+
+      // 2. Desplazamos la vista
+      slidesRef.current?.scrollToOffset({ 
+        offset: nextIndex * width, 
+        animated: true 
+      });
     } else {
-      // Si estamos en la última pantalla, aquí terminamos el onboarding
-      console.log('¡Ir al Login!');
+      console.log('[Acción] ¡Empezar presionado! Guardando sesión...');
+      try {
+        await AsyncStorage.setItem('@ya_vio_onboarding', 'true');
+        navigation.replace('Login'); 
+      } catch (error) {
+        console.error('[Error AsyncStorage]:', error);
+      }
     }
   };
 
-  // NUEVO: Función para saltar todo e ir a la última pantalla
+  // CORREGIDO: Forzamos la actualización de estado al presionar Saltar
   const skipToLast = () => {
-    slidesRef.current?.scrollToIndex({ index: ONBOARDING_DATA.length - 1 });
+    const lastIndex = ONBOARDING_DATA.length - 1;
+    console.log(`[Clic Saltar] Llevando directamente al último índice (${lastIndex})`);
+    
+    // 1. Actualizamos el estado para cambiar la interfaz y botones al instante
+    setCurrentIndex(lastIndex);
+
+    // 2. Desplazamos la vista hasta el final
+    slidesRef.current?.scrollToOffset({ 
+      offset: lastIndex * width, 
+      animated: true 
+    });
   };
 
   const renderItem = ({ item }: { item: any }) => {
@@ -41,7 +70,7 @@ export default function OnboardingScreen() {
         <View style={styles.imagePlaceholder}>
           <Image 
             source={item.image} 
-            style={styles.image} 
+            style={{ width: '80%', height: '80%', resizeMode: 'contain' }}
           />
         </View>
         <View style={styles.textContainer}>
@@ -55,7 +84,6 @@ export default function OnboardingScreen() {
   return (
     <View style={styles.container}>
       
-      {/* Contenedor del Carrusel (ocupa el 75% de la pantalla) */}
       <View style={{ flex: 3 }}>
         <FlatList
           data={ONBOARDING_DATA}
@@ -65,6 +93,12 @@ export default function OnboardingScreen() {
           pagingEnabled
           bounces={false}
           keyExtractor={(item) => item.id}
+          // Clave para optimizar el calculo de posiciones exactas en Web/Móvil
+          getItemLayout={(_, index) => ({
+            length: width,
+            offset: width * index,
+            index,
+          })}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { x: scrollX } } }],
             { useNativeDriver: false }
@@ -76,22 +110,19 @@ export default function OnboardingScreen() {
         />
       </View>
 
-      {/* NUEVO: Controles Inferiores (ocupa el 25% inferior) */}
       <View style={styles.footerContainer}>
         
         <Paginator data={ONBOARDING_DATA} scrollX={scrollX} />
 
         <View style={styles.buttonRow}>
-          {/* Si estamos en la última pantalla, escondemos el botón "Saltar" */}
           {currentIndex !== ONBOARDING_DATA.length - 1 ? (
             <TouchableOpacity style={styles.skipButton} onPress={skipToLast}>
               <Text style={styles.skipText}>Saltar</Text>
             </TouchableOpacity>
           ) : (
-            <View style={styles.skipButtonPlaceholder} /> // Mantiene el espacio centrado
+            <View style={styles.skipButtonPlaceholder} />
           )}
 
-          {/* Botón Principal (Siguiente / Empezar) */}
           <TouchableOpacity style={styles.nextButton} onPress={scrollTo}>
             <Text style={styles.nextButtonText}>
               {currentIndex === ONBOARDING_DATA.length - 1 ? 'Empezar' : 'Siguiente'}
@@ -121,11 +152,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  image: {
-    width: '80%',
-    height: '80%',
-    resizeMode: 'contain',
-  },
   textContainer: {
     flex: 0.4,
     alignItems: 'center',
@@ -145,12 +171,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-  // --- NUEVOS ESTILOS DEL FOOTER ---
   footerContainer: {
-    flex: 1, // Toma el tercio inferior
+    flex: 1,
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingBottom: 40, // Espacio para el home indicator de iOS/Android
+    paddingBottom: 40,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -162,7 +187,7 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   skipButtonPlaceholder: {
-    width: 70, // Aproximadamente el ancho del botón saltar
+    width: 70,
   },
   skipText: {
     fontSize: 16,
