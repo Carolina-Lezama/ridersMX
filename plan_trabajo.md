@@ -1,3 +1,9 @@
+arreglaremos el menu ahora, ya que faltan algunos apartados y otros no redireccion correctamente, me gusta la forma de tener grupos de botones, lo organizaremos de la siguiente forma:
+
+- Sobre mi, con apartados como: Perfil,MisMotos
+- Comunidad, con apartados como:
+- Ajustes y ayuda, con apartados como:
+
 Fase 1: Blindaje de la Base de Datos (RLS para Motocicletas)
 Acción: Ejecutaremos un script SQL en Supabase para crear las Políticas de Seguridad (Policies) específicas para la tabla motocicletas.
 
@@ -33,10 +39,7 @@ Micro-animaciones (Barra de opciones / Menú): Podemos agregar efectos visuales 
 
 Estados Vacíos Ilustrados (Empty States): Ya hicimos uno básico en el Garaje (cuando no hay motos), pero podemos mejorarlo en el Dashboard. Diseñar componentes atractivos que guíen al usuario sobre qué hacer cuando no tiene datos registrados aún.
 
-
-
 codigo de app a revisar:
-
 
 Etapa 4: Animaciones y Microinteracciones (Opcional pero recomendado)
 ¿Qué haremos? Utilizaremos la API Animated nativa de React Native o la librería react-native-reanimated para hacer que los puntitos indicadores crezcan o cambien de color suavemente conforme el usuario desliza la pantalla.

@@ -16,19 +16,17 @@ import MisMotosScreen from './src/screens/main/MisMotosScreen';
 import MotoFormScreen from './src/screens/main/MotoFormScreen';
 import CalendarioScreen from './src/screens/main/CalendarioScreen';
 import EventoFormScreen from './src/screens/main/EventoFormScreen';
+import OnboardingScreen from './src/screens/main/OnboardingScreen';
 
-import MantenimientoScreen from './src/screens/menu_options/MantenimientoScreen';
-import DiagnosticoScreen from './src/screens/menu_options/DiagnosticoScreen';
-import ForoScreen from './src/screens/menu_options/ForoScreen';
-import ResenasScreen from './src/screens/menu_options/ResenasScreen';
 import AyudaScreen from './src/screens/menu_options/AyudaScreen';
 import ConfiguracionScreen from './src/screens/menu_options/ConfiguracionScreen';
-
+import DiagnosticoScreen from './src/screens/menu_options/DiagnosticoScreen';
+import MantenimientoScreen from './src/screens/menu_options/MantenimientoScreen';
+import ForoScreen from './src/screens/menu_options/ForoScreen';
+import ResenasScreen from './src/screens/menu_options/ResenasScreen';
 import SimuladorEditorScreen from './src/screens/menu_options/SimuladorEditorScreen';
 import SimuladorLibreriaScreen from './src/screens/menu_options/SimuladorLibreriaScreen';
 
-// 1. IMPORTAMOS TU NUEVA PANTALLA (Ajusta la ruta según dónde la guardaste)
-import OnboardingScreen from './src/screens/main/OnboardingScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
