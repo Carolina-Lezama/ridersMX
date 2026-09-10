@@ -1,8 +1,8 @@
-arreglaremos el menu ahora, ya que faltan algunos apartados y otros no redireccion correctamente, me gusta la forma de tener grupos de botones, lo organizaremos de la siguiente forma:
+hacer mas amigable el formulario del calendario
 
-- Sobre mi, con apartados como: Perfil,MisMotos
-- Comunidad, con apartados como:
-- Ajustes y ayuda, con apartados como:
+
+
+
 
 Fase 1: Blindaje de la Base de Datos (RLS para Motocicletas)
 Acción: Ejecutaremos un script SQL en Supabase para crear las Políticas de Seguridad (Policies) específicas para la tabla motocicletas.

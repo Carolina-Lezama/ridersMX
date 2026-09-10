@@ -1,67 +1,69 @@
-// Arreglar
-
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../services/supabase'; // IMPORTANTE: Asegúrate de que esta ruta sea correcta
+import { supabase } from '../../services/supabase';
 
 export default function MenuScreen({ navigation }: any) {
-  // SECCIÓN 1: Actualizada con las pantallas que ya construimos
-  const seccionVehiculo = [
+
+  // SECCIÓN 1: Sobre mí
+  const seccionSobreMi = [
+    { id: 'Perfil', icon: 'person-outline', label: 'Mi Perfil', color: '#8b5cf6' },
     { id: 'MisMotos', icon: 'bicycle-outline', label: 'Mi Garaje', color: '#3b82f6' },
     { id: 'Calendario', icon: 'calendar-outline', label: 'Mi Agenda', color: '#ef4444' },
-    { id: 'Foro', icon: 'chatbubbles-outline', label: 'Foro de Riders', color: '#10b981' },
-    { id: 'Resenas', icon: 'star-outline', label: 'Mis Reseñas', color: '#f59e0b' },
   ];
 
-  // SECCIÓN 2: Cuenta
-  const seccionCuenta = [
-    { id: 'Perfil', icon: 'person-outline', label: 'Mi Perfil', color: '#8b5cf6' },
+  // SECCIÓN 2: Comunidad
+  const seccionComunidad = [
+    { id: 'Foro', icon: 'chatbubbles-outline', label: 'Foro de Riders', color: '#10b981' },
+    { id: 'Resenas', icon: 'star-outline', label: 'Mis Reseñas', color: '#f59e0b' },
+    { id: 'Mantenimiento', icon: 'build-outline', label: 'Mantenimiento', color: '#ec4899' },
+    { id: 'Diagnostico', icon: 'pulse-outline', label: 'Diagnóstico', color: '#14b8a6' },
+  ];
+
+  // SECCIÓN 3: Ajustes y ayuda
+  const seccionAjustesAyuda = [
     { id: 'Ayuda', icon: 'help-circle-outline', label: 'Ayuda y Soporte', color: '#06b6d4' },
     { id: 'Configuracion', icon: 'settings-outline', label: 'Configuración', color: '#64748b' },
   ];
 
-  // FUNCIÓN: Manejo del cierre de sesión seguro con Supabase
+  // FUNCIÓN: Cierre de sesión adaptable a Web y Móvil
   const handleCerrarSesion = () => {
-    Alert.alert(
-      'Cerrar Sesión',
-      '¿Estás segura de que deseas salir de tu cuenta?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Sí, salir', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // 1. Destruimos la sesión en el servidor
-              const { error } = await supabase.auth.signOut();
-              if (error) throw error;
-              
-              // 2. Limpiamos la navegación y volvemos al Login
-              navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-            } catch (error: any) {
-              Alert.alert('Error', 'No se pudo cerrar la sesión: ' + error.message);
-            }
-          }
+    const ejecutarCierre = async () => {
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+        navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+      } catch (error: any) {
+        const mensajeError = 'No se pudo cerrar la sesión: ' + error.message;
+        if (Platform.OS === 'web') {
+          window.alert(mensajeError);
+        } else {
+          Alert.alert('Error', mensajeError);
         }
-      ]
-    );
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmar = window.confirm('¿Estás segura de que deseas salir de tu cuenta?');
+      if (confirmar) ejecutarCierre();
+    } else {
+      Alert.alert(
+        'Cerrar Sesión',
+        '¿Estás segura de que deseas salir de tu cuenta?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Sí, salir', style: 'destructive', onPress: ejecutarCierre }
+        ]
+      );
+    }
   };
 
-  // Componente reutilizable interno para renderizar cada fila
+  // Componente reutilizable para renderizar opciones con navegación directa
   const renderItem = (item: any, isLast: boolean) => (
     <TouchableOpacity 
       key={item.id} 
       style={[styles.opcion, isLast && styles.opcionSinBorde]}
-      // Navegación dinámica
-      onPress={() => {
-        // Validación temporal: Si la pantalla aún no existe, mostramos un aviso
-        if (item.id === 'Foro' || item.id === 'Resenas' || item.id === 'Ayuda' || item.id === 'Configuracion') {
-          Alert.alert('Próximamente', 'Este módulo está en construcción.');
-        } else {
-          navigation.navigate(item.id);
-        }
-      }}
+      onPress={() => navigation.navigate(item.id)}
     >
       <View style={[styles.iconContainer, { backgroundColor: item.color + '15' }]}>
         <Ionicons name={item.icon as any} size={22} color={item.color} />
@@ -77,23 +79,31 @@ export default function MenuScreen({ navigation }: any) {
         <Text style={styles.tituloMenu}>Menú</Text>
       </View>
 
-      {/* BLOQUE 1: Mi Vehículo y Comunidad */}
-      <Text style={styles.seccionTitulo}>Mi Vehículo y Comunidad</Text>
+      {/* BLOQUE 1: Sobre mí */}
+      <Text style={styles.seccionTitulo}>Sobre mí</Text>
       <View style={styles.tarjetaSeccion}>
-        {seccionVehiculo.map((item, index) => 
-          renderItem(item, index === seccionVehiculo.length - 1)
+        {seccionSobreMi.map((item, index) => 
+          renderItem(item, index === seccionSobreMi.length - 1)
         )}
       </View>
 
-      {/* BLOQUE 2: Cuenta y Ajustes */}
-      <Text style={styles.seccionTitulo}>Cuenta y Ajustes</Text>
+      {/* BLOQUE 2: Comunidad */}
+      <Text style={styles.seccionTitulo}>Comunidad</Text>
       <View style={styles.tarjetaSeccion}>
-        {seccionCuenta.map((item, index) => 
-          renderItem(item, index === seccionCuenta.length - 1)
+        {seccionComunidad.map((item, index) => 
+          renderItem(item, index === seccionComunidad.length - 1)
         )}
       </View>
 
-      {/* Botón de Cerrar Sesión Independiente y Seguro */}
+      {/* BLOQUE 3: Ajustes y ayuda */}
+      <Text style={styles.seccionTitulo}>Ajustes y ayuda</Text>
+      <View style={styles.tarjetaSeccion}>
+        {seccionAjustesAyuda.map((item, index) => 
+          renderItem(item, index === seccionAjustesAyuda.length - 1)
+        )}
+      </View>
+
+      {/* Botón de Cerrar Sesión */}
       <TouchableOpacity 
         style={styles.botonCerrarSesion}
         onPress={handleCerrarSesion}
