@@ -17,9 +17,10 @@ import MotoFormScreen from './src/screens/main/MotoFormScreen';
 import CalendarioScreen from './src/screens/main/CalendarioScreen';
 import EventoFormScreen from './src/screens/main/EventoFormScreen';
 import OnboardingScreen from './src/screens/main/OnboardingScreen';
+import AyudaScreen from './src/screens/main/AyudaScreen';
+import ConfiguracionScreen from './src/screens/main/ConfiguracionScreen';
 
-import AyudaScreen from './src/screens/menu_options/AyudaScreen';
-import ConfiguracionScreen from './src/screens/menu_options/ConfiguracionScreen';
+
 import DiagnosticoScreen from './src/screens/menu_options/DiagnosticoScreen';
 import MantenimientoScreen from './src/screens/menu_options/MantenimientoScreen';
 import ForoScreen from './src/screens/menu_options/ForoScreen';

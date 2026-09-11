@@ -232,56 +232,87 @@ export default function EventoFormScreen({ navigation, route }: any) {
 
         <CustomInput label="Título del Evento" placeholder="Ej. Ruta a Tepoztlán" value={titulo} onChangeText={setTitulo} />
 
-        {/* SELECTOR DE FECHA INTERACTIVO */}
+{/* SELECTOR DE FECHA INTERACTIVO */}
         <View style={styles.seccion}>
           <Text style={styles.label}>Fecha del Evento</Text>
-          <TouchableOpacity 
-            style={styles.pickerButton} 
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Ionicons name="calendar-outline" size={20} color="#007bff" />
-            <Text style={styles.pickerButtonText}>{formatearFechaLegible(fechaObj)}</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
-          </TouchableOpacity>
+          {Platform.OS === 'web' ? (
+            <input
+              type="date"
+              value={formatearFechaYMD(fechaObj)}
+              onChange={(e) => {
+                if (e.target.value) setFechaObj(new Date(e.target.value + 'T00:00:00'));
+              }}
+              style={styles.webInput}
+            />
+          ) : (
+            <>
+              <TouchableOpacity 
+                style={styles.pickerButton} 
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Ionicons name="calendar-outline" size={20} color="#007bff" />
+                <Text style={styles.pickerButtonText}>{formatearFechaLegible(fechaObj)}</Text>
+                <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+              </TouchableOpacity>
+
+              {showDatePicker && (
+                <DateTimePicker
+                  value={fechaObj}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
+                    setShowDatePicker(Platform.OS === 'ios');
+                    if (selectedDate) setFechaObj(selectedDate);
+                  }}
+                />
+              )}
+            </>
+          )}
         </View>
 
-        {showDatePicker && (
-          <DateTimePicker
-            value={fechaObj}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
-              setShowDatePicker(Platform.OS === 'ios');
-              if (selectedDate) setFechaObj(selectedDate);
-            }}
-          />
-        )}
-
-        {/* SELECTOR DE HORA INTERACTIVO */}
+{/* SELECTOR DE HORA INTERACTIVO */}
         <View style={styles.seccion}>
           <Text style={styles.label}>Hora</Text>
-          <TouchableOpacity 
-            style={styles.pickerButton} 
-            onPress={() => setShowTimePicker(true)}
-          >
-            <Ionicons name="time-outline" size={20} color="#007bff" />
-            <Text style={styles.pickerButtonText}>{formatearHora12h(horaObj)}</Text>
-            <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
-          </TouchableOpacity>
-        </View>
+          {Platform.OS === 'web' ? (
+            <input
+              type="time"
+              value={`${String(horaObj.getHours()).padStart(2, '0')}:${String(horaObj.getMinutes()).padStart(2, '0')}`}
+              onChange={(e) => {
+                if (e.target.value) {
+                  const [h, m] = e.target.value.split(':');
+                  const d = new Date(horaObj);
+                  d.setHours(parseInt(h, 10), parseInt(m, 10));
+                  setHoraObj(d);
+                }
+              }}
+              style={styles.webInput}
+            />
+          ) : (
+            <>
+              <TouchableOpacity 
+                style={styles.pickerButton} 
+                onPress={() => setShowTimePicker(true)}
+              >
+                <Ionicons name="time-outline" size={20} color="#007bff" />
+                <Text style={styles.pickerButtonText}>{formatearHora12h(horaObj)}</Text>
+                <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+              </TouchableOpacity>
 
-        {showTimePicker && (
-          <DateTimePicker
-            value={horaObj}
-            mode="time"
-            is24Hour={false}
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={(event: DateTimePickerEvent, selectedTime?: Date) => {
-              setShowTimePicker(Platform.OS === 'ios');
-              if (selectedTime) setHoraObj(selectedTime);
-            }}
-          />
-        )}
+              {showTimePicker && (
+                <DateTimePicker
+                  value={horaObj}
+                  mode="time"
+                  is24Hour={false}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(event: DateTimePickerEvent, selectedTime?: Date) => {
+                    setShowTimePicker(Platform.OS === 'ios');
+                    if (selectedTime) setHoraObj(selectedTime);
+                  }}
+                />
+              )}
+            </>
+          )}
+        </View>
 
         <CustomInput label="Descripción" placeholder="Detalles, punto de reunión..." value={descripcion} onChangeText={setDescripcion} />
         <CustomInput label="Moto Asociada (Opcional)" placeholder="Ej. Yamaha MT-07" value={motoAsociada} onChangeText={setMotoAsociada} />
@@ -308,7 +339,18 @@ export default function EventoFormScreen({ navigation, route }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 60, paddingBottom: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingHorizontal: 20, 
+    marginTop: Platform.OS === 'web' ? 20 : 60, 
+    paddingBottom: 20, 
+    backgroundColor: '#fff', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#e2e8f0' 
+  },
+
   titulo: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
   content: { padding: 20, paddingBottom: 40 },
   seccion: { marginBottom: 20 },
@@ -331,6 +373,17 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     marginLeft: 10,
     fontWeight: '500',
+  },
+  webInput: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#0f172a',
   },
 
   chipsContainer: { flexDirection: 'row', flexWrap: 'wrap' },
