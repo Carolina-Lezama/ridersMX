@@ -1,4 +1,21 @@
-hacer mas amigable el formulario del calendario
+arreglar la hora y fecha para escritorio
+
+Para tu perfil como desarrolladora y con múltiples proyectos en puerta (como tu sistema de papelería en PHP/MySQL y tus aplicaciones web/móviles), lo más inteligente y económico es comprar un VPS único (como un servidor en Hetzner o DigitalOcean).
+
+pero no se guardan kilometros ni nada, sino que solo son fechas, pero me diste una gran idea, porque no agregar un apartado, despues de que la rodada pase(ese mismo dia o al siguiente), que se le pregunte al usuario como estuvo, duracion, distancias, etc. y de eso si podemos hacer registros y graficos para el lobby 
+
+
+Pedir al usuario al terminar la rodada —o recordárselo al día siguiente— que ingrese datos sencillos como la distancia aproximada, el tiempo de duración, una foto o una breve reseña transforma una simple fecha en una bitácora de experiencias.
+
+
+
+
+
+
+
+
+
+
 
 
 

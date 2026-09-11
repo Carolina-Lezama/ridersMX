@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import { supabase } from '../../services/supabase';
@@ -8,7 +9,7 @@ import { supabase } from '../../services/supabase';
 export default function EventoFormScreen({ navigation, route }: any) {
   // 1. Detectamos si venimos a Crear o a Editar
   const eventoId = route.params?.eventoId || null;
-  const fechaBase = route.params?.fechaBase || '';
+  const fechaBase = route.params?.fechaBase || new Date().toISOString().split('T')[0];
   const esEdicion = !!eventoId;
 
   const [loading, setLoading] = useState(false);
@@ -16,13 +17,20 @@ export default function EventoFormScreen({ navigation, route }: any) {
   
   // 2. Estados del Formulario
   const [titulo, setTitulo] = useState('');
-  const [fecha, setFecha] = useState(fechaBase);
-  const [hora, setHora] = useState('');
+  
+  // Manejo de fecha y hora con objetos Date para evitar errores manuales
+  const [fechaObj, setFechaObj] = useState(fechaBase ? new Date(fechaBase + 'T00:00:00') : new Date());
+  const [horaObj, setHoraObj] = useState(new Date());
+  
+  // Visibilidad de los pickers nativos
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
   const [tipo, setTipo] = useState('rodada'); // 'rodada' o 'mantenimiento'
   const [descripcion, setDescripcion] = useState('');
   const [motoAsociada, setMotoAsociada] = useState('');
   
-  // NUEVO: Estado de la actividad
+  // Estado de la actividad
   const [estado, setEstado] = useState('Planeada');
   const estadosValidos = ['Planeada', 'Completada', 'Reprogramada', 'Cancelada'];
 
@@ -46,12 +54,24 @@ export default function EventoFormScreen({ navigation, route }: any) {
 
       if (data) {
         setTitulo(data.titulo || '');
-        setFecha(data.fecha || '');
-        setHora(data.hora || '');
+        if (data.fecha) setFechaObj(new Date(data.fecha + 'T00:00:00'));
+        
+        // Parsear hora si existe (ej. "08:00 AM" o "14:30")
+        if (data.hora) {
+          const [time, modifier] = data.hora.split(' ');
+          let [hours, minutes] = time.split(':');
+          let h = parseInt(hours, 10);
+          if (modifier === 'PM' && h < 12) h += 12;
+          if (modifier === 'AM' && h === 12) h = 0;
+          const d = new Date();
+          d.setHours(h, parseInt(minutes || '0', 10));
+          setHoraObj(d);
+        }
+
         setTipo(data.tipo || 'rodada');
         setDescripcion(data.descripcion || '');
         setMotoAsociada(data.moto_asociada || '');
-        setEstado(data.estado || 'Planeada'); // Cargamos el estado real
+        setEstado(data.estado || 'Planeada');
       }
     } catch (error: any) {
       if (Platform.OS === 'web') {
@@ -65,22 +85,33 @@ export default function EventoFormScreen({ navigation, route }: any) {
     }
   };
 
+  // Formateadores auxiliares
+  const formatearFechaYMD = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatearFechaLegible = (date: Date) => {
+    return date.toLocaleDateString('es-MX', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  const formatearHora12h = (date: Date) => {
+    return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
   // 4. FUNCIÓN PARA GUARDAR (CREAR O ACTUALIZAR)
   const handleGuardar = async () => {
-    if (!titulo.trim() || !fecha.trim()) {
+    if (!titulo.trim()) {
       Platform.OS === 'web' 
-        ? window.alert('El título y la fecha son obligatorios.')
-        : Alert.alert('Faltan datos', 'El título y la fecha son obligatorios.');
+        ? window.alert('El título es obligatorio.')
+        : Alert.alert('Faltan datos', 'El título es obligatorio.');
       return;
     }
 
-    // Validación de seguridad para que la base de datos no explote
-    if (!fecha.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      Platform.OS === 'web'
-        ? window.alert('La fecha debe tener el formato YYYY-MM-DD')
-        : Alert.alert('Formato incorrecto', 'La fecha debe tener el formato YYYY-MM-DD');
-      return;
-    }
+    const fechaStr = `${fechaObj.getFullYear()}-${String(fechaObj.getMonth() + 1).padStart(2, '0')}-${String(fechaObj.getDate()).padStart(2, '0')}`;
+    const horaStr = formatearHora12h(horaObj);
 
     try {
       setSaving(true);
@@ -91,21 +122,19 @@ export default function EventoFormScreen({ navigation, route }: any) {
       const eventoPayload = {
         perfil_id: session.user.id,
         titulo: titulo.trim(),
-        fecha: fecha.trim(),
-        hora: hora.trim(),
+        fecha: fechaStr,
+        hora: horaStr,
         tipo: tipo,
         descripcion: descripcion.trim(),
         moto_asociada: motoAsociada.trim(),
-        estado: estado // Guardamos el nuevo estado
+        estado: estado
       };
 
       if (esEdicion) {
-        // ACTUALIZAR (UPDATE)
         const { error } = await supabase.from('eventos').update(eventoPayload).eq('id', eventoId);
         if (error) throw error;
         Platform.OS === 'web' ? window.alert('Evento actualizado') : Alert.alert('Éxito', 'Evento actualizado');
       } else {
-        // CREAR (INSERT)
         const { error } = await supabase.from('eventos').insert([eventoPayload]);
         if (error) throw error;
         Platform.OS === 'web' ? window.alert('Evento agendado') : Alert.alert('Éxito', 'Evento agendado');
@@ -119,7 +148,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
     }
   };
 
-  // 5. FUNCIÓN PARA ELIMINAR (Con protección Inteligente Web/Mobile)
+  // 5. FUNCIÓN PARA ELIMINAR
   const ejecutarBorrado = async () => {
     try {
       setSaving(true);
@@ -146,7 +175,6 @@ export default function EventoFormScreen({ navigation, route }: any) {
     }
   };
 
-  // Pantalla de carga mientras trae el evento a editar
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -168,7 +196,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
 
       <ScrollView contentContainerStyle={styles.content}>
         
-        {/* SECTOR ESTADO (NUEVO) */}
+        {/* SECTOR ESTADO */}
         {esEdicion && (
           <View style={styles.seccion}>
             <Text style={styles.label}>Estado de la Actividad</Text>
@@ -186,6 +214,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
           </View>
         )}
 
+        {/* TIPO DE EVENTO */}
         <View style={styles.seccion}>
           <Text style={styles.label}>¿Qué tipo de evento es?</Text>
           <View style={styles.chipsContainer}>
@@ -202,8 +231,58 @@ export default function EventoFormScreen({ navigation, route }: any) {
         </View>
 
         <CustomInput label="Título del Evento" placeholder="Ej. Ruta a Tepoztlán" value={titulo} onChangeText={setTitulo} />
-        <CustomInput label="Fecha (YYYY-MM-DD)" placeholder="Ej. 2026-10-25" value={fecha} onChangeText={setFecha} />
-        <CustomInput label="Hora" placeholder="Ej. 08:00 AM" value={hora} onChangeText={setHora} />
+
+        {/* SELECTOR DE FECHA INTERACTIVO */}
+        <View style={styles.seccion}>
+          <Text style={styles.label}>Fecha del Evento</Text>
+          <TouchableOpacity 
+            style={styles.pickerButton} 
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Ionicons name="calendar-outline" size={20} color="#007bff" />
+            <Text style={styles.pickerButtonText}>{formatearFechaLegible(fechaObj)}</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+          </TouchableOpacity>
+        </View>
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={fechaObj}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
+              setShowDatePicker(Platform.OS === 'ios');
+              if (selectedDate) setFechaObj(selectedDate);
+            }}
+          />
+        )}
+
+        {/* SELECTOR DE HORA INTERACTIVO */}
+        <View style={styles.seccion}>
+          <Text style={styles.label}>Hora</Text>
+          <TouchableOpacity 
+            style={styles.pickerButton} 
+            onPress={() => setShowTimePicker(true)}
+          >
+            <Ionicons name="time-outline" size={20} color="#007bff" />
+            <Text style={styles.pickerButtonText}>{formatearHora12h(horaObj)}</Text>
+            <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+          </TouchableOpacity>
+        </View>
+
+        {showTimePicker && (
+          <DateTimePicker
+            value={horaObj}
+            mode="time"
+            is24Hour={false}
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event: DateTimePickerEvent, selectedTime?: Date) => {
+              setShowTimePicker(Platform.OS === 'ios');
+              if (selectedTime) setHoraObj(selectedTime);
+            }}
+          />
+        )}
+
         <CustomInput label="Descripción" placeholder="Detalles, punto de reunión..." value={descripcion} onChangeText={setDescripcion} />
         <CustomInput label="Moto Asociada (Opcional)" placeholder="Ej. Yamaha MT-07" value={motoAsociada} onChangeText={setMotoAsociada} />
 
@@ -215,7 +294,6 @@ export default function EventoFormScreen({ navigation, route }: any) {
           )}
         </View>
 
-        {/* BOTÓN DE ELIMINAR (Solo visible en edición) */}
         {esEdicion && !saving && (
           <TouchableOpacity style={styles.btnEliminar} onPress={handleEliminar}>
             <Ionicons name="trash-outline" size={20} color="#ef4444" />
@@ -236,7 +314,25 @@ const styles = StyleSheet.create({
   seccion: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', color: '#1e293b', marginBottom: 10 },
   
-  // Estilos de los Chips de Tipo (Rodada/Mantenimiento)
+  // Botones Interactivos para Fecha/Hora
+  pickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  pickerButtonText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#0f172a',
+    marginLeft: 10,
+    fontWeight: '500',
+  },
+
   chipsContainer: { flexDirection: 'row', flexWrap: 'wrap' },
   chip: { flexDirection: 'row', backgroundColor: '#f1f5f9', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, marginRight: 10, marginBottom: 10, borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center' },
   chipActiveAzul: { backgroundColor: '#007bff', borderColor: '#007bff' },
@@ -244,13 +340,11 @@ const styles = StyleSheet.create({
   chipText: { color: '#64748b', fontWeight: '500', fontSize: 14 },
   chipTextActive: { color: '#fff', fontWeight: 'bold' },
 
-  // Estilos de los Chips de Estado (NUEVO)
   estadoChip: { backgroundColor: '#f8fafc', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginRight: 8, marginBottom: 8, borderWidth: 1, borderColor: '#cbd5e1' },
   estadoChipActive: { backgroundColor: '#0f172a', borderColor: '#0f172a' },
   estadoText: { color: '#64748b', fontWeight: '600', fontSize: 13 },
   estadoTextActive: { color: '#fff', fontWeight: 'bold' },
 
-  // Estilos Botón Eliminar
   btnEliminar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fef2f2', paddingVertical: 15, borderRadius: 12, marginTop: 20, borderWidth: 1, borderColor: '#fecaca' },
   textEliminar: { color: '#ef4444', fontWeight: 'bold', marginLeft: 8, fontSize: 16 }
 });
