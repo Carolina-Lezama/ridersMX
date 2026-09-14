@@ -1,4 +1,26 @@
-revisar el apartado de configuraciones
+arreglar el boton cerrar sesion y eliminar cuenta
+revisar el ultimo codigo de gemini
+
+
+
+
+
+
+
+
+
+  
+
+Nuevos Módulos que puedes construir (Frontend puro)
+
+Pantalla de Ajustes (Settings): Un menú donde el usuario pueda configurar sus preferencias visuales (preparar la estructura para un Modo Oscuro/Claro), preferencias de notificaciones, y políticas de privacidad.
+
+
+
+
+
+
+
 
 Para tu perfil como desarrolladora y con múltiples proyectos en puerta (como tu sistema de papelería en PHP/MySQL y tus aplicaciones web/móviles), lo más inteligente y económico es comprar un VPS único (como un servidor en Hetzner o DigitalOcean).
 
@@ -30,9 +52,7 @@ Justificación: Si recuerdas nuestro tropiezo con el error 401 en el registro, f
 
 
 
-Nuevos Módulos que puedes construir (Frontend puro)
 
-Pantalla de Ajustes (Settings): Un menú donde el usuario pueda configurar sus preferencias visuales (preparar la estructura para un Modo Oscuro/Claro), preferencias de notificaciones, y políticas de privacidad.
 
 2. Mejoras de UI/UX a tus módulos actuales
    Ya tienes la estructura funcional de varios apartados. Ahora podemos hacer que se sientan como una aplicación Premium:
@@ -52,3 +72,37 @@ Etapa 4: Animaciones y Microinteracciones (Opcional pero recomendado)
 
 Justificación: Este es el "excelente ejercicio de diseño" que mencionaste. Las transiciones fluidas marcan la diferencia entre una app que se siente "de juguete" y una app que se siente "premium".
 
+
+
+
+        {/* SECCIÓN 3: SOPORTE E INFORMACIÓN */}
+        <Text style={styles.sectionTitle}>Soporte e Información</Text>
+        <View style={styles.card}>
+          <TouchableOpacity style={styles.row}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="help-circle-outline" size={22} color="#0f172a" />
+              <Text style={styles.rowText}>Centro de Ayuda</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity style={styles.row}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="document-text-outline" size={22} color="#0f172a" />
+              <Text style={styles.rowText}>Términos y Privacidad</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <View style={styles.row}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="information-circle-outline" size={22} color="#0f172a" />
+              <Text style={styles.rowText}>Versión de la App</Text>
+            </View>
+            <Text style={styles.versionText}>v1.0.0</Text>
+          </View>
+        </View>
