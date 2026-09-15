@@ -25,6 +25,7 @@ import DiagnosticoScreen from './src/screens/menu_options/DiagnosticoScreen';
 import MantenimientoScreen from './src/screens/menu_options/MantenimientoScreen';
 import ForoScreen from './src/screens/menu_options/ForoScreen';
 import ResenasScreen from './src/screens/menu_options/ResenasScreen';
+import ForoCrearPublicacion from './src/screens/menu_options/foro_crear_publicacion';
 import SimuladorEditorScreen from './src/screens/menu_options/SimuladorEditorScreen';
 import SimuladorLibreriaScreen from './src/screens/menu_options/SimuladorLibreriaScreen';
 
@@ -92,6 +93,7 @@ initialRouteName={isFirstLaunch ? 'Onboarding' : 'Login'} >
         <Stack.Screen name="MotoForm" component={MotoFormScreen} />
         <Stack.Screen name="Diagnostico" component={DiagnosticoScreen} />
         <Stack.Screen name="Foro" component={ForoScreen} />
+        <Stack.Screen name="ForoCrearPublicacion" component={ForoCrearPublicacion}/>
         <Stack.Screen name="Resenas" component={ResenasScreen} />
         <Stack.Screen name="Ayuda" component={AyudaScreen} />
         <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
