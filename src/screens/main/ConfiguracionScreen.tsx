@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Alert, View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
+import { useTheme } from '../../../assets/theme/ThemeContext';
+
 
 export default function ConfiguracionScreen({ navigation }: any) {
   // Estados para probar la interacción de los switches
   const [notificaciones, setNotificaciones] = useState(true);
   const [alertasMantenimiento, setAlertasMantenimiento] = useState(true);
-  const [modoOscuro, setModoOscuro] = useState(false);
+  const { isDarkMode, toggleTheme, theme } = useTheme();
 
   // Estado para guardar la fecha de creación del usuario
   const [usuarioDesde, setUsuarioDesde] = useState('Cargando...');
@@ -196,7 +198,7 @@ export default function ConfiguracionScreen({ navigation }: any) {
           <View style={styles.row}>
             <View style={styles.rowLeft}>
               <Ionicons name="notifications-outline" size={22} color="#0f172a" />
-              <Text style={styles.rowText}>Notificaciones Push</Text>
+              <Text style={styles.rowText}>Notificaciones</Text>
             </View>
             <Switch
               value={notificaciones}

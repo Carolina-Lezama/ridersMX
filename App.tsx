@@ -4,7 +4,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // <-- IMPORTANTE
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { ThemeProvider } from './assets/theme/ThemeContext'; 
 
 // Importar todas tus pantallas
 import LoginScreen from './src/screens/auth/LoginScreen';
@@ -19,7 +21,6 @@ import EventoFormScreen from './src/screens/main/EventoFormScreen';
 import OnboardingScreen from './src/screens/main/OnboardingScreen';
 import AyudaScreen from './src/screens/main/AyudaScreen';
 import ConfiguracionScreen from './src/screens/main/ConfiguracionScreen';
-
 
 import DiagnosticoScreen from './src/screens/menu_options/DiagnosticoScreen';
 import MantenimientoScreen from './src/screens/menu_options/MantenimientoScreen';
@@ -77,12 +78,13 @@ return (
 }
 
 return (
-<NavigationContainer>
-<Stack.Navigator
-screenOptions={{ headerShown: false }}
-initialRouteName={isFirstLaunch ? 'Onboarding' : 'Login'} >
+<ThemeProvider>
+  <NavigationContainer>
+    <Stack.Navigator
+      screenOptions={{ headerShown: false }}
+      initialRouteName={isFirstLaunch ? 'Onboarding' : 'Login'} >
 
-<Stack.Screen name="Onboarding" component={OnboardingScreen} />
+      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
 
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
@@ -102,8 +104,9 @@ initialRouteName={isFirstLaunch ? 'Onboarding' : 'Login'} >
         <Stack.Screen name="SimuladorLibreria" component={SimuladorLibreriaScreen} />
         <Stack.Screen name="Calendario" component={CalendarioScreen} />
         <Stack.Screen name="EventoForm" component={EventoFormScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    </Stack.Navigator>
+  </NavigationContainer>
+</ThemeProvider>
 
 );
 }
