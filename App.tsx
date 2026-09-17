@@ -25,7 +25,7 @@ import DiagnosticoScreen from './src/screens/menu_options/DiagnosticoScreen';
 import MantenimientoScreen from './src/screens/menu_options/MantenimientoScreen';
 import ForoScreen from './src/screens/menu_options/ForoScreen';
 import ResenasScreen from './src/screens/menu_options/ResenasScreen';
-import ForoCrearPublicacion from './src/screens/menu_options/foro_crear_publicacion';
+import ForoCrearPublicacion from './src/screens/menu_options/foro_crear_publicacionScreen';
 import SimuladorEditorScreen from './src/screens/menu_options/SimuladorEditorScreen';
 import SimuladorLibreriaScreen from './src/screens/menu_options/SimuladorLibreriaScreen';
 
