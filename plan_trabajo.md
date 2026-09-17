@@ -1,5 +1,4 @@
-arreglar el boton cerrar sesion y eliminar cuenta
-revisar el ultimo codigo de gemini
+seguir viendo cambios de configuracion
 
 
 

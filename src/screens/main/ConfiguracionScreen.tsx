@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Platform } from 'react-native';
+import { Alert, View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
 
@@ -12,7 +12,86 @@ export default function ConfiguracionScreen({ navigation }: any) {
   // Estado para guardar la fecha de creación del usuario
   const [usuarioDesde, setUsuarioDesde] = useState('Cargando...');
 
-useEffect(() => {
+  const handleLogout = () => {
+    const confirmLogout = async () => {
+      try {
+        const { error } = await supabase.auth.signOut();
+
+        if (error) throw error;
+
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      } catch (error: any) {
+        Alert.alert('Error', 'Hubo un problema al intentar cerrar sesión. Inténtalo de nuevo.');
+        console.error('Error en signOut:', error?.message ?? error);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('¿Estás seguro de que deseas salir de tu cuenta?')) {
+        void confirmLogout();
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Cerrar Sesión',
+      '¿Estás seguro de que deseas salir de tu cuenta?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Sí, salir', style: 'destructive', onPress: () => void confirmLogout() },
+      ],
+    );
+  };
+
+  const ejecutarBorradoDeCuenta = async () => {
+    try {
+      const { error } = await supabase.rpc('borrar_mi_cuenta');
+
+      if (error) throw error;
+
+      await supabase.auth.signOut();
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (error) {
+      console.error('Error al borrar cuenta:', error);
+      const mensajeError = 'Hubo un problema al intentar borrar tu cuenta. Inténtalo más tarde.';
+
+      if (Platform.OS === 'web') {
+        window.alert(mensajeError);
+      } else {
+        Alert.alert('Error', mensajeError);
+      }
+    }
+  };
+
+  const handleBorrarCuenta = () => {
+    const titulo = 'Borrar Cuenta';
+    const mensaje = '¿Estás seguro de que deseas borrar tu cuenta DEFINITIVAMENTE?\n\nEsta acción no se puede deshacer y perderás todos tus datos registrados.';
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${titulo}\n\n${mensaje}`)) {
+        void ejecutarBorradoDeCuenta();
+      }
+      return;
+    }
+
+    Alert.alert(
+      titulo,
+      mensaje,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Sí, borrar cuenta', style: 'destructive', onPress: () => void ejecutarBorradoDeCuenta() },
+      ],
+    );
+  };
+
+  useEffect(() => {
     const fetchFechaCreacion = async () => {
       try {
         // 1. Obtenemos la sesión actual del usuario
@@ -55,7 +134,6 @@ useEffect(() => {
     fetchFechaCreacion();
   }, []);
 
-
   return (
     <View style={styles.container}>
       {/* HEADER CON ADAPTACIÓN MULTIPLATAFORMA */}
@@ -68,7 +146,6 @@ useEffect(() => {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-
         {/* SECCIÓN 1: MI CUENTA */}
         <Text style={styles.sectionTitle}>Cuenta y Accesos</Text>
         <View style={styles.card}>
@@ -82,7 +159,6 @@ useEffect(() => {
 
           <View style={styles.divider} />
 
-          {/* NUEVO: Agregar otra cuenta */}
           <TouchableOpacity style={styles.row}>
             <View style={styles.rowLeft}>
               <Ionicons name="person-add-outline" size={22} color="#0f172a" />
@@ -95,7 +171,6 @@ useEffect(() => {
         {/* NUEVA SECCIÓN: ACTIVIDAD Y TIEMPO */}
         <Text style={styles.sectionTitle}>Actividad y Bienestar</Text>
         <View style={styles.card}>
-          {/* NUEVO: Mi actividad reciente */}
           <TouchableOpacity style={styles.row}>
             <View style={styles.rowLeft}>
               <Ionicons name="pulse-outline" size={22} color="#0f172a" />
@@ -106,7 +181,6 @@ useEffect(() => {
 
           <View style={styles.divider} />
 
-          {/* NUEVO: Gestionar mi tiempo de uso */}
           <TouchableOpacity style={styles.row}>
             <View style={styles.rowLeft}>
               <Ionicons name="hourglass-outline" size={22} color="#0f172a" />
@@ -162,24 +236,25 @@ useEffect(() => {
 
         {/* ZONA DE PELIGRO / ACCIONES DE CUENTA */}
         <View style={{ marginTop: 10 }}>
-          {/* BOTÓN CERRAR SESIÓN */}
-          <TouchableOpacity style={styles.btnAccionPeligro} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.btnAccionPeligro} activeOpacity={0.7} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={20} color="#ef4444" />
             <Text style={styles.textAccionPeligro}>Cerrar Sesión</Text>
           </TouchableOpacity>
 
-          {/* NUEVO: BOTÓN BORRAR CUENTA */}
-          <TouchableOpacity style={[styles.btnAccionPeligro, { marginTop: 12 }]} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={[styles.btnAccionPeligro, { marginTop: 12 }]}
+            activeOpacity={0.7}
+            onPress={handleBorrarCuenta}
+          >
             <Ionicons name="trash-outline" size={20} color="#ef4444" />
             <Text style={styles.textAccionPeligro}>Borrar Cuenta</Text>
           </TouchableOpacity>
         </View>
 
-        {/* NUEVO: USUARIO DESDE */}
+        {/* USUARIO DESDE */}
         <View style={styles.footerContainer}>
           <Text style={styles.footerText}>Usuario desde: {usuarioDesde}</Text>
         </View>
-
       </ScrollView>
     </View>
   );
@@ -201,8 +276,6 @@ const styles = StyleSheet.create({
   backButton: { padding: 5 },
   titulo: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
   content: { padding: 20, paddingBottom: 40 },
-
-  /* Títulos de sección */
   sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
@@ -213,8 +286,6 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     marginTop: 10,
   },
-
-  /* Tarjetas de Opciones */
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -233,9 +304,6 @@ const styles = StyleSheet.create({
   rowLeft: { flexDirection: 'row', alignItems: 'center' },
   rowText: { fontSize: 15, fontWeight: '500', color: '#0f172a', marginLeft: 12 },
   divider: { height: 1, backgroundColor: '#f1f5f9' },
-  versionText: { fontSize: 14, color: '#94a3b8', fontWeight: '500' },
-
-  /* Botones Destructivos (Reutilizables para Cerrar sesión y Borrar cuenta) */
   btnAccionPeligro: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -247,8 +315,6 @@ const styles = StyleSheet.create({
     borderColor: '#fecaca',
   },
   textAccionPeligro: { color: '#ef4444', fontWeight: 'bold', marginLeft: 8, fontSize: 16 },
-
-  /* Footer: Usuario Desde */
   footerContainer: {
     marginTop: 30,
     alignItems: 'center',
