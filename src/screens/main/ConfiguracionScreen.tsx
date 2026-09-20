@@ -3,6 +3,7 @@ import { Alert, View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Pl
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import type { Theme } from '../../../assets/theme/theme';
 
 
 export default function ConfiguracionScreen({ navigation }: any) {
@@ -10,6 +11,7 @@ export default function ConfiguracionScreen({ navigation }: any) {
   const [notificaciones, setNotificaciones] = useState(true);
   const [alertasMantenimiento, setAlertasMantenimiento] = useState(true);
   const { isDarkMode, toggleTheme, theme } = useTheme();
+  const styles = createStyles(theme);
 
   // Estado para guardar la fecha de creación del usuario
   const [usuarioDesde, setUsuarioDesde] = useState('Cargando...');
@@ -141,7 +143,7 @@ export default function ConfiguracionScreen({ navigation }: any) {
       {/* HEADER CON ADAPTACIÓN MULTIPLATAFORMA */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#0f172a" />
+          <Ionicons name="arrow-back" size={28} color={theme.iconPrimary} />
         </TouchableOpacity>
         <Text style={styles.titulo}>Configuración</Text>
         <View style={{ width: 28 }} />
@@ -153,20 +155,20 @@ export default function ConfiguracionScreen({ navigation }: any) {
         <View style={styles.card}>
           <TouchableOpacity style={styles.row}>
             <View style={styles.rowLeft}>
-              <Ionicons name="key-outline" size={22} color="#0f172a" />
+              <Ionicons name="key-outline" size={22} color={theme.iconPrimary} />
               <Text style={styles.rowText}>Cambiar Contraseña</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            <Ionicons name="chevron-forward" size={18} color={theme.iconSecondary} />
           </TouchableOpacity>
 
           <View style={styles.divider} />
 
           <TouchableOpacity style={styles.row}>
             <View style={styles.rowLeft}>
-              <Ionicons name="person-add-outline" size={22} color="#0f172a" />
+              <Ionicons name="person-add-outline" size={22} color={theme.iconPrimary} />
               <Text style={styles.rowText}>Agregar otra cuenta</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            <Ionicons name="chevron-forward" size={18} color={theme.iconSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -175,20 +177,20 @@ export default function ConfiguracionScreen({ navigation }: any) {
         <View style={styles.card}>
           <TouchableOpacity style={styles.row}>
             <View style={styles.rowLeft}>
-              <Ionicons name="pulse-outline" size={22} color="#0f172a" />
+              <Ionicons name="pulse-outline" size={22} color={theme.iconPrimary} />
               <Text style={styles.rowText}>Mi actividad reciente</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            <Ionicons name="chevron-forward" size={18} color={theme.iconSecondary} />
           </TouchableOpacity>
 
           <View style={styles.divider} />
 
           <TouchableOpacity style={styles.row}>
             <View style={styles.rowLeft}>
-              <Ionicons name="hourglass-outline" size={22} color="#0f172a" />
+              <Ionicons name="hourglass-outline" size={22} color={theme.iconPrimary} />
               <Text style={styles.rowText}>Gestionar mi tiempo de uso</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            <Ionicons name="chevron-forward" size={18} color={theme.iconSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -197,13 +199,13 @@ export default function ConfiguracionScreen({ navigation }: any) {
         <View style={styles.card}>
           <View style={styles.row}>
             <View style={styles.rowLeft}>
-              <Ionicons name="notifications-outline" size={22} color="#0f172a" />
+              <Ionicons name="notifications-outline" size={22} color={theme.iconPrimary} />
               <Text style={styles.rowText}>Notificaciones</Text>
             </View>
             <Switch
               value={notificaciones}
               onValueChange={setNotificaciones}
-              trackColor={{ false: '#cbd5e1', true: '#007bff' }}
+              trackColor={{ false: theme.switchTrackFalse, true: theme.primary }}
             />
           </View>
 
@@ -211,13 +213,13 @@ export default function ConfiguracionScreen({ navigation }: any) {
 
           <View style={styles.row}>
             <View style={styles.rowLeft}>
-              <Ionicons name="construct-outline" size={22} color="#0f172a" />
+              <Ionicons name="construct-outline" size={22} color={theme.iconPrimary} />
               <Text style={styles.rowText}>Recordatorios de Mantenimiento</Text>
             </View>
             <Switch
               value={alertasMantenimiento}
               onValueChange={setAlertasMantenimiento}
-              trackColor={{ false: '#cbd5e1', true: '#007bff' }}
+              trackColor={{ false: theme.switchTrackFalse, true: theme.primary }}
             />
           </View>
 
@@ -225,13 +227,13 @@ export default function ConfiguracionScreen({ navigation }: any) {
 
           <View style={styles.row}>
             <View style={styles.rowLeft}>
-              <Ionicons name="moon-outline" size={22} color="#0f172a" />
+              <Ionicons name="moon-outline" size={22} color={theme.iconPrimary} />
               <Text style={styles.rowText}>Modo Oscuro</Text>
             </View>
             <Switch
-              value={modoOscuro}
-              onValueChange={setModoOscuro}
-              trackColor={{ false: '#cbd5e1', true: '#007bff' }}
+              value={isDarkMode}
+              onValueChange={toggleTheme}
+              trackColor={{ false: theme.switchTrackFalse, true: theme.primary }}
             />
           </View>
         </View>
@@ -239,7 +241,7 @@ export default function ConfiguracionScreen({ navigation }: any) {
         {/* ZONA DE PELIGRO / ACCIONES DE CUENTA */}
         <View style={{ marginTop: 10 }}>
           <TouchableOpacity style={styles.btnAccionPeligro} activeOpacity={0.7} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+            <Ionicons name="log-out-outline" size={20} color={theme.dangerText} />
             <Text style={styles.textAccionPeligro}>Cerrar Sesión</Text>
           </TouchableOpacity>
 
@@ -248,7 +250,7 @@ export default function ConfiguracionScreen({ navigation }: any) {
             activeOpacity={0.7}
             onPress={handleBorrarCuenta}
           >
-            <Ionicons name="trash-outline" size={20} color="#ef4444" />
+            <Ionicons name="trash-outline" size={20} color={theme.dangerText} />
             <Text style={styles.textAccionPeligro}>Borrar Cuenta</Text>
           </TouchableOpacity>
         </View>
@@ -262,8 +264,8 @@ export default function ConfiguracionScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+const createStyles = (theme: Theme) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -272,16 +274,16 @@ const styles = StyleSheet.create({
     marginTop: Platform.OS === 'web' ? 20 : 60,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    backgroundColor: '#fff',
+    borderBottomColor: theme.border,
+    backgroundColor: theme.card,
   },
   backButton: { padding: 5 },
-  titulo: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
+  titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   content: { padding: 20, paddingBottom: 40 },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#64748b',
+    color: theme.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 10,
@@ -289,13 +291,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderRadius: 16,
     paddingVertical: 6,
     paddingHorizontal: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
   },
   row: {
     flexDirection: 'row',
@@ -304,19 +306,19 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   rowLeft: { flexDirection: 'row', alignItems: 'center' },
-  rowText: { fontSize: 15, fontWeight: '500', color: '#0f172a', marginLeft: 12 },
-  divider: { height: 1, backgroundColor: '#f1f5f9' },
+  rowText: { fontSize: 15, fontWeight: '500', color: theme.textPrimary, marginLeft: 12 },
+  divider: { height: 1, backgroundColor: theme.divider },
   btnAccionPeligro: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fef2f2',
+    backgroundColor: theme.dangerBg,
     paddingVertical: 15,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: theme.dangerBorder,
   },
-  textAccionPeligro: { color: '#ef4444', fontWeight: 'bold', marginLeft: 8, fontSize: 16 },
+  textAccionPeligro: { color: theme.dangerText, fontWeight: 'bold', marginLeft: 8, fontSize: 16 },
   footerContainer: {
     marginTop: 30,
     alignItems: 'center',
@@ -324,7 +326,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: theme.textSecondary,
     fontWeight: '500',
   }
 });

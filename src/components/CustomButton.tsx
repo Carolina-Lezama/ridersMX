@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../../assets/theme/ThemeContext';
 
 interface Props {
   title: string;
@@ -8,6 +9,9 @@ interface Props {
 }
 
 export default function CustomButton({ title, onPress, tipo = 'primario' }: Props) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   return (
     <TouchableOpacity 
       style={[styles.boton, tipo === 'secundario' && styles.botonSecundario]} 
@@ -20,9 +24,9 @@ export default function CustomButton({ title, onPress, tipo = 'primario' }: Prop
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   boton: {
-    backgroundColor: '#007bff',
+    backgroundColor: theme.primary,
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
@@ -32,7 +36,7 @@ const styles = StyleSheet.create({
   botonSecundario: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#007bff',
+    borderColor: theme.primary,
   },
   texto: {
     color: '#fff',
@@ -40,6 +44,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   textoSecundario: {
-    color: '#007bff',
+    color: theme.primary,
   }
 });

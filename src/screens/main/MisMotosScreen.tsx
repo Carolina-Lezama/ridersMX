@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
+import { useTheme } from '../../../assets/theme/ThemeContext';
 
 export default function MisMotosScreen({ navigation }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   const [motos, setMotos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,7 +50,7 @@ export default function MisMotosScreen({ navigation }: any) {
       onPress={() => navigation.navigate('MotoForm', { motoId: item.id })}
     >
       <View style={styles.motoIconContainer}>
-        <Ionicons name="bicycle" size={32} color="#007bff" />
+        <Ionicons name="bicycle" size={32} color={theme.primary} />
       </View>
       <View style={styles.motoInfo}>
         <Text style={styles.motoTitulo}>
@@ -56,7 +60,7 @@ export default function MisMotosScreen({ navigation }: any) {
           {item.anio} • Placas: {item.placas || 'N/A'}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={24} color="#cbd5e1" />
+      <Ionicons name="chevron-forward" size={24} color={theme.iconSecondary} />
     </TouchableOpacity>
   );
 
@@ -65,7 +69,7 @@ export default function MisMotosScreen({ navigation }: any) {
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#0f172a" />
+          <Ionicons name="arrow-back" size={28} color={theme.iconPrimary} />
         </TouchableOpacity>
         <Text style={styles.titulo}>Mi Garaje</Text>
         <View style={{ width: 28 }} />
@@ -74,13 +78,13 @@ export default function MisMotosScreen({ navigation }: any) {
       {/* CONTENIDO */}
       {loading ? (
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color="#007bff" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.loadingText}>Abriendo garaje...</Text>
         </View>
       ) : motos.length === 0 ? (
         // ESTADO VACÍO: Cuando no hay motos
         <View style={styles.centerContent}>
-          <Ionicons name="build-outline" size={80} color="#cbd5e1" />
+          <Ionicons name="build-outline" size={80} color={theme.iconSecondary} />
           <Text style={styles.emptyTitle}>Tu garaje está vacío</Text>
           <Text style={styles.emptyText}>Agrega tu primera motocicleta para empezar a llevar su registro y mantenimiento.</Text>
         </View>
@@ -102,45 +106,45 @@ export default function MisMotosScreen({ navigation }: any) {
         // MAGIA 1: Navegamos sin parámetros para crear una moto nueva
         onPress={() => navigation.navigate('MotoForm')}
       >
-        <Ionicons name="add" size={30} color="#fff" />
+        <Ionicons name="add" size={30} color={theme.card} />
       </TouchableOpacity>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, marginTop: 60, paddingBottom: 20,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0'
+    backgroundColor: theme.card, borderBottomWidth: 1, borderBottomColor: theme.border
   },
   backButton: { padding: 5 },
-  titulo: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
+  titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   
   centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 },
-  loadingText: { marginTop: 15, color: '#64748b', fontSize: 16 },
-  emptyTitle: { fontSize: 22, fontWeight: 'bold', color: '#0f172a', marginTop: 20, marginBottom: 10 },
-  emptyText: { fontSize: 16, color: '#64748b', textAlign: 'center', lineHeight: 24 },
+  loadingText: { marginTop: 15, color: theme.textSecondary, fontSize: 16 },
+  emptyTitle: { fontSize: 22, fontWeight: 'bold', color: theme.textPrimary, marginTop: 20, marginBottom: 10 },
+  emptyText: { fontSize: 16, color: theme.textSecondary, textAlign: 'center', lineHeight: 24 },
   
   listContainer: { padding: 20, paddingBottom: 100 }, // Padding bottom extra para que no estorbe el FAB
   motoCard: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card,
     padding: 15, borderRadius: 16, marginBottom: 15,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3
   },
   motoIconContainer: {
-    backgroundColor: '#eff6ff', width: 60, height: 60, borderRadius: 15,
+    backgroundColor: theme.background, width: 60, height: 60, borderRadius: 15,
     justifyContent: 'center', alignItems: 'center', marginRight: 15
   },
   motoInfo: { flex: 1 },
-  motoTitulo: { fontSize: 18, fontWeight: 'bold', color: '#1e293b', marginBottom: 4 },
-  motoSubtitulo: { fontSize: 14, color: '#64748b' },
+  motoTitulo: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 4 },
+  motoSubtitulo: { fontSize: 14, color: theme.textSecondary },
 
   // Estilo del botón flotante (FAB)
   fab: {
     position: 'absolute', bottom: 30, right: 20,
-    backgroundColor: '#007bff', width: 60, height: 60, borderRadius: 30,
+    backgroundColor: theme.primary, width: 60, height: 60, borderRadius: 30,
     justifyContent: 'center', alignItems: 'center',
     shadowColor: '#007bff', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6
   }

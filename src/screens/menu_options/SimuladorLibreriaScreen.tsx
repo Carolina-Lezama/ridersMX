@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../../assets/theme/ThemeContext';
 
 export default function SimuladorLibreriaScreen({ navigation }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   const [activeTab, setActiveTab] = useState<'stickers' | 'paletas'>('stickers');
 
   const dummyStickers = [
@@ -99,26 +103,26 @@ export default function SimuladorLibreriaScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 60, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#e2e8f0', backgroundColor: '#fff' },
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 60, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.card },
   backButton: { padding: 5 },
-  titulo: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
-  searchContainer: { backgroundColor: '#fff', paddingHorizontal: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
+  titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
+  searchContainer: { backgroundColor: theme.card, paddingHorizontal: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: theme.border },
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: 10, paddingHorizontal: 15, height: 45 },
-  searchInput: { flex: 1, marginLeft: 10, color: '#0f172a', fontSize: 16 },
-  tabContainer: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
+  searchInput: { flex: 1, marginLeft: 10, color: theme.textPrimary, fontSize: 16 },
+  tabContainer: { flexDirection: 'row', backgroundColor: theme.card, borderBottomWidth: 1, borderBottomColor: theme.border },
   tab: { flex: 1, paddingVertical: 15, alignItems: 'center' },
   activeTab: { borderBottomWidth: 3, borderBottomColor: '#3b82f6' },
   tabText: { color: '#64748b', fontSize: 16, fontWeight: '600' },
   activeTabText: { color: '#3b82f6' },
   listContainer: { flex: 1, padding: 20 },
-  listItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 15, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0' },
+  listItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, padding: 15, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: theme.border },
   stickerPreview: { width: 50, height: 50, backgroundColor: '#f1f5f9', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   palettePreview: { flexDirection: 'row', width: 50, height: 50, borderRadius: 8, overflow: 'hidden', marginRight: 15, borderWidth: 1, borderColor: '#e2e8f0' },
   colorBlock: { flex: 1, height: '100%' },
   listTextInfo: { flex: 1 },
-  itemName: { color: '#0f172a', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+  itemName: { color: theme.textPrimary, fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
   itemSubText: { color: '#64748b', fontSize: 12 },
   fab: { position: 'absolute', bottom: 30, right: 30, width: 60, height: 60, borderRadius: 30, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3 }
 });
