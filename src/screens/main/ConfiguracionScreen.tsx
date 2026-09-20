@@ -5,7 +5,6 @@ import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import type { Theme } from '../../../assets/theme/theme';
 
-
 export default function ConfiguracionScreen({ navigation }: any) {
   // Estados para probar la interacción de los switches
   const [notificaciones, setNotificaciones] = useState(true);
@@ -185,7 +184,11 @@ export default function ConfiguracionScreen({ navigation }: any) {
 
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.row}>
+          {/* NUEVO: Gestionar mi tiempo de uso */}
+          <TouchableOpacity 
+            style={styles.row}
+            onPress={() => navigation.navigate('TiempoUso')} // <-- AGREGA ESTO
+          >
             <View style={styles.rowLeft}>
               <Ionicons name="hourglass-outline" size={22} color={theme.iconPrimary} />
               <Text style={styles.rowText}>Gestionar mi tiempo de uso</Text>

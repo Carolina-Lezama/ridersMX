@@ -22,6 +22,9 @@ import EventoFormScreen from './src/screens/main/EventoFormScreen';
 import OnboardingScreen from './src/screens/main/OnboardingScreen';
 import AyudaScreen from './src/screens/main/AyudaScreen';
 import ConfiguracionScreen from './src/screens/main/ConfiguracionScreen';
+import { useAppTimeTracker } from './src/utils/hooks/useAppTimeTracker';
+import TiempoUsoScreen from './src/screens/main/config/TiempoUsoScreen';
+
 
 import DiagnosticoScreen from './src/screens/menu_options/DiagnosticoScreen';
 import MantenimientoScreen from './src/screens/menu_options/MantenimientoScreen';
@@ -93,6 +96,7 @@ return (
       <Stack.Screen name="Resenas" component={ResenasScreen} />
       <Stack.Screen name="Ayuda" component={AyudaScreen} />
       <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
+      <Stack.Screen name="TiempoUso" component={TiempoUsoScreen} />
 
       <Stack.Screen name="SimuladorEditor" component={SimuladorEditorScreen} />
       <Stack.Screen name="SimuladorLibreria" component={SimuladorLibreriaScreen} />
@@ -105,6 +109,8 @@ return (
 }
 
 export default function App() {
+useAppTimeTracker();
+
 // Estado para saber si es la primera vez que inicia la app
 const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
 
