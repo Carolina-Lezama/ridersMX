@@ -3,8 +3,12 @@ import { View, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import { supabase } from '../../services/supabase';
+import { useTheme } from '../../../assets/theme/ThemeContext';
 
 export default function LoginScreen({ navigation }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -55,7 +59,7 @@ export default function LoginScreen({ navigation }: any) {
       />
 
       {loading ? (
-        <ActivityIndicator size="large" color="#007bff" style={{ marginVertical: 20 }} />
+        <ActivityIndicator size="large" color={theme.primary} style={{ marginVertical: 20 }} />
       ) : (
         <>
           <CustomButton title="Iniciar Sesión" onPress={handleLogin} />
@@ -66,7 +70,7 @@ export default function LoginScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: '#fff' },
-  titulo: { fontSize: 28, fontWeight: 'bold', marginBottom: 30, textAlign: 'center' }
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
+  container: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: theme.background },
+  titulo: { fontSize: 28, fontWeight: 'bold', marginBottom: 30, textAlign: 'center', color: theme.textPrimary }
 });

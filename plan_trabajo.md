@@ -1,5 +1,30 @@
-arreglar el boton cerrar sesion y eliminar cuenta
-revisar el ultimo codigo de gemini
+
+
+
+
+
+Paso 2.3: Construir el Panel (Dashboard) del Tiempo
+
+Qué haremos: Mostrar un número grande con los minutos/horas de "Hoy", comparar con el promedio semanal, y dibujar la gráfica.
+
+FASE 3: Sistema de Límites y Recordatorios (La Restricción)
+Como somos una app y no el sistema operativo, limitaremos el uso bloqueando la navegación de nuestra propia app.
+
+Paso 3.1: Controles para Definir Límites y Alertas (UI)
+
+Qué haremos: Añadir dos Slider o campos de texto numéricos en la parte inferior de TiempoUsoScreen. Uno para "Notificarme al llegar a X minutos" y otro para "Bloquear app al llegar a X minutos".
+
+Paso 3.2: Lógica de Recordatorio (Toasts/Notificaciones In-App)
+
+Qué haremos: Cuando el cronómetro del Paso 1.2 alcance la meta de recordatorio, mostraremos un banner o modal atractivo en la parte superior que diga "Llevas X tiempo en la app, toma un descanso".
+
+Justificación: Usaremos alertas In-App personalizadas porque las notificaciones Push nativas funcionan muy diferente en Web y en Móvil, complicando el desarrollo. Un buen modal In-App funciona perfecto en ambos.
+
+Paso 3.3: Pantalla de Bloqueo (LimiteAlcanzadoScreen.tsx)
+
+Qué haremos: Si el usuario llega a su límite diario, el router lo redirigirá forzosamente a esta pantalla. Será una pantalla bonita que diga "¡Límite Diario Alcanzado! Tiempo de rodar 🏍️".
+
+Justificación: Al usar la navegación para redirigirlo y bloquear el botón de "Atrás", bloqueamos efectivamente el uso de la app. Por UX, podemos incluir un botón con contraseña o un simple "Ignorar límite por hoy" por si hay una emergencia (gestionar un diagnóstico urgente, por ejemplo).
 
 
 
@@ -9,11 +34,26 @@ revisar el ultimo codigo de gemini
 
 
 
-  
 
-Nuevos Módulos que puedes construir (Frontend puro)
 
-Pantalla de Ajustes (Settings): Un menú donde el usuario pueda configurar sus preferencias visuales (preparar la estructura para un Modo Oscuro/Claro), preferencias de notificaciones, y políticas de privacidad.
+
+
+
+
+
+
+
+
+
+
+
+hacer los apartados de configuracion:
+Notificaciones Push
+Recordatorios de Mantenimiento
+
+cambiar contraseña
+agregar otra cuenta
+mi actividad reciente
 
 
 
