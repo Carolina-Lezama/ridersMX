@@ -20,11 +20,13 @@ import OnboardingScreen from './src/screens/main/OnboardingScreen';
 import AyudaScreen from './src/screens/main/AyudaScreen';
 import ConfiguracionScreen from './src/screens/main/ConfiguracionScreen';
 
-
-import DiagnosticoScreen from './src/screens/menu_options/DiagnosticoScreen';
 import MantenimientoScreen from './src/screens/menu_options/MantenimientoScreen';
 import ForoScreen from './src/screens/menu_options/ForoScreen';
 import ResenasScreen from './src/screens/menu_options/ResenasScreen';
+import AyudaScreen from './src/screens/menu_options/AyudaScreen';
+import ConfiguracionScreen from './src/screens/menu_options/ConfiguracionScreen';
+import DiagnosticoNavigator from './src/navigation/DiagnosticoNavigator';
+import DiagnosticoScreen from './src/screens/menu_options/DiagnosticoScreen';
 import ForoCrearPublicacion from './src/screens/menu_options/foro_crear_publicacion';
 import SimuladorEditorScreen from './src/screens/menu_options/SimuladorEditorScreen';
 import SimuladorLibreriaScreen from './src/screens/menu_options/SimuladorLibreriaScreen';
@@ -89,6 +91,7 @@ initialRouteName={isFirstLaunch ? 'Onboarding' : 'Login'} >
         <Stack.Screen name="MainApp" component={MainTabs} />
 
         <Stack.Screen name="Mantenimiento" component={MantenimientoScreen} />
+        <Stack.Screen name="Diagnostico" component={DiagnosticoNavigator} />
         <Stack.Screen name="MisMotos" component={MisMotosScreen} />
         <Stack.Screen name="MotoForm" component={MotoFormScreen} />
         <Stack.Screen name="Diagnostico" component={DiagnosticoScreen} />
