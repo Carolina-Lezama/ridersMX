@@ -15,6 +15,8 @@ import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { DrawerContentScrollView, DrawerItem, type DrawerContentComponentProps } from '@react-navigation/drawer';
 import Entypo from '@expo/vector-icons/Entypo';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import geminiapi from '../../services/apiurl';
+
 
 interface Message {
   id: string;
@@ -30,7 +32,7 @@ export default function DiagnosticoScreen() {
   ]);
   const [inputText, setInputText] = useState('');
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (inputText.trim() === '') return;
 
     const newUserMessage: Message = {
@@ -38,11 +40,21 @@ export default function DiagnosticoScreen() {
       text: inputText,
       sender: 'user',
     };
-
-    setMessages([...messages, newUserMessage]);
+    setMessages((prev)=>[...prev, newUserMessage]);
     setInputText('');
-  };
 
+    try{
+      const respuestaIA = await geminiapi.enviarMensaje(inputText);
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: respuestaIA,
+        sender: 'ai',
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      console.error(error);
+    }
+  };
   const openSidebar = () => {
     navigation.dispatch(DrawerActions.openDrawer());
   };
