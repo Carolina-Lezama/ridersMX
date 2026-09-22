@@ -1,156 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { ThemeProvider, useTheme } from './assets/theme/ThemeContext';
-
-// Importar todas tus pantallas
-import LoginScreen from './src/screens/auth/LoginScreen';
-import RegisterScreen from './src/screens/auth/RegisterScreen';
-import InicioScreen from './src/screens/main/InicioScreen';
-import MenuScreen from './src/screens/main/MenuScreen';
-import PerfilScreen from './src/screens/main/PerfilScreen';
-import MisMotosScreen from './src/screens/main/MisMotosScreen';
-import MotoFormScreen from './src/screens/main/MotoFormScreen';
-import CalendarioScreen from './src/screens/main/CalendarioScreen';
-import EventoFormScreen from './src/screens/main/EventoFormScreen';
-import OnboardingScreen from './src/screens/main/OnboardingScreen';
-import AyudaScreen from './src/screens/main/AyudaScreen';
-import ConfiguracionScreen from './src/screens/main/ConfiguracionScreen';
+import { ThemeProvider } from './assets/theme/ThemeContext';
 import { useAppTimeTracker } from './src/utils/hooks/useAppTimeTracker';
-import TiempoUsoScreen from './src/screens/main/config/TiempoUsoScreen';
-
-
-import DiagnosticoScreen from './src/screens/menu_options/DiagnosticoScreen';
-import MantenimientoScreen from './src/screens/menu_options/MantenimientoScreen';
-import ForoScreen from './src/screens/menu_options/ForoScreen';
-import ResenasScreen from './src/screens/menu_options/ResenasScreen';
-import ForoCrearPublicacion from './src/screens/menu_options/foro_crear_publicacion';
-import SimuladorEditorScreen from './src/screens/menu_options/SimuladorEditorScreen';
-import SimuladorLibreriaScreen from './src/screens/menu_options/SimuladorLibreriaScreen';
-
-
-const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
-
-function MainTabs() {
-const { theme } = useTheme();
-
-return (
-<Tab.Navigator screenOptions={{
-  headerShown: false,
-  tabBarActiveTintColor: theme.primary,
-  tabBarInactiveTintColor: theme.textSecondary,
-  tabBarStyle: { backgroundColor: theme.card, borderTopColor: theme.border },
-}}>
-<Tab.Screen name="Inicio" component={InicioScreen}
-options={{ tabBarIcon: ({color}) => <Ionicons name="home" size={24} color={color} /> }} />
-<Tab.Screen name="Menu" component={MenuScreen}
-options={{ tabBarIcon: ({color}) => <Ionicons name="menu" size={24} color={color} /> }} />
-<Tab.Screen name="Perfil" component={PerfilScreen}
-options={{ tabBarIcon: ({color}) => <Ionicons name="person" size={24} color={color} /> }} />
-</Tab.Navigator>
-);
-}
-
-function AppNavigation({ isFirstLaunch }: { isFirstLaunch: boolean }) {
-const { isDarkMode, theme } = useTheme();
-const navigationTheme = {
-  ...DefaultTheme,
-  dark: isDarkMode,
-  colors: {
-    primary: theme.primary,
-    background: theme.background,
-    card: theme.card,
-    text: theme.textPrimary,
-    border: theme.border,
-    notification: theme.primary,
-  },
-};
-
-return (
-<>
-  <StatusBar style={isDarkMode ? 'light' : 'dark'} />
-  <NavigationContainer theme={navigationTheme}>
-    <Stack.Navigator
-      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}
-      initialRouteName={isFirstLaunch ? 'Onboarding' : 'Login'} >
-
-      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
-      <Stack.Screen name="MainApp" component={MainTabs} />
-
-      <Stack.Screen name="Mantenimiento" component={MantenimientoScreen} />
-      <Stack.Screen name="MisMotos" component={MisMotosScreen} />
-      <Stack.Screen name="MotoForm" component={MotoFormScreen} />
-      <Stack.Screen name="Diagnostico" component={DiagnosticoScreen} />
-      <Stack.Screen name="Foro" component={ForoScreen} />
-      <Stack.Screen name="ForoCrearPublicacion" component={ForoCrearPublicacion}/>
-      <Stack.Screen name="Resenas" component={ResenasScreen} />
-      <Stack.Screen name="Ayuda" component={AyudaScreen} />
-      <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
-      <Stack.Screen name="TiempoUso" component={TiempoUsoScreen} />
-
-      <Stack.Screen name="SimuladorEditor" component={SimuladorEditorScreen} />
-      <Stack.Screen name="SimuladorLibreria" component={SimuladorLibreriaScreen} />
-      <Stack.Screen name="Calendario" component={CalendarioScreen} />
-      <Stack.Screen name="EventoForm" component={EventoFormScreen} />
-    </Stack.Navigator>
-  </NavigationContainer>
-</>
-);
-}
+import RootNavigator from './src/navigation/RootNavigator';
 
 export default function App() {
-useAppTimeTracker();
+  useAppTimeTracker();
+  const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
 
-// Estado para saber si es la primera vez que inicia la app
-const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
+  useEffect(() => {
+    const checkFirstLaunch = async () => {
+      try {
+        const value = await AsyncStorage.getItem('@ya_vio_onboarding');
+        setIsFirstLaunch(value === null);
+      } catch (error) {
+        setIsFirstLaunch(false);
+      }
+    };
+    checkFirstLaunch();
+  }, []);
 
-useEffect(() => {
-// Función que revisa la memoria del teléfono al abrir la app
-const checkFirstLaunch = async () => {
-try {
-const value = await AsyncStorage.getItem('@ya_vio_onboarding');
-if (value === null) {
-setIsFirstLaunch(true); // Es la primera vez
-} else {
-setIsFirstLaunch(false); // Ya lo vio antes
+  if (isFirstLaunch === null) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#007bff" />
+      </View>
+    );
+  }
+
+  return (
+    <ThemeProvider>
+      <RootNavigator isFirstLaunch={isFirstLaunch} />
+    </ThemeProvider>
+  );
 }
-} catch (error) {
-setIsFirstLaunch(false); // En caso de error, lo mandamos al Login por seguridad
-}
-};
-checkFirstLaunch();
-}, []);
-
-// Mientras revisa la memoria, mostramos un pequeño loader para que no parpadee la pantalla
-if (isFirstLaunch === null) {
-return (
-<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-<ActivityIndicator size="large" color="#007bff" />
-</View>
-);
-}
-
-return (
-<ThemeProvider>
-  <AppNavigation isFirstLaunch={isFirstLaunch} />
-</ThemeProvider>
-
-);
-}
-
-
-
-
-
-
-

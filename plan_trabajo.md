@@ -3,6 +3,22 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Paso 2.3: Construir el Panel (Dashboard) del Tiempo
 
 Qué haremos: Mostrar un número grande con los minutos/horas de "Hoy", comparar con el promedio semanal, y dibujar la gráfica.
