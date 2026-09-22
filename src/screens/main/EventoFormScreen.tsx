@@ -5,8 +5,12 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import { supabase } from '../../services/supabase';
+import { useTheme } from '../../../assets/theme/ThemeContext';
 
 export default function EventoFormScreen({ navigation, route }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   // 1. Detectamos si venimos a Crear o a Editar
   const eventoId = route.params?.eventoId || null;
   const fechaBase = route.params?.fechaBase || new Date().toISOString().split('T')[0];
@@ -337,8 +341,8 @@ export default function EventoFormScreen({ navigation, route }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
   header: { 
     flexDirection: 'row', 
     alignItems: 'center', 
@@ -346,23 +350,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, 
     marginTop: Platform.OS === 'web' ? 20 : 60, 
     paddingBottom: 20, 
-    backgroundColor: '#fff', 
+    backgroundColor: theme.card, 
     borderBottomWidth: 1, 
-    borderBottomColor: '#e2e8f0' 
+    borderBottomColor: theme.border 
   },
 
-  titulo: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
+  titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   content: { padding: 20, paddingBottom: 40 },
   seccion: { marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: '600', color: '#1e293b', marginBottom: 10 },
+  label: { fontSize: 14, fontWeight: '600', color: theme.textPrimary, marginBottom: 10 },
   
   // Botones Interactivos para Fecha/Hora
   pickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: theme.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -370,34 +374,34 @@ const styles = StyleSheet.create({
   pickerButtonText: {
     flex: 1,
     fontSize: 15,
-    color: '#0f172a',
+    color: theme.textPrimary,
     marginLeft: 10,
     fontWeight: '500',
   },
   webInput: {
     width: '100%',
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: theme.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
-    color: '#0f172a',
+    color: theme.textPrimary,
   },
 
   chipsContainer: { flexDirection: 'row', flexWrap: 'wrap' },
-  chip: { flexDirection: 'row', backgroundColor: '#f1f5f9', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, marginRight: 10, marginBottom: 10, borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center' },
-  chipActiveAzul: { backgroundColor: '#007bff', borderColor: '#007bff' },
+  chip: { flexDirection: 'row', backgroundColor: theme.background, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, marginRight: 10, marginBottom: 10, borderWidth: 1, borderColor: theme.border, alignItems: 'center' },
+  chipActiveAzul: { backgroundColor: theme.primary, borderColor: theme.primary },
   chipActiveRojo: { backgroundColor: '#ef4444', borderColor: '#ef4444' },
-  chipText: { color: '#64748b', fontWeight: '500', fontSize: 14 },
+  chipText: { color: theme.textSecondary, fontWeight: '500', fontSize: 14 },
   chipTextActive: { color: '#fff', fontWeight: 'bold' },
 
-  estadoChip: { backgroundColor: '#f8fafc', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginRight: 8, marginBottom: 8, borderWidth: 1, borderColor: '#cbd5e1' },
-  estadoChipActive: { backgroundColor: '#0f172a', borderColor: '#0f172a' },
-  estadoText: { color: '#64748b', fontWeight: '600', fontSize: 13 },
+  estadoChip: { backgroundColor: theme.background, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginRight: 8, marginBottom: 8, borderWidth: 1, borderColor: theme.border },
+  estadoChipActive: { backgroundColor: theme.textPrimary, borderColor: theme.textPrimary },
+  estadoText: { color: theme.textSecondary, fontWeight: '600', fontSize: 13 },
   estadoTextActive: { color: '#fff', fontWeight: 'bold' },
 
-  btnEliminar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fef2f2', paddingVertical: 15, borderRadius: 12, marginTop: 20, borderWidth: 1, borderColor: '#fecaca' },
-  textEliminar: { color: '#ef4444', fontWeight: 'bold', marginLeft: 8, fontSize: 16 }
+  btnEliminar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: theme.dangerBg, paddingVertical: 15, borderRadius: 12, marginTop: 20, borderWidth: 1, borderColor: theme.dangerBorder },
+  textEliminar: { color: theme.dangerText, fontWeight: 'bold', marginLeft: 8, fontSize: 16 }
 });

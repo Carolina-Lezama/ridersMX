@@ -9,8 +9,12 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../../assets/theme/ThemeContext';
 
 export default function ForoCrearPublicacion({ navigation }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   const [titulo, setTitulo] = useState('');
   const [marca, setMarca] = useState('Italika');
   const [modeloMoto, setModeloMoto] = useState('');
@@ -206,10 +210,10 @@ export default function ForoCrearPublicacion({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.background,
     paddingHorizontal: 20,
   },
 
@@ -224,20 +228,20 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: theme.textPrimary,
   },
 
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0f172a',
+    color: theme.textPrimary,
     marginBottom: 6,
   },
 
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderWidth: 1.5,
-    borderColor: '#cbd5e1',
+    borderColor: theme.border,
     borderRadius: 12,
     paddingHorizontal: 15,
     paddingVertical: 15,
@@ -246,16 +250,16 @@ const styles = StyleSheet.create({
   },
 
   pickerContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderWidth: 1.5,
-    borderColor: '#cbd5e1',
+    borderColor: theme.border,
     borderRadius: 12,
     marginBottom: 15,
     overflow: 'hidden',
   },
 
   descripcion: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderWidth: 1.5,
     borderColor: '#cbd5e1',
     borderRadius: 12,
@@ -276,17 +280,17 @@ const styles = StyleSheet.create({
   smallButton: {
     width: '48%',
     borderWidth: 1.5,
-    borderColor: '#0f172a',
+    borderColor: theme.border,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
   },
 
   smallButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0f172a',
+    color: theme.textPrimary,
   },
 
   publicarButton: {
