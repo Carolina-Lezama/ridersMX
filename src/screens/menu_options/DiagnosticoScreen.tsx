@@ -12,7 +12,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
-import { DrawerContentScrollView, DrawerItem, type DrawerContentComponentProps } from '@react-navigation/drawer';
 import Entypo from '@expo/vector-icons/Entypo';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import geminiapi from '../../services/apiurl';
@@ -124,47 +123,6 @@ export default function DiagnosticoScreen() {
     </View>
   );
 }
-{/*---------------------Aqui empieza el código del Sidebar---------------------*/}
-export function CustomDrawerContent(props: DrawerContentComponentProps) {
-  return (
-    // Menu de Opciones
-    <View style={styles.container}>
-      <DrawerContentScrollView {...props}>
-        <View style={styles.header}>
-          <Text style={styles.logo}>Menú de Opciones</Text>
-          <TouchableOpacity onPress={() => props.navigation.closeDrawer()}>
-            <MaterialCommunityIcons name="menu-close" size={24} color="#0f172a" />
-          </TouchableOpacity>
-        </View>
-        <View style={{ height: 10 }} />
-        <DrawerItem
-          label="Nuevo chat"
-          icon={() => <Entypo name="new-message" size={24} color="black" />}
-          labelStyle={[styles.label, {marginLeft: 10}]}
-          onPress={() => props.navigation.closeDrawer()}
-        /><View style={{ height: 10 }} />
-        <DrawerItem
-        label="Buscar chats"
-        icon={() => <FontAwesome name="search" size={24} color="black"/>}
-        labelStyle={[styles.label, {marginLeft: 10}]}
-        onPress={() => props.navigation.closeDrawer()} />
-      </DrawerContentScrollView>
-
-      <View style={styles.footer}>
-        <View style={styles.profileBox}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>F</Text>
-          </View>
-          <View>
-            <Text style={styles.userName}>Fernando Cano</Text>
-            <Text style={styles.userPlan}>Estudiante Ingeniería</Text>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
   header: {
