@@ -17,5 +17,4 @@ const geminiapi = {
     }
   },
 };
-
 export default geminiapi;

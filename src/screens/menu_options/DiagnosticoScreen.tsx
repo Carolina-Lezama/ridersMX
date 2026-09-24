@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+
 import Entypo from '@expo/vector-icons/Entypo';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import geminiapi from '../../services/apiurl';
@@ -23,8 +23,7 @@ interface Message {
   sender: 'user' | 'ai';
 }
 
-export default function DiagnosticoScreen() {
-  const navigation = useNavigation<any>();
+export default function DiagnosticoScreen({ navigation }: any) {
 
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', text: 'Hola! ¿En qué puedo ayudarte hoy?', sender: 'ai' },
@@ -54,9 +53,6 @@ export default function DiagnosticoScreen() {
       console.error(error);
     }
   };
-  const openSidebar = () => {
-    navigation.dispatch(DrawerActions.openDrawer());
-  };
 
   return (
     <View style={styles.container}>
@@ -66,10 +62,6 @@ export default function DiagnosticoScreen() {
         </TouchableOpacity>
 
         <Text style={styles.titulo}>Diagnóstico</Text>
-        {/*----------------Boton de SideBar-----------------*/}
-        <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())} style={styles.backButton}>
-          <FontAwesome name="bars" size={24} color="black" />
-        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
@@ -162,16 +154,4 @@ const styles = StyleSheet.create({
   toolButton: { padding: 8, borderRadius: 10, backgroundColor: '#f1f5f9' },
   sendButton: { backgroundColor: '#0f172a', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, marginLeft: 8 },
   sendButtonText: { color: '#fff', fontWeight: 'bold' },
-  logo: { color: '#0f172a', fontSize: 22, fontWeight: 'bold' },
-  label: { color: '#0f172a', fontWeight: '600', marginLeft: -20 },
-  divider: { height: 1, backgroundColor: '#e2e8f0', marginVertical: 10, marginHorizontal: 20 },
-  historySection: { marginTop: 10, paddingHorizontal: 10 },
-  sectionTitle: { color: '#94a3b8', fontSize: 12, marginBottom: 10, marginLeft: 20, textTransform: 'uppercase' },
-  historyLabel: { color: '#475569', marginLeft: -20 },
-  footer: { padding: 20, borderTopWidth: 1, borderTopColor: '#e2e8f0' },
-  profileBox: { flexDirection: 'row', alignItems: 'center' },
-  avatar: { backgroundColor: '#2563eb', width: 45, height: 45, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  avatarText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
-  userName: { color: '#0f172a', fontWeight: 'bold' },
-  userPlan: { color: '#64748b', fontSize: 12 },
 });

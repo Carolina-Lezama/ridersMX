@@ -27,7 +27,6 @@ def add_cors_headers(response):
 def chat():
     data = request.json
     mensaje = data.get('mensaje', '')
-
     try:
         response = client.models.generate_content(
             model="gemini-3.5-flash-lite",
@@ -35,7 +34,6 @@ def chat():
         )
         return jsonify({"respuesta": response.text})
     except Exception as e:
-        # En vez de dejar que la app explote, le mandamos este mensaje al usuario:
         mensaje_error = "Lo siento, mis servidores están un poco saturados en este momento. ¡Intenta en unos minutos!"
         return jsonify({"respuesta": mensaje_error}), 500
 
