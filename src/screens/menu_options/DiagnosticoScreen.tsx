@@ -10,10 +10,6 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-
-import Entypo from '@expo/vector-icons/Entypo';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import geminiapi from '../../services/apiurl';
 
 
@@ -56,6 +52,8 @@ export default function DiagnosticoScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
+      
+      {/* HEADER CON BOTÓN DE REGRESO */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#0f172a" />
@@ -119,10 +117,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    marginTop: 60,
+    marginTop: 60, // Margen para la barra de estado del celular
     paddingBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',

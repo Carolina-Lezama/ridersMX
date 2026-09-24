@@ -3,8 +3,12 @@ import { View, Text, StyleSheet, FlatList, useWindowDimensions, Animated, Toucha
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ONBOARDING_DATA } from '../../constants/onboardingData';
 import Paginator from '../../components/Paginator'; 
+import { useTheme } from '../../../assets/theme/ThemeContext';
 
 export default function OnboardingScreen({ navigation }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   const { width } = useWindowDimensions();
   const scrollX = useRef(new Animated.Value(0)).current;
   const slidesRef = useRef<FlatList>(null);
@@ -135,10 +139,10 @@ export default function OnboardingScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.background,
   },
   slideContainer: {
     flex: 1,
@@ -161,13 +165,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 28,
     marginBottom: 10,
-    color: '#0f172a',
+    color: theme.textPrimary,
     textAlign: 'center',
   },
   description: {
     fontWeight: '400',
     fontSize: 16,
-    color: '#64748b',
+    color: theme.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -191,11 +195,11 @@ const styles = StyleSheet.create({
   },
   skipText: {
     fontSize: 16,
-    color: '#64748b',
+    color: theme.textSecondary,
     fontWeight: '600',
   },
   nextButton: {
-    backgroundColor: '#007bff',
+    backgroundColor: theme.primary,
     paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 30,
@@ -207,7 +211,7 @@ const styles = StyleSheet.create({
   },
   nextButtonText: {
     fontSize: 16,
-    color: '#fff',
+    color: theme.card,
     fontWeight: 'bold',
   },
 });

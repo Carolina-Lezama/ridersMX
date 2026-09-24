@@ -7,8 +7,12 @@ import {
   FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../../assets/theme/ThemeContext';
 
 export default function ForoScreen({ navigation }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   const publicaciones = [
     {
       id: '1',
@@ -98,10 +102,10 @@ export default function ForoScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.background,
   },
 
   header: {
@@ -111,22 +115,22 @@ const styles = StyleSheet.create({
     marginTop: 55,
     paddingHorizontal: 20,
     paddingBottom: 15,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: theme.border,
   },
 
   titulo: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: theme.textPrimary,
   },
 
   crearBtn: {
     margin: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderWidth: 2,
-    borderColor: '#0f172a',
+    borderColor: theme.border,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
@@ -135,7 +139,7 @@ const styles = StyleSheet.create({
   crearBtnText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: theme.textPrimary,
   },
 
   sectionTitle: {
@@ -143,17 +147,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginHorizontal: 16,
     marginBottom: 10,
-    color: '#0f172a',
+    color: theme.textPrimary,
   },
 
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 15,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
   },
 
   userContainer: {
@@ -181,7 +185,7 @@ const styles = StyleSheet.create({
   nombre: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: theme.textPrimary,
   },
 
   fecha: {
@@ -192,7 +196,7 @@ const styles = StyleSheet.create({
   cardTitulo: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: theme.textPrimary,
     marginBottom: 8,
   },
 
