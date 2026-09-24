@@ -1,46 +1,17 @@
+revisar el ultimo codigo que me dio gemini:  Parte B: Integración en TiempoUsoScreen.tsx
 
 
 
 
+2.Carga de Métricas Reales en la Gráfica:Paso 2: Transformación de logs a formato de gráfica.Consulta de 7 días: Crear una consulta SQL o RPC en Supabase que sume los minutos consumidos agrupados por día de la semana (DATE_TRUNC('day', fecha)) para el usuario actual.Formateo de datos: Mapear la respuesta de Supabase a la estructura que requiere react-native-gifted-charts:TypeScript{ value: minutos, label: 'Día', frontColor: superoLimite ? theme.dangerText : theme.primary }
+Cálculo de métricas del Dashboard: Obtener el valor de hoy para el número principal y calcular la media aritmética de los últimos 7 días para la etiqueta de "Promedio semanal".
+
+
+3.Vigilante en Tiempo Real y Triggers:Paso 3: Evaluador de reglas de negocio.Integración en useAppTimeTracker: Modificar el hook global para que evalúe periódicamente (o cada vez que sume minutos acumulados) el tiempo total del día contra los límites configurados.Disparador 1 (Aviso de tiempo): Si tiempoHoy >= limiteNotificacion, activar el estado global de AvisoTiempoModal. Se guardará una bandera en sesión para evitar que el banner reaparezca de forma molesta tras ser cerrado.Disparador 2 (Bloqueo forzado): Si tiempoHoy >= limiteBloqueo, ejecutar la navegación inmediata hacia LimiteAlcanzadoScreen inhabilitando el retorno.
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-Paso 2.3: Construir el Panel (Dashboard) del Tiempo
-
-Qué haremos: Mostrar un número grande con los minutos/horas de "Hoy", comparar con el promedio semanal, y dibujar la gráfica.
-
-FASE 3: Sistema de Límites y Recordatorios (La Restricción)
-Como somos una app y no el sistema operativo, limitaremos el uso bloqueando la navegación de nuestra propia app.
-
-Paso 3.1: Controles para Definir Límites y Alertas (UI)
-
-Qué haremos: Añadir dos Slider o campos de texto numéricos en la parte inferior de TiempoUsoScreen. Uno para "Notificarme al llegar a X minutos" y otro para "Bloquear app al llegar a X minutos".
-
-Paso 3.2: Lógica de Recordatorio (Toasts/Notificaciones In-App)
-
-Qué haremos: Cuando el cronómetro del Paso 1.2 alcance la meta de recordatorio, mostraremos un banner o modal atractivo en la parte superior que diga "Llevas X tiempo en la app, toma un descanso".
-
-Justificación: Usaremos alertas In-App personalizadas porque las notificaciones Push nativas funcionan muy diferente en Web y en Móvil, complicando el desarrollo. Un buen modal In-App funciona perfecto en ambos.
-
-Paso 3.3: Pantalla de Bloqueo (LimiteAlcanzadoScreen.tsx)
-
-Qué haremos: Si el usuario llega a su límite diario, el router lo redirigirá forzosamente a esta pantalla. Será una pantalla bonita que diga "¡Límite Diario Alcanzado! Tiempo de rodar 🏍️".
-
-Justificación: Al usar la navegación para redirigirlo y bloquear el botón de "Atrás", bloqueamos efectivamente el uso de la app. Por UX, podemos incluir un botón con contraseña o un simple "Ignorar límite por hoy" por si hay una emergencia (gestionar un diagnóstico urgente, por ejemplo).
 
 
 
