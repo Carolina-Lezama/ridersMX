@@ -1,41 +1,10 @@
-revisar el ultimo codigo que me dio gemini:  Parte B: Integración en TiempoUsoScreen.tsx
 
-
-
-
-2.Carga de Métricas Reales en la Gráfica:Paso 2: Transformación de logs a formato de gráfica.Consulta de 7 días: Crear una consulta SQL o RPC en Supabase que sume los minutos consumidos agrupados por día de la semana (DATE_TRUNC('day', fecha)) para el usuario actual.Formateo de datos: Mapear la respuesta de Supabase a la estructura que requiere react-native-gifted-charts:TypeScript{ value: minutos, label: 'Día', frontColor: superoLimite ? theme.dangerText : theme.primary }
-Cálculo de métricas del Dashboard: Obtener el valor de hoy para el número principal y calcular la media aritmética de los últimos 7 días para la etiqueta de "Promedio semanal".
-
-
-3.Vigilante en Tiempo Real y Triggers:Paso 3: Evaluador de reglas de negocio.Integración en useAppTimeTracker: Modificar el hook global para que evalúe periódicamente (o cada vez que sume minutos acumulados) el tiempo total del día contra los límites configurados.Disparador 1 (Aviso de tiempo): Si tiempoHoy >= limiteNotificacion, activar el estado global de AvisoTiempoModal. Se guardará una bandera en sesión para evitar que el banner reaparezca de forma molesta tras ser cerrado.Disparador 2 (Bloqueo forzado): Si tiempoHoy >= limiteBloqueo, ejecutar la navegación inmediata hacia LimiteAlcanzadoScreen inhabilitando el retorno.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+SIGUIENTE APARTADO, HACER PLAN DE TRABAJO: Notificaciones Push
 
 
 
 hacer los apartados de configuracion:
-Notificaciones Push
+
 Recordatorios de Mantenimiento
 
 cambiar contraseña

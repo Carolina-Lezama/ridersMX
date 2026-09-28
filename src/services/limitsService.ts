@@ -11,7 +11,7 @@ export interface LimitesUso {
 export const obtenerLimites = async (userId: string): Promise<LimitesUso | null> => {
   try {
     const { data, error } = await supabase
-      .from('profiles') // Reemplaza con el nombre exacto de tu tabla si es distinto
+      .from('perfiles')
       .select('limite_notificacion, limite_bloqueo')
       .eq('id', userId)
       .single();
@@ -37,7 +37,7 @@ export const obtenerLimites = async (userId: string): Promise<LimitesUso | null>
 export const guardarLimites = async (userId: string, limites: LimitesUso): Promise<boolean> => {
   try {
     const { error } = await supabase
-      .from('profiles')
+      .from('perfiles')
       .update({
         limite_notificacion: limites.limite_notificacion,
         limite_bloqueo: limites.limite_bloqueo,

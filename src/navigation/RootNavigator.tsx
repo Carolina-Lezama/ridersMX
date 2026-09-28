@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { navigationRef } from '../utils/helper/navigationRef';
 
 // Estilo y colores
 import { useTheme } from '../../assets/theme/ThemeContext';
@@ -29,8 +30,6 @@ import MisMotosScreen from '../screens/main/MisMotosScreen';
 import MotoFormScreen from '../screens/main/MotoFormScreen';
 import CalendarioScreen from '../screens/main/CalendarioScreen';
 import EventoFormScreen from '../screens/main/EventoFormScreen';
-
-import { useAppTimeTracker } from '../utils/hooks/useAppTimeTracker';
 
 // ============================================================================
 // ZONA DE IMPORTACIONES: JOSHUA
@@ -149,7 +148,7 @@ export default function RootNavigator({ isFirstLaunch }: { isFirstLaunch: boolea
   return (
     <>
       <StatusBar style={isDarkMode ? 'light' : 'dark'} />
-      <NavigationContainer theme={navigationTheme}>
+      <NavigationContainer ref={navigationRef} theme={navigationTheme}>
         <Stack.Navigator
           screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}
           initialRouteName={isFirstLaunch ? 'Onboarding' : 'Login'}

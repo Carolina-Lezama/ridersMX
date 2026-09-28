@@ -1,30 +1,90 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../../assets/theme/ThemeContext';
 import { BarChart } from 'react-native-gifted-charts';
+import { obtenerMetricasSemanales, type BarDataPoint } from '../../../services/timeMetricsService';
+import { obtenerLimites, guardarLimites } from '../../../services/limitsService';
+import { supabase } from '../../../services/supabase';
 
 export default function TiempoUsoScreen({ navigation }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
-  // ESTADOS DEL DASHBOARD (Paso 2.3) - Pronto los conectaremos a Supabase
-  const [tiempoHoy, setTiempoHoy] = useState(20);
-  const [promedioSemanal, setPromedioSemanal] = useState(45);
+  // Estados del dashboard y la gráfica semanal
+  const [tiempoHoy, setTiempoHoy] = useState(0);
+  const [promedioSemanal, setPromedioSemanal] = useState(0);
+  const [barData, setBarData] = useState<BarDataPoint[]>([]);
+  const [cargandoMetricas, setCargandoMetricas] = useState(true);
   
   // ESTADOS DE LÍMITES (Paso 3.1)
-  const [limiteNotificacion, setLimiteNotificacion] = useState(60);
-  const [limiteBloqueo, setLimiteBloqueo] = useState(120);
+  const [limiteNotificacion, setLimiteNotificacion] = useState(0);
+  const [limiteBloqueo, setLimiteBloqueo] = useState(0);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [cargandoLimites, setCargandoLimites] = useState(true);
+  const [guardandoLimites, setGuardandoLimites] = useState(false);
 
-  const [barData, setBarData] = useState([
-    { value: 45, label: 'Lun', frontColor: theme.primary },
-    { value: 60, label: 'Mar', frontColor: theme.primary },
-    { value: 30, label: 'Mié', frontColor: theme.primary },
-    { value: 90, label: 'Jue', frontColor: theme.primary },
-    { value: 140, label: 'Vie', frontColor: theme.dangerText }, 
-    { value: 50, label: 'Sáb', frontColor: theme.primary },
-    { value: 20, label: 'Dom', frontColor: theme.primary },
-  ]);
+  useEffect(() => {
+    let mounted = true;
+
+    const cargarMetricas = async () => {
+      setCargandoMetricas(true);
+
+      const metricas = await obtenerMetricasSemanales(
+        limiteBloqueo,
+        theme.primary,
+        theme.dangerText,
+      );
+
+      if (mounted) {
+        setTiempoHoy(metricas.tiempoHoy);
+        setPromedioSemanal(metricas.promedioSemanal);
+        setBarData(metricas.barData);
+        setCargandoMetricas(false);
+      }
+    };
+
+    void cargarMetricas();
+    return () => {
+      mounted = false;
+    };
+  }, [limiteBloqueo, theme.primary, theme.dangerText]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const cargarConfiguracion = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        if (!session?.user) {
+          Alert.alert('Sesión no disponible', 'Inicia sesión para cargar tus límites de uso.');
+          return;
+        }
+
+        const currentUserId = session.user.id;
+        if (mounted) setUserId(currentUserId);
+
+        const limites = await obtenerLimites(currentUserId);
+        if (mounted && limites) {
+          setLimiteNotificacion(limites.limite_notificacion || 0);
+          setLimiteBloqueo(limites.limite_bloqueo || 0);
+        }
+      } catch (error: any) {
+        if (mounted) {
+          Alert.alert('Error al cargar límites', error?.message || 'No se pudo cargar la configuración.');
+        }
+      } finally {
+        if (mounted) setCargandoLimites(false);
+      }
+    };
+
+    void cargarConfiguracion();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Funciones para manejar los límites
   const ajustarLimite = (tipo: 'notificacion' | 'bloqueo', cantidad: number) => {
@@ -33,6 +93,27 @@ export default function TiempoUsoScreen({ navigation }: any) {
     } else {
       setLimiteBloqueo(prev => Math.max(0, prev + cantidad));
     }
+  };
+
+  const handleGuardarLimites = async () => {
+    if (!userId) {
+      Alert.alert('Sesión no disponible', 'Inicia sesión para guardar tus límites de uso.');
+      return;
+    }
+
+    setGuardandoLimites(true);
+    const exito = await guardarLimites(userId, {
+      limite_notificacion: limiteNotificacion,
+      limite_bloqueo: limiteBloqueo,
+    });
+    setGuardandoLimites(false);
+
+    Alert.alert(
+      exito ? 'Límites guardados' : 'Error',
+      exito
+        ? 'Tus límites de uso se han guardado correctamente.'
+        : 'No se pudieron guardar los límites. Inténtalo de nuevo.',
+    );
   };
 
   return (
@@ -51,36 +132,51 @@ export default function TiempoUsoScreen({ navigation }: any) {
         <View style={styles.resumenCard}>
           <Text style={styles.resumenTitulo}>Tiempo de hoy</Text>
           <View style={styles.rowCenter}>
-            <Text style={styles.resumenValor}>{tiempoHoy}</Text>
-            <Text style={styles.resumenMinutos}> min</Text>
+            {cargandoMetricas ? (
+              <ActivityIndicator color={theme.primary} />
+            ) : (
+              <>
+                <Text style={styles.resumenValor}>{tiempoHoy}</Text>
+                <Text style={styles.resumenMinutos}> min</Text>
+              </>
+            )}
           </View>
           <View style={styles.badgePromedio}>
             <Ionicons name="trending-up-outline" size={16} color={theme.textSecondary} />
-            <Text style={styles.textoPromedio}>Promedio semanal: {promedioSemanal} min</Text>
+            <Text style={styles.textoPromedio}>
+              Promedio semanal: {cargandoMetricas ? '...' : `${promedioSemanal} min`}
+            </Text>
           </View>
         </View>
 
-        {/* DASHBOARD: GRÁFICA SEMANAL */}
+        {/* DASHBOARD: GRÁFICA SEMANAL CON DATOS REALES */}
         <Text style={styles.sectionTitle}>Uso de los últimos 7 días</Text>
         <View style={styles.chartCard}>
-          <BarChart
-            data={barData}
-            barWidth={22}
-            spacing={20}
-            roundedTop
-            roundedBottom
-            hideRules
-            xAxisThickness={0}
-            yAxisThickness={0}
-            yAxisTextStyle={{ color: theme.textSecondary }}
-            noOfSections={4}
-            maxValue={150}
-            isAnimated
-          />
+          {cargandoMetricas ? (
+            <ActivityIndicator size="large" color={theme.primary} style={{ height: 180 }} />
+          ) : barData.length > 0 ? (
+            <BarChart
+              data={barData}
+              barWidth={22}
+              spacing={20}
+              roundedTop
+              roundedBottom
+              hideRules
+              xAxisThickness={0}
+              yAxisThickness={0}
+              yAxisTextStyle={{ color: theme.textSecondary }}
+              noOfSections={4}
+              maxValue={Math.max(...barData.map(point => point.value), 60) + 20}
+              isAnimated
+            />
+          ) : (
+            <Text style={{ color: theme.textSecondary, padding: 20 }}>No hay registros disponibles</Text>
+          )}
         </View>
 
         {/* CONTROLES DE LÍMITES (Paso 3.1) */}
         <Text style={styles.sectionTitle}>Ajustes de Restricción</Text>
+        {cargandoLimites && <ActivityIndicator color={theme.primary} style={{ marginBottom: 10 }} />}
         <View style={styles.card}>
           
           {/* Límite de Notificación */}
@@ -94,11 +190,11 @@ export default function TiempoUsoScreen({ navigation }: any) {
             </View>
             
             <View style={styles.stepper}>
-              <TouchableOpacity onPress={() => ajustarLimite('notificacion', -5)} style={styles.stepperBtn}>
+              <TouchableOpacity disabled={cargandoLimites || guardandoLimites} onPress={() => ajustarLimite('notificacion', -5)} style={styles.stepperBtn}>
                 <Ionicons name="remove" size={18} color={theme.iconPrimary} />
               </TouchableOpacity>
               <Text style={styles.stepperValue}>{limiteNotificacion}m</Text>
-              <TouchableOpacity onPress={() => ajustarLimite('notificacion', 5)} style={styles.stepperBtn}>
+              <TouchableOpacity disabled={cargandoLimites || guardandoLimites} onPress={() => ajustarLimite('notificacion', 5)} style={styles.stepperBtn}>
                 <Ionicons name="add" size={18} color={theme.iconPrimary} />
               </TouchableOpacity>
             </View>
@@ -117,11 +213,11 @@ export default function TiempoUsoScreen({ navigation }: any) {
             </View>
             
             <View style={styles.stepper}>
-              <TouchableOpacity onPress={() => ajustarLimite('bloqueo', -5)} style={styles.stepperBtn}>
+              <TouchableOpacity disabled={cargandoLimites || guardandoLimites} onPress={() => ajustarLimite('bloqueo', -5)} style={styles.stepperBtn}>
                 <Ionicons name="remove" size={18} color={theme.iconPrimary} />
               </TouchableOpacity>
               <Text style={styles.stepperValue}>{limiteBloqueo}m</Text>
-              <TouchableOpacity onPress={() => ajustarLimite('bloqueo', 5)} style={styles.stepperBtn}>
+              <TouchableOpacity disabled={cargandoLimites || guardandoLimites} onPress={() => ajustarLimite('bloqueo', 5)} style={styles.stepperBtn}>
                 <Ionicons name="add" size={18} color={theme.iconPrimary} />
               </TouchableOpacity>
             </View>
@@ -129,9 +225,17 @@ export default function TiempoUsoScreen({ navigation }: any) {
 
         </View>
 
-        {/* Botón Guardar (Preparación para BD/AsyncStorage) */}
-        <TouchableOpacity style={styles.saveButton}>
-          <Text style={styles.saveButtonText}>Guardar Límites</Text>
+        {/* Guardar límites en Supabase */}
+        <TouchableOpacity
+          style={[styles.saveButton, (cargandoLimites || guardandoLimites || !userId) && { opacity: 0.6 }]}
+          onPress={handleGuardarLimites}
+          disabled={cargandoLimites || guardandoLimites || !userId}
+        >
+          {guardandoLimites ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.saveButtonText}>Guardar Límites</Text>
+          )}
         </TouchableOpacity>
 
       </ScrollView>
