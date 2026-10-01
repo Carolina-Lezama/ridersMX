@@ -1,18 +1,31 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../assets/theme/ThemeContext';
-import { RachaWidget, RachaEstado } from '../../components/RachaWidget'; 
-import { QuizModal } from '../../components/QuizModal';
+import { RachaWidget } from '../../components/RachaWidget'; 
+import { QuizModal, type PreguntaQuiz } from '../../components/QuizModal';
+import { getPreguntaDelDia } from '../../services/quizService';
+import { useStreak } from '../../utils/hooks/useStreak';
+
 
 export default function InicioScreen({ navigation }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
-  // Estados de prueba para la Racha (luego vendrán de Supabase)
-  const [rachaDias, setRachaDias] = useState(5);
-  const [rachaEstado, setRachaEstado] = useState<RachaEstado>('pendiente');
+  const {
+    diasRacha,
+    comodines,
+    completadoHoy,
+    rachaSalvadaRecientemente,
+    realizarCheckIn,
+  } = useStreak();
   const [quizVisible, setQuizVisible] = useState(false);
+  const [preguntaDiaria, setPreguntaDiaria] = useState<PreguntaQuiz | undefined>();
+  
+  useEffect(() => {
+    const pregunta = getPreguntaDelDia();
+    setPreguntaDiaria(pregunta);
+  }, []);
 
   const handleOpenQuiz = () => {
     setQuizVisible(true);
@@ -36,8 +49,10 @@ export default function InicioScreen({ navigation }: any) {
 
       {/* 2. SECCIÓN: RACHA DIARIA (Widget Interactivo) */}
       <RachaWidget 
-        rachaDias={rachaDias} 
-        estado={rachaEstado} 
+        diasRacha={diasRacha}
+        comodines={comodines}
+        completadoHoy={completadoHoy}
+        rachaSalvada={rachaSalvadaRecientemente}
         onPress={handleOpenQuiz} 
       />
 
@@ -138,11 +153,11 @@ export default function InicioScreen({ navigation }: any) {
     </ScrollView>
     <QuizModal
       visible={quizVisible}
+      preguntaData={preguntaDiaria}
       onClose={() => setQuizVisible(false)}
       onCompletarCheckIn={(esCorrecta) => {
         if (esCorrecta) {
-          setRachaDias((prev) => prev + 1);
-          setRachaEstado('completado');
+          realizarCheckIn();
         }
       }}
     />

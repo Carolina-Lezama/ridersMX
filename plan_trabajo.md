@@ -1,37 +1,7 @@
 
 
-4. Documento y Banco de Preguntas (quizQuestions.json)
-Objetivo: Disponer de una fuente de datos local estructurada, fácil de ampliar y mantener.
-	Ubicación del archivo: src/data/quizQuestions.json.
-	Estructura del Schema:
-JSON
-[
-  {
-    "id": "q_001",
-    "categoria": "Mantenimiento",
-    "pregunta": "¿Qué indica un color blanquecino o lechoso en el aceite del motor?",
-    "opciones": [
-      "Desgaste normal por kilometraje",
-      "Presencia de anticongelante/agua en el motor",
-      "Exceso de aditivo de viscosidad",
-      "Falta de uso del vehículo"
-    ],
-    "respuestaCorrecta": 1,
-    "explicacion": "El aspecto lechoso se produce por la emulsión del aceite al mezclarse con líquido refrigerante o agua."
-  }
-]
-	Lógica de Rotación Diaria:
-	Cálculo algorítmico basado en el día del año: indice = diaDelAño % totalPreguntas.
-	Garantiza que todos los usuarios reciban la misma pregunta el mismo día sin necesidad de realizar consultas pesadas al backend.
-5. Sistema de Comodines (Streak Freeze / Congelador)
-Objetivo: Proteger la motivación del usuario evitando que pierda todo su avance por olvidar ingresar un solo día.
-	Lógica de Negocio:
-	Cada usuario inicia con 1 Comodín disponible por defecto.
-	Regla de consumo: Si el sistema detecta que el último check-in fue hace 2 días (Día-2), en lugar de reiniciar la racha a 0, evalúa:
-	Si tiene comodín: Consume 1 comodín, mantiene la racha intacta y marca el día perdido como "Salvado con ❄️".
-	Si no tiene comodín: La racha se reinicia a 0.
-	Regeneración de Comodines: Se otorga 1 comodín extra al alcanzar hitos importantes (ej. racha de 7 y 30 días), con un límite máximo de 2 comodines acumulados.
-	Visualización: Ícono de copo de nieve / escudo helado ❄️ situado junto a la llama en el Dashboard.
+
+
 6. Arquitectura de Base de Datos (Supabase SQL)
 Objetivo: Crear una estructura relacional limpia, segura y eficiente en Supabase.
 	Estructura de Tablas:

@@ -1,155 +1,155 @@
-import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withSequence,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
 import { useTheme } from '../../assets/theme/ThemeContext'; // Ajusta la ruta según tu proyecto
 
-// Definimos el componente animado de Ionicons
-const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
-
-export type RachaEstado = 'pendiente' | 'completado' | 'en_riesgo';
-
 interface RachaWidgetProps {
-  rachaDias: number;
-  estado: RachaEstado;
+  diasRacha: number;
+  comodines: number;
+  completadoHoy: boolean;
+  rachaSalvada: boolean;
   onPress: () => void;
 }
 
-export const RachaWidget: React.FC<RachaWidgetProps> = ({ rachaDias, estado, onPress }) => {
+export const RachaWidget: React.FC<RachaWidgetProps> = ({
+  diasRacha,
+  comodines,
+  completadoHoy,
+  rachaSalvada,
+  onPress,
+}) => {
   const { theme } = useTheme();
-  
-  // Valor compartido para la animación de escala (pulso)
-  const scale = useSharedValue(1);
-
-  useEffect(() => {
-    if (estado === 'en_riesgo' || estado === 'completado') {
-      // Animación infinita de latido/pulso
-      scale.value = withRepeat(
-        withSequence(
-          withTiming(1.2, { duration: 600, easing: Easing.inOut(Easing.ease) }),
-          withTiming(1, { duration: 600, easing: Easing.inOut(Easing.ease) })
-        ),
-        -1, // -1 significa repetición infinita
-        true // reverse
-      );
-    } else {
-      // Detener animación si está pendiente
-      scale.value = withTiming(1, { duration: 300 });
-    }
-  }, [estado]);
-
-  const animatedIconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  // Configuración visual dinámica según el estado
-  const getConfig = () => {
-    switch (estado) {
-      case 'completado':
-        return {
-          iconColor: '#FF5722', // Naranja fuego
-          borderColor: '#FF5722',
-          borderStyle: 'solid' as const,
-          bgColor: 'rgba(255, 87, 34, 0.1)',
-          title: '¡Racha al día! 🔥',
-          subtitle: `${rachaDias} días seguidos`,
-          icon: 'flame' as const,
-        };
-      case 'en_riesgo':
-        return {
-          iconColor: '#FFC107', // Amarillo alerta
-          borderColor: '#FFC107',
-          borderStyle: 'solid' as const,
-          bgColor: 'rgba(255, 193, 7, 0.1)',
-          title: '¡Tu racha está en riesgo!',
-          subtitle: `Salva tus ${rachaDias} días ahora`,
-          icon: 'flame' as const,
-        };
-      case 'pendiente':
-      default:
-        return {
-          iconColor: theme.iconPrimary || '#888',
-          borderColor: theme.border || '#ccc',
-          borderStyle: 'dashed' as const,
-          bgColor: theme.card || '#fff',
-          title: '¡Haz tu Check-in hoy!',
-          subtitle: `Racha actual: ${rachaDias} días`,
-          icon: 'flame-outline' as const,
-        };
-    }
-  };
-
-  const config = getConfig();
+  const styles = createStyles(theme);
 
   return (
-    <TouchableOpacity 
-      activeOpacity={0.8} 
-      onPress={onPress}
+    <TouchableOpacity
+      activeOpacity={0.88}
       style={[
-        styles.container,
-        {
-          backgroundColor: config.bgColor,
-          borderColor: config.borderColor,
-          borderStyle: config.borderStyle,
-        }
+        styles.card,
+        completadoHoy && styles.cardCompletado,
+        rachaSalvada && styles.cardSalvado,
       ]}
+      onPress={onPress}
+      disabled={completadoHoy}
     >
-      <View style={styles.contentRow}>
-        <View style={styles.textContainer}>
-          <Text style={[styles.title, { color: theme.textPrimary }]}>
-            {config.title}
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            {config.subtitle}
-          </Text>
+      <View style={styles.contentLeft}>
+        <View style={[styles.iconContainer, completadoHoy && styles.iconCompletado]}>
+          <Text style={styles.llamaIcon}>{completadoHoy ? '🔥' : '⚡'}</Text>
         </View>
 
-        <AnimatedIcon 
-          name={config.icon} 
-          size={36} 
-          color={config.iconColor} 
-          style={animatedIconStyle} 
-        />
+        <View style={styles.infoContainer}>
+          <View style={styles.rachaHeader}>
+            <Text style={styles.diasTexto}>{diasRacha} días en racha</Text>
+            <View style={styles.badgeComodines}>
+              <Text style={styles.comodinesTexto}>❄️ {comodines}/2</Text>
+            </View>
+          </View>
+
+          {rachaSalvada ? (
+            <Text style={styles.subtextoSalvado}>
+              ¡Ayer faltaste! Tu racha fue salvada con ❄️
+            </Text>
+          ) : completadoHoy ? (
+            <Text style={styles.subtextoCompletado}>Check-in de hoy completado</Text>
+          ) : (
+            <Text style={styles.subtextoPendiente}>
+              Responde el Quiz Diario para mantener tu racha
+            </Text>
+          )}
+        </View>
       </View>
+
+      <Ionicons
+        name={completadoHoy ? 'checkmark-circle' : 'chevron-forward'}
+        size={22}
+        color={completadoHoy ? '#10b981' : theme.textSecondary}
+      />
     </TouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: 16,
-    borderWidth: 2,
-    padding: 16,
-    marginVertical: 10,
-    elevation: 2, // Sombra en Android
-    shadowColor: '#000', // Sombra en iOS
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  contentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  textContainer: {
-    flex: 1,
-    marginRight: 12,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-});
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
+  StyleSheet.create({
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.card,
+      borderRadius: 18,
+      padding: 16,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      marginHorizontal: 16,
+      marginVertical: 10,
+    },
+    cardCompletado: {
+      borderColor: '#10b98140',
+      backgroundColor: '#10b9810a',
+    },
+    cardSalvado: {
+      borderColor: '#3b82f660',
+      backgroundColor: '#3b82f60d',
+    },
+    contentLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      flex: 1,
+    },
+    iconContainer: {
+      width: 46,
+      height: 46,
+      borderRadius: 14,
+      backgroundColor: '#ff572218',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    iconCompletado: {
+      backgroundColor: '#10b98118',
+    },
+    llamaIcon: {
+      fontSize: 24,
+    },
+    infoContainer: {
+      flex: 1,
+      gap: 4,
+    },
+    rachaHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flexWrap: 'wrap',
+    },
+    diasTexto: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: theme.textPrimary,
+    },
+    badgeComodines: {
+      backgroundColor: '#3b82f618',
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#3b82f630',
+    },
+    comodinesTexto: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#2563eb',
+    },
+    subtextoPendiente: {
+      fontSize: 12,
+      color: theme.textSecondary,
+    },
+    subtextoCompletado: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#10b981',
+    },
+    subtextoSalvado: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#2563eb',
+    },
+  });
