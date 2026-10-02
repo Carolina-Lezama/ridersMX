@@ -7,7 +7,6 @@ import type { Theme } from '../../../assets/theme/theme';
 
 export default function ConfiguracionScreen({ navigation }: any) {
   // Estados para probar la interacción de los switches
-  const [notificaciones, setNotificaciones] = useState(true);
   const [alertasMantenimiento, setAlertasMantenimiento] = useState(true);
   const { isDarkMode, toggleTheme, theme } = useTheme();
   const styles = createStyles(theme);
@@ -200,17 +199,17 @@ export default function ConfiguracionScreen({ navigation }: any) {
         {/* SECCIÓN 2: PREFERENCIAS */}
         <Text style={styles.sectionTitle}>Preferencias de la App</Text>
         <View style={styles.card}>
-          <View style={styles.row}>
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('Notificaciones')}
+          >
             <View style={styles.rowLeft}>
               <Ionicons name="notifications-outline" size={22} color={theme.iconPrimary} />
               <Text style={styles.rowText}>Notificaciones</Text>
             </View>
-            <Switch
-              value={notificaciones}
-              onValueChange={setNotificaciones}
-              trackColor={{ false: theme.switchTrackFalse, true: theme.primary }}
-            />
-          </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.iconSecondary} />
+          </TouchableOpacity>
 
           <View style={styles.divider} />
 

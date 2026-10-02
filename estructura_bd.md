@@ -546,6 +546,22 @@
 "column_default": null
 },
 {
+"table_name": "perfiles",
+"column_name": "limite_notificacion",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "60"
+},
+{
+"table_name": "perfiles",
+"column_name": "limite_bloqueo",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "120"
+},
+{
 "table_name": "resenas",
 "column_name": "id",
 "data_type": "uuid",
@@ -600,5 +616,62 @@
 "character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "fecha",
+"data_type": "date",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "CURRENT_DATE"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "minutos_usados",
+"data_type": "numeric",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "0"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "limite_diario_minutos",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "120"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "recordatorio_minutos",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "60"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
 }
 ]
+

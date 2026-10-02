@@ -2,20 +2,7 @@
 
 
 
-6. Arquitectura de Base de Datos (Supabase SQL)
-Objetivo: Crear una estructura relacional limpia, segura y eficiente en Supabase.
-	Estructura de Tablas:
-Tabla	Campo Clave	Descripción
-rachas_usuario	perfil_id (PK, FK)	Almacena racha_actual, racha_maxima, ultimo_checkin (DATE), comodines_disponibles y ultimo_comodin_usado.
-insignias	id (PK)	Catálogo de logros con nombre, descripcion, icono y racha_requerida.
-usuario_insignias	(perfil_id, insignia_id)	Historial de insignias desbloqueadas por usuario con fecha_desbloqueo.
-	Procedimiento Almacenado (RPC SQL):
-	Creación de la función procesar_checkin_diario(p_user_id) que ejecuta en una sola transacción atómica:
-	Validar si el check-in de hoy ya fue realizado.
-	Calcular días transcurridos desde el último check-in.
-	Incrementar racha o aplicar comodín según corresponda.
-	Verificar si se alcanzaron nuevas insignias e insertarlas en usuario_insignias.
-	Retornar el estado actualizado de la racha al cliente.
+
 7. Apartado Visual de Notificaciones (Pantalla de Preferencias)
 Objetivo: Ofrecer una pantalla completa de ajustes de alertas con categorización clara, dejando preparadas las futuras integraciones.
 	Ubicación: Reemplazo/Actualización del módulo de preferencias en ConfiguracionScreen.tsx o NotificacionesScreen.tsx.
@@ -51,17 +38,6 @@ Objetivo: Garantizar que los cambios en los switches de notificaciones se apliqu
 	Lógica de Canceling/Scheduling:
 	Switch ON: Registra los disparadores de tiempo en el motor de expo-notifications.
 	Switch OFF: Ejecuta inmediatamente cancelAllScheduledNotificationsAsync() o cancela el ID específico de la alarma de racha.
-Matriz de Resumen del Plan de Trabajo
-Paso	Módulo	Entregable Clave	Dependencia Directa
-1	Base de Datos	Script SQL en Supabase (Tablas + RPC procesar_checkin_diario).	Ninguna
-2	Datos Estáticos	quizQuestions.json + insigniasCatalog.ts.	Ninguna
-3	Servicios	streakService.ts (Lógica de racha, check-in y comodín).	Paso 1 y 2
-4	UI Quiz	QuizModal.tsx / QuizScreen.tsx con animaciones.	Paso 3
-5	UI Dashboard	RachaWidget.tsx con animación de fuego y estado dinámico.	Paso 3
-6	UI Logros	InsigniasScreen.tsx con la galería de insignias y comodines.	Paso 1 y 3
-7	Notificaciones	notificationService.ts con expo-notifications.	Ninguna
-8	UI Ajustes	Pantalla de Preferencias de Notificaciones completa.	Paso 7
-9	Integración	Conexión global del widget, modal, alertas y persistencia.	Pasos 4, 5, 6 y 8
 
 
 

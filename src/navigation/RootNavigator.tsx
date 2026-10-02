@@ -24,6 +24,7 @@ import PerfilScreen from '../screens/main/PerfilScreen';
 import AyudaScreen from '../screens/main/AyudaScreen';
 import ConfiguracionScreen from '../screens/main/ConfiguracionScreen';
 import TiempoUsoScreen from '../screens/main/config/TiempoUsoScreen';
+import { NotificacionesScreen } from '../screens/main/config/NotificacionesScreen';
 import LimiteAlcanzadoScreen from '../screens/main/config/LimiteAlcanzadoScreen';
 
 import MisMotosScreen from '../screens/main/MisMotosScreen';
@@ -166,6 +167,7 @@ export default function RootNavigator({ isFirstLaunch }: { isFirstLaunch: boolea
           <Stack.Screen name="Ayuda" component={AyudaScreen} />
           <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
           <Stack.Screen name="TiempoUso" component={TiempoUsoScreen} />
+          <Stack.Screen name="Notificaciones" component={NotificacionesScreen} />
           <Stack.Screen name="LimiteAlcanzado" component={LimiteAlcanzadoScreen} />
 
 

@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import { RachaWidget } from '../../components/RachaWidget'; 
 import { QuizModal, type PreguntaQuiz } from '../../components/QuizModal';
 import { getPreguntaDelDia } from '../../services/quizService';
+import { supabase } from '../../services/supabase';
 import { useStreak } from '../../utils/hooks/useStreak';
 
 
 export default function InicioScreen({ navigation }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
+  const [userId, setUserId] = useState<string>();
 
   const {
     diasRacha,
@@ -18,9 +20,27 @@ export default function InicioScreen({ navigation }: any) {
     completadoHoy,
     rachaSalvadaRecientemente,
     realizarCheckIn,
-  } = useStreak();
+  } = useStreak(userId);
+
   const [quizVisible, setQuizVisible] = useState(false);
   const [preguntaDiaria, setPreguntaDiaria] = useState<PreguntaQuiz | undefined>();
+
+  useEffect(() => {
+    const cargarUsuario = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        setUserId(session?.user.id);
+      } catch (error) {
+        Alert.alert(
+          'Error al cargar sesión',
+          error instanceof Error ? error.message : 'No se pudo obtener la sesión del usuario.',
+        );
+      }
+    };
+
+    void cargarUsuario();
+  }, []);
   
   useEffect(() => {
     const pregunta = getPreguntaDelDia();
