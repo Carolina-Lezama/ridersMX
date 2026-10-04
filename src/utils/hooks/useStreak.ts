@@ -8,24 +8,69 @@ import {
   registrarCheckInExitoso
 } from '../../services/streakService';
 
+import {
+  limpiarNotificacionesRacha,
+  programarNotificacionesRacha,
+} from '../../services/notificationService';
+import { obtenerConfigNotificaciones } from '../../services/notificationConfigService';
+
+
 export const useStreak = (userId: string | undefined) => {
   const [streakState, setStreakState] = useState<StreakState>(ESTADO_INICIAL_RACHA);
   const [loading, setLoading] = useState<boolean>(true);
   const [procesando, setProcesando] = useState<boolean>(false);
 
-  // Cargar y evaluar racha al iniciar
+  const sincronizarNotificacionesRacha = useCallback(async (
+    completadoHoy: boolean,
+    currentUserId: string,
+  ) => {
+    try {
+      const config = await obtenerConfigNotificaciones(currentUserId);
+      if (config.checkInEnabled) {
+        const programadas = await programarNotificacionesRacha(completadoHoy, config.checkInTime);
+        if (!programadas) {
+          console.warn('Los recordatorios de racha están activos, pero no hay permisos concedidos.');
+        }
+      } else {
+        await limpiarNotificacionesRacha();
+      }
+    } catch (error) {
+      console.error('No se pudieron sincronizar los recordatorios de racha:', error);
+    }
+  }, []);
+
   useEffect(() => {
-    if (!userId) return;
+    let mounted = true;
+
+    if (!userId) {
+      setStreakState(ESTADO_INICIAL_RACHA);
+      setLoading(false);
+      return () => {
+        mounted = false;
+      };
+    }
 
     const inicializarRacha = async () => {
       setLoading(true);
-      const estado = await obtenerEstadoRachaDB(userId);
-      setStreakState(estado);
-      setLoading(false);
+      try {
+        const estado = await obtenerEstadoRachaDB(userId);
+        if (!mounted) return;
+
+        setStreakState(estado);
+        const yaCompletadoHoy = estado.ultimoCheckIn === obtenerFechaISO();
+        await sincronizarNotificacionesRacha(yaCompletadoHoy, userId);
+      } catch (error) {
+        console.error('No se pudo inicializar la racha:', error);
+      } finally {
+        if (mounted) setLoading(false);
+      }
     };
 
-    inicializarRacha();
-  }, [userId]);
+    void inicializarRacha();
+    return () => {
+      mounted = false;
+    };
+  }, [userId, sincronizarNotificacionesRacha]);
 
   const completadoHoy = streakState.ultimoCheckIn === obtenerFechaISO();
 
@@ -33,19 +78,18 @@ export const useStreak = (userId: string | undefined) => {
     if (!userId || completadoHoy || procesando) return;
 
     setProcesando(true);
+    try {
+      const estadoOptimista = registrarCheckInExitoso(streakState);
+      setStreakState(estadoOptimista);
+      await sincronizarNotificacionesRacha(true, userId);
 
-    // 1. Actualización optimista (instantánea en la UI)
-    const estadoOptimista = registrarCheckInExitoso(streakState);
-    setStreakState(estadoOptimista);
-
-    // 2. Confirmación en backend
-    const estadoConfirmado = await ejecutarCheckInDB(userId, estadoOptimista);
+      const estadoConfirmado = await ejecutarCheckInDB(userId, estadoOptimista);
+      setStreakState(estadoConfirmado);
+    } finally {
+      setProcesando(false);
+    }
     
-    // Si hay discrepancia entre nuestro cálculo y la BD, manda la BD
-    setStreakState(estadoConfirmado);
-    setProcesando(false);
-    
-  }, [userId, completadoHoy, procesando, streakState]);
+  }, [userId, completadoHoy, procesando, streakState, sincronizarNotificacionesRacha]);
 
   return {
     loading,

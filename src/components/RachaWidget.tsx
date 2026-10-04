@@ -9,6 +9,7 @@ interface RachaWidgetProps {
   completadoHoy: boolean;
   rachaSalvada: boolean;
   onPress: () => void;
+  loading?: boolean;
 }
 
 export const RachaWidget: React.FC<RachaWidgetProps> = ({
@@ -17,6 +18,7 @@ export const RachaWidget: React.FC<RachaWidgetProps> = ({
   completadoHoy,
   rachaSalvada,
   onPress,
+  loading = false,
 }) => {
   const { theme } = useTheme();
   const styles = createStyles(theme);
@@ -28,13 +30,14 @@ export const RachaWidget: React.FC<RachaWidgetProps> = ({
         styles.card,
         completadoHoy && styles.cardCompletado,
         rachaSalvada && styles.cardSalvado,
+        loading && styles.cardLoading,
       ]}
       onPress={onPress}
-      disabled={completadoHoy}
+      disabled={completadoHoy || loading}
     >
       <View style={styles.contentLeft}>
         <View style={[styles.iconContainer, completadoHoy && styles.iconCompletado]}>
-          <Text style={styles.llamaIcon}>{completadoHoy ? '🔥' : '⚡'}</Text>
+          <Text style={styles.llamaIcon}>{loading ? '…' : completadoHoy ? '🔥' : '⚡'}</Text>
         </View>
 
         <View style={styles.infoContainer}>
@@ -45,7 +48,9 @@ export const RachaWidget: React.FC<RachaWidgetProps> = ({
             </View>
           </View>
 
-          {rachaSalvada ? (
+          {loading ? (
+            <Text style={styles.subtextoPendiente}>Cargando tu racha...</Text>
+          ) : rachaSalvada ? (
             <Text style={styles.subtextoSalvado}>
               ¡Ayer faltaste! Tu racha fue salvada con ❄️
             </Text>
@@ -81,6 +86,9 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       borderColor: theme.border,
       marginHorizontal: 16,
       marginVertical: 10,
+    },
+    cardLoading: {
+      opacity: 0.65,
     },
     cardCompletado: {
       borderColor: '#10b98140',

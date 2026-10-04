@@ -31,7 +31,7 @@ export const AvisoTiempoModal = ({ visible, minutos, onClose }: Props) => {
           </View>
 
           <Text style={styles.mensaje}>
-            Llevas <Text style={styles.boldText}>{minutos} minutos</Text> continuos en la aplicación. Considera tomar un descanso.
+            Has usado la aplicación durante <Text style={styles.boldText}>{minutos} minutos</Text> hoy. Considera tomar un descanso.
           </Text>
 
           <TouchableOpacity style={styles.btnEntendido} onPress={onClose}>

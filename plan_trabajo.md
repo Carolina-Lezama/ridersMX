@@ -1,43 +1,5 @@
 
-
-
-
-
-7. Apartado Visual de Notificaciones (Pantalla de Preferencias)
-Objetivo: Ofrecer una pantalla completa de ajustes de alertas con categorización clara, dejando preparadas las futuras integraciones.
-	Ubicación: Reemplazo/Actualización del módulo de preferencias en ConfiguracionScreen.tsx o NotificacionesScreen.tsx.
-	Estructura por Secciones (Switches Independientes):
- ┌──────────────────────────────────────────────────────────┐
- │ PREFERENCIAS DE NOTIFICACIONES                           │
- ├──────────────────────────────────────────────────────────┤
- │  [🔥] RACHA Y HÁBITOS                                   │
- │   • Recordatorio de Check-in Diario             [ ON ] │
- │   • Hora del Recordatorio                   [ 19:00 PM ] │
- ├──────────────────────────────────────────────────────────┤
- │  [⏱️] BIENESTAR Y TIEMPO DE USO                         │
- │   • Alerta de Límite Diario Alcanzado           [ ON ] │
- ├──────────────────────────────────────────────────────────┤
- │  [🛠️] VEHÍCULO Y MANTENIMIENTO (Próximamente)            │
- │   • Recordatorios de Cambio de Aceite / Frenos  [ OFF ] │
- ├──────────────────────────────────────────────────────────┤
- │  [💬] COMUNIDAD (Próximamente)                           │
- │   • Respuestas a tus publicaciones              [ OFF ] │
- └──────────────────────────────────────────────────────────┘
-8. Sistema Horario de Recordatorios y Tiempo de Uso
-Objetivo: Configurar las alertas programadas locales utilizando expo-notifications.
-	Alertas Programadas de Racha:
-	Alerta 1 (Preventiva - 7:00 PM): Se programa diariamente. Si el usuario realiza su check-in antes de esa hora, la notificación de ese día se cancela automáticamente.
-	Alerta 2 (Urgencia - 10:00 PM): Se dispara únicamente si a las 10:00 PM el usuario no ha realizado su check-in y su racha está en riesgo.
-	Alertas Integradas de Tiempo de Uso:
-	Evento gatillado directamente desde useAppTimeTracker cuando los minutos de sesión alcancen el limiteNotificacion configurado.
-9. Persistencia y Control de Estado de Notificaciones
-Objetivo: Garantizar que los cambios en los switches de notificaciones se apliquen inmediatamente tanto en el sistema operativo del teléfono como en la base de datos.
-	Estrategia de Almacenamiento Doble:
-	Local (AsyncStorage): Lectura instantánea al arrancar la app sin esperar respuesta de red.
-	Remoto (Supabase perfiles): Guardado de una estructura JSONB notificaciones_config para mantener las preferencias sincronizadas entre dispositivos.
-	Lógica de Canceling/Scheduling:
-	Switch ON: Registra los disparadores de tiempo en el motor de expo-notifications.
-	Switch OFF: Ejecuta inmediatamente cancelAllScheduledNotificationsAsync() o cancela el ID específico de la alarma de racha.
+No puedo confirmar que el flujo completo funcione contra la base de datos remota: en las migraciones del repositorio no encontré definiciones para tiempo_uso, rachas_usuario ni para las funciones RPC que consumen esos servicios. La migración nueva cubre la columna de preferencias, pero hay que aplicarla en Supabase y verificar que esas tablas y RPC ya existan. Las notificaciones de Expo son para iOS y Android; en web no se programan. Para probar los cambios nativos, hay que reconstruir la app después de cambiar app.json.
 
 
 

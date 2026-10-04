@@ -15,6 +15,7 @@ export default function InicioScreen({ navigation }: any) {
   const [userId, setUserId] = useState<string>();
 
   const {
+    loading: cargandoRacha,
     diasRacha,
     comodines,
     completadoHoy,
@@ -69,6 +70,7 @@ export default function InicioScreen({ navigation }: any) {
 
       {/* 2. SECCIÓN: RACHA DIARIA (Widget Interactivo) */}
       <RachaWidget 
+        loading={cargandoRacha}
         diasRacha={diasRacha}
         comodines={comodines}
         completadoHoy={completadoHoy}

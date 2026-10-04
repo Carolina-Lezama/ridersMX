@@ -21,10 +21,9 @@ export default function LimiteAlcanzadoScreen({ navigation, route }: any) {
 
   const handleIgnorar = () => {
     if (onIgnorar) onIgnorar();
-    // Redirige al inicio o a la vista principal
     navigation.reset({
       index: 0,
-      routes: [{ name: 'Home' }], // Cambia 'Home' por el nombre de tu pantalla principal
+      routes: [{ name: 'MainApp' }],
     });
   };
 

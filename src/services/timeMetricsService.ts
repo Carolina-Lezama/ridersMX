@@ -14,6 +14,13 @@ export interface MetricasTiempo {
 
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
+const obtenerFechaLocalISO = (fecha: Date) => {
+  const year = fecha.getFullYear();
+  const month = String(fecha.getMonth() + 1).padStart(2, '0');
+  const day = String(fecha.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const obtenerMetricasSemanales = async (
   limiteBloqueo: number,
   themePrimary: string,
@@ -38,7 +45,8 @@ export const obtenerMetricasSemanales = async (
     // Crear un mapa de fecha (YYYY-MM-DD) -> minutos
     const mapaRegistros: { [fecha: string]: number } = {};
     (data || []).forEach((row: { fecha: string; minutos_usados: number }) => {
-      mapaRegistros[row.fecha] = Math.round(Number(row.minutos_usados));
+      const minutos = Number(row.minutos_usados);
+      mapaRegistros[row.fecha] = Number.isFinite(minutos) ? Math.max(0, Math.round(minutos)) : 0;
     });
 
     // 2. Construir el arreglo continuo de los últimos 7 días (de hace 6 días hasta hoy)
@@ -53,7 +61,7 @@ export const obtenerMetricasSemanales = async (
       d.setDate(hoy.getDate() - i);
       
       // Formato YYYY-MM-DD para comparar con la BD
-      const fechaIso = d.toISOString().split('T')[0];
+      const fechaIso = obtenerFechaLocalISO(d);
       const minutos = mapaRegistros[fechaIso] || 0;
       const etiquetaDia = DIAS_SEMANA[d.getDay()];
 
@@ -82,12 +90,6 @@ export const obtenerMetricasSemanales = async (
     };
   } catch (error) {
     console.error('Error calculando métricas de tiempo:', error);
-    
-    // En caso de error, retornar datos limpios
-    return {
-      tiempoHoy: 0,
-      promedioSemanal: 0,
-      barData: [],
-    };
+    throw error;
   }
 };

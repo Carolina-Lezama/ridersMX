@@ -16,6 +16,7 @@ export default function TiempoUsoScreen({ navigation }: any) {
   const [promedioSemanal, setPromedioSemanal] = useState(0);
   const [barData, setBarData] = useState<BarDataPoint[]>([]);
   const [cargandoMetricas, setCargandoMetricas] = useState(true);
+  const [errorMetricas, setErrorMetricas] = useState(false);
   
   // ESTADOS DE LÍMITES (Paso 3.1)
   const [limiteNotificacion, setLimiteNotificacion] = useState(0);
@@ -29,18 +30,24 @@ export default function TiempoUsoScreen({ navigation }: any) {
 
     const cargarMetricas = async () => {
       setCargandoMetricas(true);
+      setErrorMetricas(false);
+      try {
+        const metricas = await obtenerMetricasSemanales(
+          limiteBloqueo,
+          theme.primary,
+          theme.dangerText,
+        );
 
-      const metricas = await obtenerMetricasSemanales(
-        limiteBloqueo,
-        theme.primary,
-        theme.dangerText,
-      );
-
-      if (mounted) {
-        setTiempoHoy(metricas.tiempoHoy);
-        setPromedioSemanal(metricas.promedioSemanal);
-        setBarData(metricas.barData);
-        setCargandoMetricas(false);
+        if (mounted) {
+          setTiempoHoy(metricas.tiempoHoy);
+          setPromedioSemanal(metricas.promedioSemanal);
+          setBarData(metricas.barData);
+        }
+      } catch (error) {
+        console.error('No se pudieron cargar las métricas de uso:', error);
+        if (mounted) setErrorMetricas(true);
+      } finally {
+        if (mounted) setCargandoMetricas(false);
       }
     };
 
@@ -154,6 +161,10 @@ export default function TiempoUsoScreen({ navigation }: any) {
         <View style={styles.chartCard}>
           {cargandoMetricas ? (
             <ActivityIndicator size="large" color={theme.primary} style={{ height: 180 }} />
+          ) : errorMetricas ? (
+            <Text style={{ color: theme.dangerText, padding: 20 }}>
+              No se pudieron cargar las métricas. Comprueba tu conexión e inténtalo de nuevo.
+            </Text>
           ) : barData.length > 0 ? (
             <BarChart
               data={barData}

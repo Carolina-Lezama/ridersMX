@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,113 @@ import {
   Switch,
   TouchableOpacity,
   Platform,
+  ActivityIndicator,
+  Alert,
+  Modal,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; // Asegúrate de tener expo/vector-icons instalado
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
+import { useNotificationConfig } from '../../../utils/hooks/useNotificationConfig';
+import { useStreak } from '../../../utils/hooks/useStreak';
+import { supabase } from '../../../services/supabase';
 
 export const NotificacionesScreen = () => {
-  // --- Estados Locales (Aquí luego conectarás tus Hooks/Servicios) ---
-  const [checkInEnabled, setCheckInEnabled] = useState(true);
-  const [limiteEnabled, setLimiteEnabled] = useState(true);
-  
-  // Para la hora, podrías usar @react-native-community/datetimepicker en el futuro
-  const [checkInTime, setCheckInTime] = useState('19:00'); 
+  const [userId, setUserId] = useState<string>();
+  const [cargandoUsuario, setCargandoUsuario] = useState(true);
+  const [selectorHoraVisible, setSelectorHoraVisible] = useState(false);
+  const [horaTemporal, setHoraTemporal] = useState(new Date());
+
+  useEffect(() => {
+    let mounted = true;
+
+    const cargarUsuario = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        if (mounted) setUserId(session?.user.id);
+      } catch (error) {
+        console.error('Error al cargar la sesión para las notificaciones:', error);
+        const mensaje = 'No se pudo cargar la sesión. Inténtalo de nuevo.';
+        if (Platform.OS === 'web') {
+          window.alert(mensaje);
+        } else {
+          Alert.alert('Error de sesión', mensaje);
+        }
+      } finally {
+        if (mounted) setCargandoUsuario(false);
+      }
+    };
+
+    void cargarUsuario();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const { completadoHoy, loading: cargandoRacha } = useStreak(userId);
+  const {
+    config,
+    loading,
+    toggleCheckIn,
+    toggleLimite,
+    actualizarHoraCheckIn,
+  } = useNotificationConfig(userId, completadoHoy);
+
+  const mostrarError = (mensaje: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(mensaje);
+    } else {
+      Alert.alert('No se pudo actualizar', mensaje);
+    }
+  };
+
+  const guardarHoraSeleccionada = async (hora: Date) => {
+    const valor = `${String(hora.getHours()).padStart(2, '0')}:${String(hora.getMinutes()).padStart(2, '0')}`;
+    try {
+      await actualizarHoraCheckIn(valor);
+      setSelectorHoraVisible(false);
+    } catch (error) {
+      console.error('Error guardando la hora del recordatorio:', error);
+      mostrarError(error instanceof Error ? error.message : 'No se pudo guardar la hora del recordatorio.');
+    }
+  };
+
+  const abrirSelectorHora = () => {
+    const [hora, minuto] = config.checkInTime.split(':').map(Number);
+    const fecha = new Date();
+    fecha.setHours(hora, minuto, 0, 0);
+    setHoraTemporal(fecha);
+
+    if (Platform.OS === 'web') {
+      const nuevaHora = window.prompt('Hora del recordatorio (HH:MM)', config.checkInTime);
+      if (nuevaHora === null) return;
+      if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(nuevaHora)) {
+        mostrarError('Ingresa la hora en formato de 24 horas, por ejemplo 19:00.');
+        return;
+      }
+      void actualizarHoraCheckIn(nuevaHora).catch((error) => {
+        console.error('Error guardando la hora del recordatorio:', error);
+        mostrarError(error instanceof Error ? error.message : 'No se pudo guardar la hora del recordatorio.');
+      });
+      return;
+    }
+
+    setSelectorHoraVisible(true);
+  };
+
+  const manejarCambioHora = (event: DateTimePickerEvent, selectedTime?: Date) => {
+    if (event.type === 'dismissed') {
+      setSelectorHoraVisible(false);
+      return;
+    }
+    if (!selectedTime) return;
+
+    setHoraTemporal(selectedTime);
+    if (Platform.OS === 'android') {
+      setSelectorHoraVisible(false);
+      void guardarHoraSeleccionada(selectedTime);
+    }
+  };
 
   // --- Componentes Reutilizables de la UI ---
   
@@ -66,6 +163,22 @@ export const NotificacionesScreen = () => {
     </TouchableOpacity>
   );
 
+  if (cargandoUsuario || (userId && (loading || cargandoRacha))) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#FF6347" />
+      </View>
+    );
+  }
+
+  if (!userId) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <Text style={styles.rowLabel}>Inicia sesión para configurar tus notificaciones.</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       
@@ -75,14 +188,19 @@ export const NotificacionesScreen = () => {
       <Section title="RACHA Y HÁBITOS" icon="flame-outline">
         <SwitchRow 
           label="Recordatorio de Check-in Diario" 
-          value={checkInEnabled} 
-          onValueChange={setCheckInEnabled} 
+          value={config.checkInEnabled}
+          onValueChange={(enabled: boolean) => {
+            void toggleCheckIn(enabled).catch((error) => {
+              console.error('Error actualizando recordatorios de racha:', error);
+              mostrarError(error instanceof Error ? error.message : 'No se pudo actualizar el recordatorio de check-in.');
+            });
+          }}
         />
-        {checkInEnabled && (
+        {config.checkInEnabled && (
           <ActionRow 
             label="Hora del Recordatorio" 
-            value={checkInTime} 
-            onPress={() => console.log('Abrir selector de hora')} 
+            value={config.checkInTime}
+            onPress={abrirSelectorHora}
           />
         )}
       </Section>
@@ -91,8 +209,13 @@ export const NotificacionesScreen = () => {
       <Section title="BIENESTAR Y TIEMPO DE USO" icon="timer-outline">
         <SwitchRow 
           label="Alerta de Límite Diario Alcanzado" 
-          value={limiteEnabled} 
-          onValueChange={setLimiteEnabled} 
+          value={config.limiteEnabled}
+          onValueChange={(enabled: boolean) => {
+            void toggleLimite(enabled).catch((error) => {
+              console.error('Error actualizando alertas de límite:', error);
+              mostrarError(error instanceof Error ? error.message : 'No se pudo actualizar la alerta de límite diario.');
+            });
+          }}
         />
       </Section>
 
@@ -116,6 +239,44 @@ export const NotificacionesScreen = () => {
         />
       </Section>
 
+      {Platform.OS === 'ios' && (
+        <Modal
+          transparent
+          visible={selectorHoraVisible}
+          animationType="fade"
+          onRequestClose={() => setSelectorHoraVisible(false)}
+        >
+          <View style={styles.pickerOverlay}>
+            <View style={styles.pickerCard}>
+              <Text style={styles.pickerTitle}>Hora del recordatorio</Text>
+              <DateTimePicker
+                value={horaTemporal}
+                mode="time"
+                display="spinner"
+                onChange={manejarCambioHora}
+              />
+              <View style={styles.pickerActions}>
+                <TouchableOpacity onPress={() => setSelectorHoraVisible(false)}>
+                  <Text style={styles.pickerCancel}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => void guardarHoraSeleccionada(horaTemporal)}>
+                  <Text style={styles.pickerSave}>Guardar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {Platform.OS === 'android' && selectorHoraVisible && (
+        <DateTimePicker
+          value={horaTemporal}
+          mode="time"
+          display="default"
+          onChange={manejarCambioHora}
+        />
+      )}
+
     </ScrollView>
   );
 };
@@ -124,6 +285,44 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121212', // Fondo oscuro (adaptado a tu app de motos)
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  pickerOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  },
+  pickerCard: {
+    borderRadius: 16,
+    padding: 16,
+    backgroundColor: '#1E1E1E',
+  },
+  pickerTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  pickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+  },
+  pickerCancel: {
+    color: '#CCCCCC',
+    fontSize: 16,
+  },
+  pickerSave: {
+    color: '#FF6347',
+    fontSize: 16,
+    fontWeight: '600',
   },
   content: {
     padding: 20,
