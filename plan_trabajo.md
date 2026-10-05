@@ -1,8 +1,4 @@
 
-No puedo confirmar que el flujo completo funcione contra la base de datos remota: en las migraciones del repositorio no encontré definiciones para tiempo_uso, rachas_usuario ni para las funciones RPC que consumen esos servicios. La migración nueva cubre la columna de preferencias, pero hay que aplicarla en Supabase y verificar que esas tablas y RPC ya existan. Las notificaciones de Expo son para iOS y Android; en web no se programan. Para probar los cambios nativos, hay que reconstruir la app después de cambiar app.json.
-
-
-
 
 
 
