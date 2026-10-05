@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -16,7 +17,7 @@ export default function ForoScreen({ navigation }: any) {
       fecha: 'Rodada el 12 de mayo',
       titulo: 'Rodada Italika',
       descripcion:
-        'Este es el texto de la publicación. Aquí se describe el contenido de la rodada.',
+        'Este es el texto de la publicación. Aquí se describe el contenido de la rodada y detalles de la ruta.',
       ubicacion: 'Italika BAS',
     },
     {
@@ -25,74 +26,98 @@ export default function ForoScreen({ navigation }: any) {
       fecha: 'Rodada el 12 de mayo',
       titulo: 'Rodada Puebla',
       descripcion:
-        'Ruta para motociclistas principiantes. Salida desde el centro.',
+        'Ruta para motociclistas principiantes. Salida desde el centro histórico hacia los fuertes.',
       ubicacion: 'Base 24',
     },
   ];
 
   const renderItem = ({ item }: any) => (
     <View style={styles.card}>
+      {/* Header del Post: Autor y Fecha */}
       <View style={styles.userContainer}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
-            {item.usuario.charAt(0)}
+            {item.usuario.charAt(0).toUpperCase()}
           </Text>
         </View>
 
-        <View>
+        <View style={styles.userInfo}>
           <Text style={styles.nombre}>{item.usuario}</Text>
           <Text style={styles.fecha}>{item.fecha}</Text>
         </View>
+
+        <TouchableOpacity style={styles.btnOptions}>
+          <Ionicons name="ellipsis-horizontal" size={20} color="#94a3b8" />
+        </TouchableOpacity>
       </View>
 
+      {/* Contenido principal */}
       <Text style={styles.cardTitulo}>{item.titulo}</Text>
+      <Text style={styles.descripcion}>{item.descripcion}</Text>
 
-      <Text style={styles.descripcion}>
-        {item.descripcion}
-      </Text>
+      {/* Tag de Ubicación */}
+      <View style={styles.ubicacionContainer}>
+        <Ionicons name="location-outline" size={16} color="#3b82f6" />
+        <Text style={styles.ubicacionTexto}>{item.ubicacion}</Text>
+      </View>
 
-      <Text style={styles.ubicacion}>
-        📍 {item.ubicacion}
-      </Text>
+      {/* Footer del Post: Interacciones */}
+      <View style={styles.cardFooter}>
+        <TouchableOpacity style={styles.actionBtn}>
+          <Ionicons name="heart-outline" size={20} color="#64748b" />
+          <Text style={styles.actionText}>Me gusta</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionBtn}>
+          <Ionicons name="chatbubble-outline" size={18} color="#64748b" />
+          <Text style={styles.actionText}>Comentar</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      {/* HEADER */}
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+
+      {/* 1. HEADER INTEGRADO */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons
-            name="arrow-back"
-            size={28}
-            color="#0f172a"
-          />
+        <TouchableOpacity 
+          style={styles.backBtn} 
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={22} color="#0f172a" />
         </TouchableOpacity>
 
-        <Text style={styles.titulo}>Foro</Text>
+        <View>
+          <Text style={styles.tituloHeader}>Comunidad Riders</Text>
+          <Text style={styles.subtituloHeader}>Foro de discusión y rutas</Text>
+        </View>
 
-        <View style={{ width: 28 }} />
+        <View style={{ width: 40 }} />
       </View>
-
-      {/* BOTÓN CREAR */}
-      <TouchableOpacity
-        style={styles.crearBtn}
-        onPress={() => navigation.navigate('ForoCrearPublicacion')}
-      >
-        <Text style={styles.crearBtnText}>
-          Crear publicación
-        </Text>
-      </TouchableOpacity>
-
-      <Text style={styles.sectionTitle}>
-        Publicaciones
-      </Text>
 
       <FlatList
         data={publicaciones}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingBottom: 30 }}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <>
+            {/* 2. BOTÓN PRIMARIO CREAR */}
+            <TouchableOpacity
+              style={styles.crearBtn}
+              onPress={() => navigation.navigate('ForoCrearPublicacion')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add-circle-outline" size={22} color="#ffffff" style={{ marginRight: 8 }} />
+              <Text style={styles.crearBtnText}>Crear publicación</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.sectionTitle}>Publicaciones recientes</Text>
+          </>
+        }
       />
     </View>
   );
@@ -104,56 +129,86 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
 
+  // Header principal
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 55,
-    paddingHorizontal: 20,
+    paddingTop: 50,
     paddingBottom: 15,
-    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: '#f1f5f9',
   },
-
-  titulo: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#0f172a',
-  },
-
-  crearBtn: {
-    margin: 16,
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#0f172a',
+  backBtn: {
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: '#f8fafc',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-
-  crearBtnText: {
-    fontSize: 18,
+  tituloHeader: {
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#0f172a',
+    textAlign: 'center',
+  },
+  subtituloHeader: {
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 30,
+  },
+
+  // Botón Principal Estilizado
+  crearBtn: {
+    backgroundColor: '#007bff',
+    borderRadius: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 25,
+    shadowColor: '#007bff',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  crearBtnText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
   },
 
   sectionTitle: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginHorizontal: 16,
-    marginBottom: 10,
     color: '#0f172a',
+    marginBottom: 15,
   },
 
+  // Card Estilo Dashboard
   card: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 18,
     marginBottom: 16,
-    borderRadius: 15,
-    padding: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#f1f5f9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
   },
 
   userContainer: {
@@ -161,49 +216,85 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-
   avatar: {
-    width: 45,
-    height: 45,
-    borderRadius: 22,
-    backgroundColor: '#dbeafe',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#eff6ff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 12,
   },
-
   avatarText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1e3a8a',
-  },
-
-  nombre: {
     fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2563eb',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  nombre: {
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#0f172a',
   },
-
   fecha: {
     color: '#64748b',
-    fontSize: 13,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  btnOptions: {
+    padding: 4,
   },
 
   cardTitulo: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
     color: '#0f172a',
-    marginBottom: 8,
+    marginBottom: 6,
   },
-
   descripcion: {
     color: '#475569',
+    fontSize: 14,
     lineHeight: 22,
+    marginBottom: 14,
   },
 
-  ubicacion: {
-    marginTop: 15,
+  // Badge de Ubicación
+  ubicacionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    marginBottom: 15,
+  },
+  ubicacionTexto: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#0f172a',
+    color: '#2563eb',
+    marginLeft: 6,
+  },
+
+  // Footer / Acciones
+  cardFooter: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#f8fafc',
+    paddingTop: 12,
+    marginTop: 4,
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 24,
+  },
+  actionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748b',
+    marginLeft: 6,
   },
 });
