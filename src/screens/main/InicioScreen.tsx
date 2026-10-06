@@ -1,150 +1,419 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../../assets/theme/ThemeContext';
+import { RachaWidget } from '../../components/RachaWidget'; 
+import { QuizModal, type PreguntaQuiz } from '../../components/QuizModal';
+import { getPreguntaDelDia } from '../../services/quizService';
 import { supabase } from '../../services/supabase';
+import { useStreak } from '../../utils/hooks/useStreak';
+
 
 export default function InicioScreen({ navigation }: any) {
-  const [username, setUsername] = useState('');
-  const [loading, setLoading] = useState(true);
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+  const [userId, setUserId] = useState<string>();
 
-  const accesosRapidos = [
-    { id: 'diagnostico', icon: 'pulse-outline', titulo: 'Diagnóstico', color: '#ef4444' },
-    { id: 'mantenimiento', icon: 'build-outline', titulo: 'Mantenimiento', color: '#3b82f6' },
-    { id: 'foro', icon: 'chatbubbles-outline', titulo: 'Foro Riders', color: '#10b981' },
-    { id: 'resenas', icon: 'star-outline', titulo: 'Top Reseñas', color: '#f59e0b' },
-  ];
+  const {
+    loading: cargandoRacha,
+    diasRacha,
+    comodines,
+    completadoHoy,
+    rachaSalvadaRecientemente,
+    realizarCheckIn,
+  } = useStreak(userId);
+
+  const [quizVisible, setQuizVisible] = useState(false);
+  const [preguntaDiaria, setPreguntaDiaria] = useState<PreguntaQuiz | undefined>();
 
   useEffect(() => {
-    obtenerPerfil();
+    const cargarUsuario = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        setUserId(session?.user.id);
+      } catch (error) {
+        Alert.alert(
+          'Error al cargar sesión',
+          error instanceof Error ? error.message : 'No se pudo obtener la sesión del usuario.',
+        );
+      }
+    };
+
+    void cargarUsuario();
+  }, []);
+  
+  useEffect(() => {
+    const pregunta = getPreguntaDelDia();
+    setPreguntaDiaria(pregunta);
   }, []);
 
-  const obtenerPerfil = async () => {
-    try {
-      setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (session?.user) {
-        // Pedimos la columna 'username' en lugar de 'nombre_completo'
-        const { data, error } = await supabase
-          .from('perfiles')
-          .select('username')
-          .eq('id', session.user.id)
-          .single();
-
-        if (error) throw error;
-
-        if (data && data.username) {
-          setUsername(data.username);
-        }
-      }
-    } catch (error: any) {
-      console.error('Error cargando username en Inicio:', error.message);
-    } finally {
-      setLoading(false);
-    }
+  const handleOpenQuiz = () => {
+    setQuizVisible(true);
   };
 
   return (
+    <>
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       
-      {/* ENCABEZADO CON USERNAME */}
+      {/* 1. ENCABEZADO */}
       <View style={styles.header}>
         <View>
-          {loading ? (
-            <ActivityIndicator size="small" color="#007bff" style={{ alignSelf: 'flex-start', marginVertical: 8 }} />
-          ) : (
-            <Text style={styles.saludo}>
-              Hola, {username ? `@${username}` : 'Rider'} 👋
-            </Text>
-          )}
-          <Text style={styles.info}>Tu garaje digital está listo</Text>
+          <Text style={styles.saludo}>Hola, Carolina 👋</Text>
+          <Text style={styles.info}>Tu garaje digital está activo</Text>
         </View>
         <TouchableOpacity style={styles.btnNotificacion}>
-          <Ionicons name="notifications-outline" size={24} color="#0f172a" />
+          <Ionicons name="notifications-outline" size={22} color={theme.textPrimary} />
+          <View style={styles.badgeNotificacion} />
         </TouchableOpacity>
       </View>
 
-      {/* RESTO DEL COMPONENTE IGUAL */}
-      <View style={styles.emptyStateCard}>
-        <View style={styles.emptyStateIcono}>
-          <Ionicons name="map-outline" size={32} color="#007bff" />
-        </View>
-        <Text style={styles.emptyStateTitulo}>¿Listo para tu primera ruta?</Text>
-        <Text style={styles.emptyStateTexto}>
-          Aún no tienes viajes registrados. Cuando comiences a rodar, tus estadísticas y rutas aparecerán aquí.
-        </Text>
-        <TouchableOpacity style={styles.btnPrimario}>
-          <Text style={styles.btnTexto}>Planear un Viaje</Text>
+      {/* 2. SECCIÓN: RACHA DIARIA (Widget Interactivo) */}
+      <RachaWidget 
+        loading={cargandoRacha}
+        diasRacha={diasRacha}
+        comodines={comodines}
+        completadoHoy={completadoHoy}
+        rachaSalvada={rachaSalvadaRecientemente}
+        onPress={handleOpenQuiz} 
+      />
+
+      {/* 3. SECCIÓN: RESUMEN DE TU MOTO / GARAJE */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Estado de tu Moto</Text>
+        <TouchableOpacity>
+          <Text style={styles.sectionLink}>Ver Garaje</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionTitle}>Preparación y Comunidad</Text>
-      <View style={styles.gridAccesos}>
-        {accesosRapidos.map((item) => (
-          <TouchableOpacity 
-            key={item.id} 
-            style={styles.accesoCard}
-            onPress={() => {
-              if (item.id === 'foro') navigation.navigate('Foro');
-            }}
-          >
-            <View style={[styles.accesoIcono, { backgroundColor: item.color + '15' }]}>
-              <Ionicons name={item.icon as any} size={28} color={item.color} />
+      <View style={styles.cardCardLarge}>
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.bikeInfo}>
+            <View style={[styles.iconContainer, { backgroundColor: '#3b82f615' }]}>
+              <Ionicons name="bicycle-outline" size={26} color="#3b82f6" />
             </View>
-            <Text style={styles.accesoTitulo}>{item.titulo}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={styles.tipCard}>
-        <View style={styles.tipHeader}>
-          <Ionicons name="bulb-outline" size={20} color="#f59e0b" />
-          <Text style={styles.tipTitulo}>Consejo para tu primera rodada</Text>
+            <View>
+              <Text style={styles.cardTitle}>Mi Honda CB500F</Text>
+              <Text style={styles.cardSubtitle}>Telemetría en tiempo real</Text>
+            </View>
+          </View>
+          <View style={styles.chipStatus}>
+            <Text style={styles.chipText}>En orden</Text>
+          </View>
         </View>
-        <Text style={styles.tipTexto}>
-          Antes de salir, revisa siempre la presión de tus llantas desde el apartado de Diagnóstico. Una presión adecuada mejora el consumo y la seguridad en curvas.
-        </Text>
+
+        <View style={styles.metricsGrid}>
+          <View style={styles.metricItem}>
+            <Ionicons name="speedometer-outline" size={18} color={theme.textSecondary} />
+            <Text style={styles.metricValue}>12,450 km</Text>
+            <Text style={styles.metricLabel}>Kilometraje</Text>
+          </View>
+          <View style={styles.dividerVertical} />
+          <View style={styles.metricItem}>
+            <Ionicons name="build-outline" size={18} color={theme.textSecondary} />
+            <Text style={styles.metricValue}>En 550 km</Text>
+            <Text style={styles.metricLabel}>Próx. Servicio</Text>
+          </View>
+        </View>
       </View>
 
-      <View style={{ height: 30 }} />
+      {/* 4. SECCIÓN: INSIGNIAS Y LOGROS (Fila horizontal de preview) */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Tus Logros</Text>
+        <TouchableOpacity>
+          <Text style={styles.sectionLink}>Ver Todas</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+        <View style={styles.badgeCard}>
+          <View style={[styles.badgeIcon, { backgroundColor: '#f59e0b15' }]}>
+            <Ionicons name="flame" size={28} color="#f59e0b" />
+          </View>
+          <Text style={styles.badgeName}>Piloto Novato</Text>
+          <Text style={styles.badgeDetail}>3 Días Seguidos</Text>
+        </View>
+
+        <View style={styles.badgeCard}>
+          <View style={[styles.badgeIcon, { backgroundColor: '#10b98115' }]}>
+            <Ionicons name="shield-checkmark" size={28} color="#10b981" />
+          </View>
+          <Text style={styles.badgeName}>Check-in Pro</Text>
+          <Text style={styles.badgeDetail}>7 Días Seguidos</Text>
+        </View>
+
+        <View style={[styles.badgeCard, styles.badgeCardLocked]}>
+          <View style={[styles.badgeIcon, { backgroundColor: '#6b728015' }]}>
+            <Ionicons name="lock-closed-outline" size={24} color="#6b7280" />
+          </View>
+          <Text style={[styles.badgeName, { color: theme.textSecondary }]}>Leyenda</Text>
+          <Text style={styles.badgeDetail}>30 Días Seguidos</Text>
+        </View>
+      </ScrollView>
+
+      {/* 5. SECCIÓN: MANTENIMIENTO PREVENTIVO Y ALERTAS */}
+      <Text style={styles.sectionTitle}>Mantenimiento Preventivo</Text>
+      <View style={styles.mantenimientoCard}>
+        <View style={styles.mantenimientoRow}>
+          <View style={styles.mantenimientoLeft}>
+            <View style={[styles.smallIcon, { backgroundColor: '#ef444415' }]}>
+              <Ionicons name="color-fill-outline" size={20} color="#ef4444" />
+            </View>
+            <View>
+              <Text style={styles.mantenimientoTitle}>Cambio de Aceite</Text>
+              <Text style={styles.mantenimientoSub}>Recomendación por tiempo</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.btnActionSmall}>
+            <Text style={styles.btnActionText}>Agendar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Espaciado inferior para la barra de navegación */}
+      <View style={{ height: 40 }} />
     </ScrollView>
+    <QuizModal
+      visible={quizVisible}
+      preguntaData={preguntaDiaria}
+      onClose={() => setQuizVisible(false)}
+      onCompletarCheckIn={(esCorrecta) => {
+        if (esCorrecta) {
+          realizarCheckIn();
+        }
+      }}
+    />
+    </>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc', paddingHorizontal: 20 },
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
+  container: { 
+    flex: 1, 
+    backgroundColor: theme.background, 
+    paddingHorizontal: 20 
+  },
+  
+  // Header
   header: { 
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', 
-    marginTop: 60, marginBottom: 25 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginTop: 60, 
+    marginBottom: 15 
   },
-  saludo: { fontSize: 26, fontWeight: 'bold', color: '#0f172a' },
-  info: { fontSize: 16, color: '#64748b', marginTop: 4 },
+  saludo: { 
+    fontSize: 26, 
+    fontWeight: '800', 
+    color: theme.textPrimary 
+  },
+  info: { 
+    fontSize: 14, 
+    color: theme.textSecondary, 
+    marginTop: 2 
+  },
   btnNotificacion: {
-    backgroundColor: '#fff', padding: 10, borderRadius: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2
+    backgroundColor: theme.card, 
+    padding: 10, 
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.border,
+    position: 'relative'
   },
-  emptyStateCard: {
-    backgroundColor: '#fff', borderRadius: 24, padding: 25, alignItems: 'center', marginBottom: 30,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 15, elevation: 3,
-    borderWidth: 1, borderColor: '#f1f5f9'
+  badgeNotificacion: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444'
   },
-  emptyStateIcono: {
-    backgroundColor: '#eff6ff', width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginBottom: 15
+
+  // Titles & Section Headers
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 12
   },
-  emptyStateTitulo: { fontSize: 20, fontWeight: 'bold', color: '#0f172a', marginBottom: 10, textAlign: 'center' },
-  emptyStateTexto: { fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 20, lineHeight: 22 },
-  btnPrimario: { backgroundColor: '#007bff', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12, width: '100%', alignItems: 'center' },
-  btnTexto: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#0f172a', marginBottom: 15 },
-  gridAccesos: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 25 },
-  accesoCard: {
-    backgroundColor: '#fff', width: '48%', padding: 20, borderRadius: 20, marginBottom: 15, alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2
+  sectionTitle: { 
+    fontSize: 18, 
+    fontWeight: '700', 
+    color: theme.textPrimary,
+    marginTop: 15,
+    marginBottom: 12
   },
-  accesoIcono: { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  accesoTitulo: { fontSize: 15, fontWeight: '600', color: '#1e293b', textAlign: 'center' },
-  tipCard: { backgroundColor: '#fffbeb', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#fef3c7' },
-  tipHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  tipTitulo: { fontSize: 16, fontWeight: 'bold', color: '#b45309', marginLeft: 8 },
-  tipTexto: { fontSize: 14, color: '#92400e', lineHeight: 22 }
+  sectionLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.primary,
+    marginTop: 15
+  },
+
+  // Card Estado de Moto (Large)
+  cardCardLarge: {
+    backgroundColor: theme.card,
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: theme.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16
+  },
+  bikeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.textPrimary
+  },
+  cardSubtitle: {
+    fontSize: 12,
+    color: theme.textSecondary
+  },
+  chipStatus: {
+    backgroundColor: '#10b98115',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20
+  },
+  chipText: {
+    color: '#10b981',
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    backgroundColor: theme.background,
+    borderRadius: 14,
+    padding: 12,
+    alignItems: 'center'
+  },
+  metricItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2
+  },
+  metricValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.textPrimary,
+    marginTop: 2
+  },
+  metricLabel: {
+    fontSize: 11,
+    color: theme.textSecondary
+  },
+  dividerVertical: {
+    width: 1,
+    height: '70%',
+    backgroundColor: theme.border
+  },
+
+  // Logros / Insignias Scroll Horizontal
+  horizontalScroll: {
+    marginLeft: -20,
+    paddingLeft: 20,
+    marginBottom: 10
+  },
+  badgeCard: {
+    backgroundColor: theme.card,
+    borderRadius: 18,
+    padding: 16,
+    marginRight: 12,
+    width: 130,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.border
+  },
+  badgeCardLocked: {
+    opacity: 0.6
+  },
+  badgeIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8
+  },
+  badgeName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.textPrimary,
+    textAlign: 'center'
+  },
+  badgeDetail: {
+    fontSize: 11,
+    color: theme.textSecondary,
+    textAlign: 'center',
+    marginTop: 2
+  },
+
+  // Mantenimiento Card
+  mantenimientoCard: {
+    backgroundColor: theme.card,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.border
+  },
+  mantenimientoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  mantenimientoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
+  },
+  smallIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  mantenimientoTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.textPrimary
+  },
+  mantenimientoSub: {
+    fontSize: 12,
+    color: theme.textSecondary
+  },
+  btnActionSmall: {
+    backgroundColor: theme.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10
+  },
+  btnActionText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700'
+  }
 });

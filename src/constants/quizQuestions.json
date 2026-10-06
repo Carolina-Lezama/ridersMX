@@ -1,0 +1,67 @@
+[
+  {
+    "id": "q_001",
+    "categoria": "Mantenimiento",
+    "pregunta": "¿Qué indica un color blanquecino o lechoso en el aceite del motor?",
+    "opciones": [
+      "Desgaste normal por kilometraje",
+      "Presencia de anticongelante/agua",
+      "Exceso de aditivo de viscosidad",
+      "Falta de uso del vehículo"
+    ],
+    "respuestaCorrecta": 1,
+    "explicacion": "El aspecto lechoso se produce por la emulsión del aceite al mezclarse con líquido refrigerante o condensación excesiva de agua."
+  },
+  {
+    "id": "q_002",
+    "categoria": "Seguridad",
+    "pregunta": "¿Cuándo es el momento ideal para revisar la presión de las llantas?",
+    "opciones": [
+      "Después de rodar al menos 10 km",
+      "Con las llantas completamente frías",
+      "A mitad de una ruta larga",
+      "Bajo la luz directa del sol"
+    ],
+    "respuestaCorrecta": 1,
+    "explicacion": "La presión debe medirse en frío (antes de rodar o rodando menos de 2 km) porque el calor del rodamiento expande el aire y da una lectura falsamente alta."
+  },
+  {
+    "id": "q_003",
+    "categoria": "Técnica",
+    "pregunta": "¿Qué significa el número '4' en un líquido de frenos DOT 4?",
+    "opciones": [
+      "Los años de caducidad del líquido",
+      "El nivel de viscosidad a baja temperatura",
+      "Su punto de ebullición mínimo garantizado",
+      "El número de componentes químicos"
+    ],
+    "respuestaCorrecta": 2,
+    "explicacion": "El estándar DOT clasifica los líquidos según su punto de ebullición. El DOT 4 soporta temperaturas más altas que el DOT 3, evitando que los frenos fallen por sobrecalentamiento."
+  },
+  {
+    "id": "q_004",
+    "categoria": "Mantenimiento",
+    "pregunta": "¿Cuál es la holgura (juego libre) recomendada para la cadena de transmisión en la mayoría de las motos street?",
+    "opciones": [
+      "5 a 10 mm",
+      "20 a 30 mm",
+      "50 a 60 mm",
+      "0 mm (completamente tensa)"
+    ],
+    "respuestaCorrecta": 1,
+    "explicacion": "Una holgura de entre 20 y 30 mm permite que la cadena tenga el juego necesario para absorber el recorrido del basculante (amortiguador trasero) sin romperse ni saltarse."
+  },
+  {
+    "id": "q_005",
+    "categoria": "Conducción",
+    "pregunta": "En una frenada de emergencia en pavimento seco, ¿cuál es la técnica correcta?",
+    "opciones": [
+      "Usar solo el freno trasero para no derrapar",
+      "Usar 70% freno delantero y 30% trasero",
+      "Presionar ambos frenos al 100% de golpe",
+      "Bombear los frenos repetidamente"
+    ],
+    "respuestaCorrecta": 1,
+    "explicacion": "Al frenar, el peso de la moto se transfiere hacia adelante. El freno delantero proporciona entre el 70% y el 80% del poder de frenado total, mientras que el trasero estabiliza."
+  }
+]
