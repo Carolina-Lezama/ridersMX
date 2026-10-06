@@ -151,7 +151,10 @@ export default function ConfiguracionScreen({ navigation }: any) {
         {/* SECCIÓN 1: MI CUENTA */}
         <Text style={styles.sectionTitle}>Cuenta y Accesos</Text>
         <View style={styles.card}>
-          <TouchableOpacity style={styles.row}>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => navigation.navigate('CambiarContrasena')}
+          >
             <View style={styles.rowLeft}>
               <Ionicons name="key-outline" size={22} color={theme.iconPrimary} />
               <Text style={styles.rowText}>Cambiar Contraseña</Text>
