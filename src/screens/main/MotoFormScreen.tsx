@@ -4,8 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import { supabase } from '../../services/supabase';
+import { useTheme } from '../../../assets/theme/ThemeContext';
 
 export default function MotoFormScreen({ navigation, route }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   // Detectamos si pasamos un 'motoId' por los parámetros de navegación
   const motoId = route.params?.motoId || null;
   const esEdicion = !!motoId;
@@ -197,7 +201,7 @@ export default function MotoFormScreen({ navigation, route }: any) {
       {/* HEADER DINÁMICO */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#0f172a" />
+          <Ionicons name="arrow-back" size={28} color={theme.iconPrimary} />
         </TouchableOpacity>
         <Text style={styles.titulo}>
           {esEdicion ? 'Editar Motocicleta' : 'Nueva Motocicleta'}
@@ -249,7 +253,7 @@ export default function MotoFormScreen({ navigation, route }: any) {
         {/* BOTÓN DE ACCIÓN PRINCIPAL */}
         <View style={styles.actionContainer}>
           {saving ? (
-            <ActivityIndicator size="large" color="#007bff" />
+            <ActivityIndicator size="large" color={theme.primary} />
           ) : (
             <CustomButton title={esEdicion ? 'Guardar Cambios' : 'Registrar Moto'} onPress={handleGuardar} />
           )}
@@ -258,7 +262,7 @@ export default function MotoFormScreen({ navigation, route }: any) {
         {/* BOTÓN DE ELIMINAR (Solo visible si estamos editando) */}
         {esEdicion && !saving && (
           <TouchableOpacity style={styles.btnEliminar} onPress={handleEliminar}>
-            <Ionicons name="trash-outline" size={20} color="#ef4444" />
+            <Ionicons name="trash-outline" size={20} color={theme.dangerText} />
             <Text style={styles.textEliminar}>Eliminar del Garaje</Text>
           </TouchableOpacity>
         )}
@@ -268,30 +272,30 @@ export default function MotoFormScreen({ navigation, route }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, marginTop: 60, paddingBottom: 20,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0'
+    backgroundColor: theme.card, borderBottomWidth: 1, borderBottomColor: theme.border
   },
   backButton: { padding: 5 },
-  titulo: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
+  titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   
   scrollContent: { padding: 20, paddingBottom: 40 },
-  centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' },
-  loadingText: { marginTop: 10, color: '#64748b' },
+  centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background },
+  loadingText: { marginTop: 10, color: theme.textSecondary },
   
-  card: { backgroundColor: '#fff', padding: 20, borderRadius: 16, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', paddingBottom: 10 },
-  cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b', marginLeft: 10 },
+  card: { backgroundColor: theme.card, padding: 20, borderRadius: 16, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.divider, paddingBottom: 10 },
+  cardTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginLeft: 10 },
   
   actionContainer: { marginTop: 10 },
   
   btnEliminar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#fef2f2', paddingVertical: 15, borderRadius: 12,
-    marginTop: 20, borderWidth: 1, borderColor: '#fecaca'
+    backgroundColor: theme.dangerBg, paddingVertical: 15, borderRadius: 12,
+    marginTop: 20, borderWidth: 1, borderColor: theme.dangerBorder
   },
-  textEliminar: { color: '#ef4444', fontWeight: 'bold', marginLeft: 8, fontSize: 16 }
+  textEliminar: { color: theme.dangerText, fontWeight: 'bold', marginLeft: 8, fontSize: 16 }
 });

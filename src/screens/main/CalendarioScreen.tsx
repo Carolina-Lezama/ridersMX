@@ -4,6 +4,7 @@ import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
 import EventoCard from '../../components/EventoCard';
+import { useTheme } from '../../../assets/theme/ThemeContext';
 
 // Configuración del idioma del calendario a Español
 LocaleConfig.locales['es'] = {
@@ -16,6 +17,9 @@ LocaleConfig.locales['es'] = {
 LocaleConfig.defaultLocale = 'es';
 
 export default function CalendarioScreen({ navigation }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   // Obtener fecha local (YYYY-MM-DD) sin desfase UTC
   const hoy = new Date();
   const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
@@ -72,10 +76,10 @@ export default function CalendarioScreen({ navigation }: any) {
     marcas[fechaSeleccionada] = { 
       ...marcas[fechaSeleccionada], 
       selected: true, 
-      selectedColor: '#0f172a' 
+      selectedColor: theme.textPrimary 
     };
     return marcas;
-  }, [eventos, fechaSeleccionada]);
+  }, [eventos, fechaSeleccionada, theme.textPrimary]);
 
   // Filtrar eventos a mostrar según la pestaña activa
   const eventosAMostrar = useMemo(() => {
@@ -90,7 +94,7 @@ export default function CalendarioScreen({ navigation }: any) {
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="#0f172a" />
+          <Ionicons name="arrow-back" size={28} color={theme.iconPrimary} />
         </TouchableOpacity>
         <Text style={styles.titulo}>Mi Agenda</Text>
         <View style={{ width: 28 }} />
@@ -107,10 +111,13 @@ export default function CalendarioScreen({ navigation }: any) {
           markingType={'multi-dot'}
           markedDates={markedDates}
           theme={{
-            selectedDayBackgroundColor: '#0f172a',
-            todayTextColor: '#007bff',
-            dotColor: '#007bff',
-            arrowColor: '#0f172a',
+            selectedDayBackgroundColor: theme.textPrimary,
+            todayTextColor: theme.primary,
+            dotColor: theme.primary,
+            arrowColor: theme.iconPrimary,
+            calendarBackground: theme.card,
+            dayTextColor: theme.textPrimary,
+            textDisabledColor: theme.iconSecondary,
           }}
         />
       </View>
@@ -175,14 +182,14 @@ export default function CalendarioScreen({ navigation }: any) {
         style={styles.fab} 
         onPress={() => navigation.navigate('EventoForm', { fechaBase: fechaSeleccionada })}
       >
-        <Ionicons name="add" size={30} color="#fff" />
+        <Ionicons name="add" size={30} color={theme.card} />
       </TouchableOpacity>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
   header: { 
     flexDirection: 'row', 
     alignItems: 'center', 
@@ -191,12 +198,12 @@ const styles = StyleSheet.create({
     marginTop: 60, 
     paddingBottom: 15 
   },
-  titulo: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
+  titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   calendarWrapper: { 
-    backgroundColor: '#fff', 
+    backgroundColor: theme.card, 
     paddingBottom: 10, 
     borderBottomWidth: 1, 
-    borderBottomColor: '#e2e8f0', 
+    borderBottomColor: theme.border, 
     elevation: 2 
   },
   listContainer: { flex: 1, paddingHorizontal: 20, paddingTop: 15 },
@@ -204,7 +211,7 @@ const styles = StyleSheet.create({
   /* ESTILOS DEL SELECTOR DE PESTAÑAS (TABS) */
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#e2e8f0',
+    backgroundColor: theme.border,
     borderRadius: 12,
     padding: 4,
     marginBottom: 15,
@@ -216,7 +223,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabButtonActive: {
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.card,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -226,24 +233,24 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748b',
+    color: theme.textSecondary,
   },
   tabTextActive: {
-    color: '#0f172a',
+    color: theme.textPrimary,
     fontWeight: 'bold',
   },
 
   /* ESTADOS VACÍOS */
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 20 },
-  emptyTitle: { fontSize: 16, fontWeight: 'bold', color: '#1e293b', marginTop: 12, marginBottom: 6 },
-  emptyText: { fontSize: 13, color: '#64748b', textAlign: 'center', paddingHorizontal: 20, lineHeight: 18 },
+  emptyTitle: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, marginTop: 12, marginBottom: 6 },
+  emptyText: { fontSize: 13, color: theme.textSecondary, textAlign: 'center', paddingHorizontal: 20, lineHeight: 18 },
   
   /* FAB */
   fab: { 
     position: 'absolute', 
     bottom: 30, 
     right: 20, 
-    backgroundColor: '#007bff', 
+    backgroundColor: theme.primary, 
     width: 60, 
     height: 60, 
     borderRadius: 30, 

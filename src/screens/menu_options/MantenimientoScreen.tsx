@@ -1,15 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../../assets/theme/ThemeContext';
 
 export default function MantenimientoScreen({ navigation }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   return (
     <View style={styles.container}>
       
       {/* HEADER CON BOTÓN DE REGRESO (Mantiene tu diseño original) */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#0f172a" />
+          <Ionicons name="arrow-back" size={28} color={theme.iconPrimary} />
         </TouchableOpacity>
         <Text style={styles.titulo}>Mantenimiento</Text>
         <View style={{ width: 28 }} />
@@ -23,7 +27,7 @@ export default function MantenimientoScreen({ navigation }: any) {
           style={styles.mainButton}
           onPress={() => navigation.navigate('SimuladorEditor')}
         >
-          <Ionicons name="camera-outline" size={48} color="#3b82f6" />
+          <Ionicons name="camera-outline" size={48} color={theme.primary} />
           <Text style={styles.mainButtonText}>Iniciar Nuevo Diseño</Text>
           <Text style={styles.subButtonText}>(Seleccionar Foto de Galería)</Text>
         </TouchableOpacity>
@@ -74,22 +78,22 @@ export default function MantenimientoScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 60, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#e2e8f0', backgroundColor: '#fff' },
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 60, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.card },
   backButton: { padding: 5 },
-  titulo: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
+  titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   content: { padding: 20, paddingBottom: 40 },
-  mainButton: { backgroundColor: '#fff', height: 160, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 25, borderWidth: 1, borderColor: '#e2e8f0', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3 },
-  mainButtonText: { color: '#0f172a', fontSize: 18, fontWeight: 'bold', marginTop: 10 },
-  subButtonText: { color: '#64748b', fontSize: 14, marginTop: 5 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#0f172a', marginBottom: 15 },
-  cardContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25, backgroundColor: '#fff', padding: 20, borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0' },
+  mainButton: { backgroundColor: theme.card, height: 160, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 25, borderWidth: 1, borderColor: theme.border, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3 },
+  mainButtonText: { color: theme.textPrimary, fontSize: 18, fontWeight: 'bold', marginTop: 10 },
+  subButtonText: { color: theme.textSecondary, fontSize: 14, marginTop: 5 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 15 },
+  cardContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25, backgroundColor: theme.card, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: theme.border },
   progressItem: { alignItems: 'center' },
   circle: { width: 70, height: 70, borderRadius: 35, borderWidth: 4, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  circleText: { color: '#0f172a', fontWeight: 'bold', fontSize: 16 },
-  progressLabel: { color: '#64748b', fontSize: 12 },
+  circleText: { color: theme.textPrimary, fontWeight: 'bold', fontSize: 16 },
+  progressLabel: { color: theme.textSecondary, fontSize: 12 },
   gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  gridItem: { backgroundColor: '#fff', width: '48%', height: 100, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 15, borderWidth: 1, borderColor: '#e2e8f0' },
-  gridText: { color: '#0f172a', fontSize: 14, fontWeight: '600', marginTop: 8 }
+  gridItem: { backgroundColor: theme.card, width: '48%', height: 100, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 15, borderWidth: 1, borderColor: theme.border },
+  gridText: { color: theme.textPrimary, fontSize: 14, fontWeight: '600', marginTop: 8 }
 });

@@ -1,8 +1,12 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, PanResponder, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../../assets/theme/ThemeContext';
 
 export default function SimuladorEditorScreen({ navigation }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   const pan = useRef(new Animated.ValueXY()).current;
   const [isStickerActive, setIsStickerActive] = useState(true);
 
@@ -77,11 +81,11 @@ export default function SimuladorEditorScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 60, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#e2e8f0', backgroundColor: '#fff', zIndex: 10 },
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 60, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.card, zIndex: 10 },
   backButton: { padding: 5 },
-  titulo: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
+  titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   headerActions: { flexDirection: 'row', alignItems: 'center' },
   canvas: { flex: 1, backgroundColor: '#e2e8f0', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   bikeImage: { width: '100%', height: '100%', position: 'absolute' },
@@ -89,12 +93,12 @@ const styles = StyleSheet.create({
   stickerBorder: { padding: 10, borderWidth: 2, borderColor: 'transparent' },
   stickerBorderActive: { borderColor: '#3b82f6', borderStyle: 'dashed', backgroundColor: 'rgba(59, 130, 246, 0.1)' },
   stickerImage: { width: 120, height: 120, resizeMode: 'contain' },
-  handle: { position: 'absolute', width: 16, height: 16, backgroundColor: '#fff', borderRadius: 8, borderWidth: 2, borderColor: '#3b82f6' },
+  handle: { position: 'absolute', width: 16, height: 16, backgroundColor: theme.card, borderRadius: 8, borderWidth: 2, borderColor: theme.primary },
   handleTopLeft: { top: -8, left: -8 },
   handleTopRight: { top: -8, right: -8 },
   handleBottomLeft: { bottom: -8, left: -8 },
   handleBottomRight: { bottom: -8, right: -8 },
   handleCenter: { position: 'absolute', top: -30, alignSelf: 'center', backgroundColor: '#3b82f6', borderRadius: 12, padding: 2 },
-  floatingRightPanel: { position: 'absolute', right: 15, top: '35%', backgroundColor: '#fff', borderRadius: 16, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0', elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+  floatingRightPanel: { position: 'absolute', right: 15, top: '35%', backgroundColor: theme.card, borderRadius: 16, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: theme.border, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
   panelButton: { marginVertical: 12 }
 });

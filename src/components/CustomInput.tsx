@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, TextInput, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../../assets/theme/ThemeContext';
 
 interface Props {
   label: string;
@@ -20,6 +21,9 @@ export default function CustomInput({
   onChangeText,
   autoCapitalize = 'none' 
 }: Props) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
@@ -28,7 +32,7 @@ export default function CustomInput({
         placeholder={placeholder}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor={theme.iconSecondary}
         value={value}
         onChangeText={onChangeText}
         autoCapitalize={autoCapitalize}
@@ -37,16 +41,16 @@ export default function CustomInput({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: { marginBottom: 15, width: '100%' },
-  label: { fontSize: 14, fontWeight: '600', color: '#1e293b', marginBottom: 5 },
+  label: { fontSize: 14, fontWeight: '600', color: theme.textPrimary, marginBottom: 5 },
   input: { 
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.background,
     borderWidth: 1, 
-    borderColor: '#e2e8f0', 
+    borderColor: theme.border, 
     padding: 12, 
     borderRadius: 10, 
     fontSize: 16,
-    color: '#0f172a'
+    color: theme.textPrimary
   }
 });

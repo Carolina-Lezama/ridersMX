@@ -3,8 +3,12 @@ import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator } from 're
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import { supabase } from '../../services/supabase';
+import { useTheme } from '../../../assets/theme/ThemeContext';
 
 export default function RegisterScreen({ navigation }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   const [nombre, setNombre] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -94,7 +98,7 @@ const handleRegister = async () => {
       />
 
       {loading ? (
-        <ActivityIndicator size="large" color="#007bff" style={{ marginVertical: 20 }} />
+        <ActivityIndicator size="large" color={theme.primary} style={{ marginVertical: 20 }} />
       ) : (
         <>
           <CustomButton title="Registrarme" onPress={handleRegister} />
@@ -105,8 +109,8 @@ const handleRegister = async () => {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: 25, backgroundColor: '#fff', flexGrow: 1, justifyContent: 'center' },
-  titulo: { fontSize: 32, fontWeight: 'bold', color: '#0f172a', textAlign: 'center' },
-  subtitulo: { fontSize: 16, color: '#64748b', textAlign: 'center', marginBottom: 30 }
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
+  container: { padding: 25, backgroundColor: theme.background, flexGrow: 1, justifyContent: 'center' },
+  titulo: { fontSize: 32, fontWeight: 'bold', color: theme.textPrimary, textAlign: 'center' },
+  subtitulo: { fontSize: 16, color: theme.textSecondary, textAlign: 'center', marginBottom: 30 }
 });

@@ -3,8 +3,12 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIn
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import { supabase } from '../../services/supabase';
+import { useTheme } from '../../../assets/theme/ThemeContext';
 
 export default function PerfilScreen({ navigation }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -120,7 +124,7 @@ const guardarPerfil = async () => {
   if (loading) {
     return (
       <View style={styles.centerContent}>
-        <ActivityIndicator size="large" color="#007bff" />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>Cargando perfil...</Text>
       </View>
     );
@@ -135,7 +139,7 @@ const guardarPerfil = async () => {
         <View style={styles.avatarPlaceholder}>
           <Text style={styles.avatarText}>{nombreCompleto ? nombreCompleto.substring(0, 2).toUpperCase() : 'UI'}</Text>
           <TouchableOpacity style={styles.editBadge}>
-            <Ionicons name="camera" size={16} color="#fff" />
+            <Ionicons name="camera" size={16} color={theme.card} />
           </TouchableOpacity>
         </View>
         <Text style={styles.nombreUsuario}>{nombreCompleto || 'Rider'}</Text>
@@ -145,7 +149,7 @@ const guardarPerfil = async () => {
       {/* SECCIÓN 1: Datos Generales */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Ionicons name="person-outline" size={20} color="#007bff" />
+          <Ionicons name="person-outline" size={20} color={theme.primary} />
           <Text style={styles.cardTitle}>Datos Generales</Text>
         </View>
 
@@ -213,13 +217,13 @@ const guardarPerfil = async () => {
       <TouchableOpacity style={styles.btnGaraje} onPress={() => navigation.navigate('MisMotos')}>
         <View style={styles.btnGarajeContent}>
           <View style={styles.btnGarajeIcon}>
-            <Ionicons name="bicycle" size={28} color="#007bff" />
+            <Ionicons name="bicycle" size={28} color={theme.primary} />
           </View>
           <View style={styles.btnGarajeText}>
             <Text style={styles.btnGarajeTitle}>Gestionar Motocicletas</Text>
             <Text style={styles.btnGarajeSub}>Agrega, edita o elimina tus motos</Text>
           </View>
-          <Ionicons name="chevron-forward" size={24} color="#cbd5e1" />
+          <Ionicons name="chevron-forward" size={24} color={theme.iconSecondary} />
         </View>
       </TouchableOpacity>
 
@@ -228,38 +232,38 @@ const guardarPerfil = async () => {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { backgroundColor: '#f8fafc', flexGrow: 1, paddingBottom: 20 },
-  centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' },
-  loadingText: { marginTop: 10, color: '#64748b' },
-  headerBackground: { backgroundColor: '#007bff', height: 120, width: '100%', position: 'absolute', top: 0, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
+  container: { backgroundColor: theme.background, flexGrow: 1, paddingBottom: 20 },
+  centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background },
+  loadingText: { marginTop: 10, color: theme.textSecondary },
+  headerBackground: { backgroundColor: theme.primary, height: 120, width: '100%', position: 'absolute', top: 0, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
   avatarContainer: { alignItems: 'center', marginTop: 60, marginBottom: 20 },
-  avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, borderWidth: 3, borderColor: '#f8fafc' },
-  avatarText: { fontSize: 36, fontWeight: 'bold', color: '#cbd5e1' },
-  editBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#007bff', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#fff' },
-  nombreUsuario: { fontSize: 22, fontWeight: 'bold', color: '#0f172a', marginTop: 10 },
-  rolUsuario: { fontSize: 14, color: '#64748b', fontWeight: '500' },
-  card: { backgroundColor: '#fff', marginHorizontal: 20, marginTop: 15, padding: 20, borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', paddingBottom: 10 },
-  cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b', marginLeft: 10 },
-  label: { fontSize: 14, fontWeight: '600', color: '#1e293b', marginBottom: 10 },
+  avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: theme.card, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, borderWidth: 3, borderColor: theme.background },
+  avatarText: { fontSize: 36, fontWeight: 'bold', color: theme.iconSecondary },
+  editBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: theme.primary, width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: theme.card },
+  nombreUsuario: { fontSize: 22, fontWeight: 'bold', color: theme.textPrimary, marginTop: 10 },
+  rolUsuario: { fontSize: 14, color: theme.textSecondary, fontWeight: '500' },
+  card: { backgroundColor: theme.card, marginHorizontal: 20, marginTop: 15, padding: 20, borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.divider, paddingBottom: 10 },
+  cardTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginLeft: 10 },
+  label: { fontSize: 14, fontWeight: '600', color: theme.textPrimary, marginBottom: 10 },
   footer: { paddingHorizontal: 20, marginTop: 30 },
   
   // NUEVOS ESTILOS PARA LOS CHIPS DE EXPERIENCIA
   chipsContainer: { flexDirection: 'row', flexWrap: 'wrap' },
-  chip: { backgroundColor: '#f1f5f9', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, marginRight: 10, marginBottom: 10, borderWidth: 1, borderColor: '#e2e8f0' },
-  chipActive: { backgroundColor: '#007bff', borderColor: '#007bff' },
-  chipText: { color: '#64748b', fontWeight: '500', fontSize: 14 },
+  chip: { backgroundColor: theme.background, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, marginRight: 10, marginBottom: 10, borderWidth: 1, borderColor: theme.border },
+  chipActive: { backgroundColor: theme.primary, borderColor: theme.primary },
+  chipText: { color: theme.textSecondary, fontWeight: '500', fontSize: 14 },
   chipTextActive: { color: '#fff', fontWeight: 'bold' },
   
   dividerContainer: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginTop: 40, marginBottom: 20 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#cbd5e1' },
-  dividerText: { marginHorizontal: 15, fontSize: 14, fontWeight: 'bold', color: '#94a3b8', letterSpacing: 1 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: theme.border },
+  dividerText: { marginHorizontal: 15, fontSize: 14, fontWeight: 'bold', color: theme.iconSecondary, letterSpacing: 1 },
   
-  btnGaraje: { backgroundColor: '#fff', marginHorizontal: 20, borderRadius: 16, padding: 15, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3, borderWidth: 1, borderColor: '#e0e7ff' },
+  btnGaraje: { backgroundColor: theme.card, marginHorizontal: 20, borderRadius: 16, padding: 15, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3, borderWidth: 1, borderColor: theme.border },
   btnGarajeContent: { flexDirection: 'row', alignItems: 'center' },
-  btnGarajeIcon: { backgroundColor: '#eff6ff', width: 50, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  btnGarajeIcon: { backgroundColor: theme.background, width: 50, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   btnGarajeText: { flex: 1 },
-  btnGarajeTitle: { fontSize: 16, fontWeight: 'bold', color: '#1e293b', marginBottom: 4 },
-  btnGarajeSub: { fontSize: 13, color: '#64748b' }
+  btnGarajeTitle: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 4 },
+  btnGarajeSub: { fontSize: 13, color: theme.textSecondary }
 });

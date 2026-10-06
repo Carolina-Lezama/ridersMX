@@ -1,15 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../assets/theme/ThemeContext';
 
 export default function EventoCard({ evento, onPress }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+
   const esMantenimiento = evento.tipo === 'mantenimiento';
   const estado = evento.estado || 'Planeada'; // Fallback de seguridad
 
   // 1. Definir colores base por TIPO (Mantenimiento vs Rodada)
-  let colorTema = esMantenimiento ? '#ef4444' : '#007bff';
+  let colorTema = esMantenimiento ? '#ef4444' : theme.primary;
   let icono = esMantenimiento ? 'build-outline' : 'map-outline';
-  let bgColor = esMantenimiento ? '#fef2f2' : '#eff6ff';
+  let bgColor = esMantenimiento ? '#fef2f2' : theme.background;
 
   // 2. Variables dinámicas que cambiarán según el ESTADO
   let opacidad = 1;
@@ -50,7 +54,7 @@ export default function EventoCard({ evento, onPress }: any) {
         <View style={styles.headerRow}>
           {/* Si está cancelada, tachamos el título */}
           <Text 
-            style={[styles.titulo, estado === 'Cancelada' && { textDecorationLine: 'line-through', color: '#94a3b8' }]} 
+            style={[styles.titulo, estado === 'Cancelada' && { textDecorationLine: 'line-through', color: theme.iconSecondary }]}
             numberOfLines={1}
           >
             {evento.titulo}
@@ -71,7 +75,7 @@ export default function EventoCard({ evento, onPress }: any) {
         <View style={styles.footerRow}>
           {evento.moto_asociada ? (
             <View style={styles.motoTag}>
-              <Ionicons name="bicycle" size={14} color="#64748b" />
+              <Ionicons name="bicycle" size={14} color={theme.textSecondary} />
               <Text style={styles.motoText}>{evento.moto_asociada}</Text>
             </View>
           ) : <View />}
@@ -86,18 +90,18 @@ export default function EventoCard({ evento, onPress }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 16, padding: 15, marginBottom: 15, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: '#f1f5f9' },
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
+  card: { flexDirection: 'row', backgroundColor: theme.card, borderRadius: 16, padding: 15, marginBottom: 15, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: theme.border },
   iconContainer: { width: 50, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   contentContainer: { flex: 1, justifyContent: 'center' },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  titulo: { fontSize: 16, fontWeight: 'bold', color: '#1e293b', flex: 1, marginRight: 10 },
-  hora: { fontSize: 12, fontWeight: '600', color: '#007bff' },
-  descripcion: { fontSize: 13, color: '#64748b', marginBottom: 8 },
+  titulo: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, flex: 1, marginRight: 10 },
+  hora: { fontSize: 12, fontWeight: '600', color: theme.primary },
+  descripcion: { fontSize: 13, color: theme.textSecondary, marginBottom: 8 },
   footerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 },
-  motoTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#e2e8f0' },
-  motoText: { fontSize: 12, color: '#64748b', marginLeft: 4, fontWeight: '500' },
+  motoTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.background, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: theme.border },
+  motoText: { fontSize: 12, color: theme.textSecondary, marginLeft: 4, fontWeight: '500' },
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
   badgeText: { fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' },
-  horaAbajo: { fontSize: 12, fontWeight: '600', color: '#94a3b8' }
+  horaAbajo: { fontSize: 12, fontWeight: '600', color: theme.iconSecondary }
 });
