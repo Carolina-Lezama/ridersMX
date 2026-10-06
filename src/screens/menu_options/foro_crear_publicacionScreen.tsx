@@ -10,22 +10,28 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
+  Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import CustomButton from '../../components/CustomButton';
+import CustomInput from '../../components/CustomInput';
+import { supabase } from '../../services/supabase';
 
 export default function ForoCrearPublicacion({ navigation }: any) {
   const [titulo, setTitulo] = useState('');
   const [marca, setMarca] = useState('Italika');
   const [modeloMoto, setModeloMoto] = useState('');
-  const [categoria, setCategoria] = useState('Rodadas');
+  const [categoria, setCategoria] = useState('Rutas');
   const [descripcion, setDescripcion] = useState('');
-  
-  // Estado para la ubicación y búsqueda de LocationIQ
+  const [guardando, setGuardando] = useState(false);
+
+  // Ubicación LocationIQ
   const [ubicacionQuery, setUbicacionQuery] = useState('');
   const [resultadosUbicacion, setResultadosUbicacion] = useState<any[]>([]);
   const [cargandoUbicacion, setCargandoUbicacion] = useState(false);
 
-  // Control de Modales para Marca y Modelo
+  // Modales Marca/Modelo
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTipo, setModalTipo] = useState<'marca' | 'modelo' | null>(null);
 
@@ -41,19 +47,26 @@ export default function ForoCrearPublicacion({ navigation }: any) {
   };
 
   const categorias = [
-    'Rodadas',
-    'Mantenimiento',
-    'Dudas y Ayuda',
-    'Rutas',
-    'Eventos',
-    'Compra y Venta',
+  'Rutas',
+  'Mecánica',
+  'Compra/Venta',
+  'Off-Topic',
   ];
 
-  // Función para autocompletar ubicaciones con LocationIQ
+  // Mostrar mensaje unificado (Web / Móvil)
+  const mostrarMensaje = (tituloMsg: string, mensaje: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${tituloMsg}: ${mensaje}`);
+    } else {
+      Alert.alert(tituloMsg, mensaje);
+    }
+  };
+
+  // Buscador de Ubicación a prueba de fallos
   const buscarUbicacion = async (texto: string) => {
     setUbicacionQuery(texto);
 
-    if (texto.length < 3) {
+    if (!texto || texto.trim().length < 3) {
       setResultadosUbicacion([]);
       return;
     }
@@ -66,20 +79,23 @@ export default function ForoCrearPublicacion({ navigation }: any) {
         )}&countrycodes=mx&limit=5&format=json&lang=es`
       );
       const data = await response.json();
+
       if (Array.isArray(data)) {
         setResultadosUbicacion(data);
       } else {
         setResultadosUbicacion([]);
       }
     } catch (error) {
-      console.error('Error al buscar ubicación:', error);
+      console.error('Error buscando ubicación:', error);
+      setResultadosUbicacion([]);
     } finally {
       setCargandoUbicacion(false);
     }
   };
 
   const seleccionarUbicacion = (item: any) => {
-    setUbicacionQuery(item.display_name);
+    const texto = typeof item === 'string' ? item : item?.display_name || '';
+    setUbicacionQuery(texto);
     setResultadosUbicacion([]);
   };
 
@@ -98,16 +114,62 @@ export default function ForoCrearPublicacion({ navigation }: any) {
     setModalVisible(false);
   };
 
-  const crearPublicacion = () => {
-    console.log({
-      titulo,
-      marca,
-      modeloMoto,
-      categoria,
-      descripcion,
-      ubicacion: ubicacionQuery,
-    });
-    navigation.goBack();
+  // Función principal para crear la publicación
+  const crearPublicacion = async () => {
+    console.log('Iniciando creación de publicación...');
+
+    if (!titulo.trim() || !descripcion.trim()) {
+      mostrarMensaje('Campos requeridos', 'Por favor ingresa un título y una descripción.');
+      return;
+    }
+
+    try {
+      setGuardando(true);
+
+      // Obtener sesión igual que en PerfilScreen
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.user) {
+        mostrarMensaje('Error de Sesión', 'No se pudo verificar la sesión. Intenta reiniciar la sesión.');
+        setGuardando(false);
+        return;
+      }
+
+      let contenidoCompleto = descripcion.trim();
+      const detallesExtras = [];
+
+      if (marca) detallesExtras.push(`Moto: ${marca}${modeloMoto ? ' ' + modeloMoto : ''}`);
+      if (ubicacionQuery) detallesExtras.push(`Punto: ${ubicacionQuery}`);
+
+      if (detallesExtras.length > 0) {
+        contenidoCompleto += `\n\n📍 ${detallesExtras.join(' | ')}`;
+      }
+
+      // Guardar en la base de datos
+      const { error } = await supabase.from('foro_publicaciones').insert([
+        {
+          perfil_id: session.user.id,
+          titulo: titulo.trim(),
+          contenido: contenidoCompleto,
+          categoria: categoria,
+        },
+      ]);
+
+      if (error) {
+        console.error('Error devuelto por Supabase:', error);
+        mostrarMensaje('Error al guardar', error.message);
+        return;
+      }
+
+      console.log('¡Publicación creada exitosamente!');
+      mostrarMensaje('¡Éxito!', 'Tu publicación ha sido creada.');
+      navigation.goBack();
+    } catch (err: any) {
+      console.error('Error inesperado:', err);
+      mostrarMensaje('Error inesperado', err.message || 'Ocurrió un error al publicar.');
+    } finally {
+      setGuardando(false);
+    }
   };
 
   return (
@@ -128,20 +190,15 @@ export default function ForoCrearPublicacion({ navigation }: any) {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        
         {/* TÍTULO */}
-        <Text style={styles.sectionLabel}>Título de la publicación</Text>
-        <View style={styles.inputCard}>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej. Rodada al Volcán este domingo"
-            placeholderTextColor="#94a3b8"
-            value={titulo}
-            onChangeText={setTitulo}
-          />
-        </View>
+        <CustomInput 
+          label="Título de la publicación" 
+          placeholder="Ej. Rodada al Volcán este domingo" 
+          value={titulo} 
+          onChangeText={setTitulo} 
+        />
 
-        {/* CATEGORÍAS TIPO CHIPS */}
+        {/* CATEGORÍAS */}
         <Text style={styles.sectionLabel}>Categoría</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
           {categorias.map((cat) => {
@@ -184,20 +241,14 @@ export default function ForoCrearPublicacion({ navigation }: any) {
         </View>
 
         {/* DESCRIPCIÓN */}
-        <Text style={styles.sectionLabel}>Descripción</Text>
-        <View style={styles.inputCard}>
-          <TextInput
-            style={styles.textArea}
-            placeholder="Escribe el itinerario, recomendaciones, punto de encuentro..."
-            placeholderTextColor="#94a3b8"
-            multiline
-            numberOfLines={5}
-            value={descripcion}
-            onChangeText={setDescripcion}
-          />
-        </View>
+        <CustomInput 
+          label="Descripción" 
+          placeholder="Escribe el itinerario, recomendaciones, punto de encuentro..." 
+          value={descripcion} 
+          onChangeText={setDescripcion} 
+        />
 
-        {/* BUSCADOR DE UBICACIÓN LOCATIONIQ */}
+        {/* BUSCADOR DE UBICACIÓN */}
         <Text style={styles.sectionLabel}>Punto de salida / Ubicación</Text>
         <View style={styles.locationContainer}>
           <View style={styles.inputCard}>
@@ -212,42 +263,43 @@ export default function ForoCrearPublicacion({ navigation }: any) {
             {cargandoUbicacion && <ActivityIndicator size="small" color="#007bff" />}
           </View>
 
-          {/* LISTA DESPLEGABLE DE RESULTADOS */}
-          {resultadosUbicacion.length > 0 && (
+          {/* LISTA RESULTADOS UBICACIÓN */}
+          {Array.isArray(resultadosUbicacion) && resultadosUbicacion.length > 0 && (
             <View style={styles.resultadosCard}>
-              {resultadosUbicacion.map((item) => (
-                <TouchableOpacity
-                  key={item.place_id}
-                  style={styles.resultadoItem}
-                  onPress={() => seleccionarUbicacion(item)}
-                >
-                  <Ionicons name="pin-outline" size={16} color="#007bff" style={{ marginRight: 8 }} />
-                  <Text style={styles.resultadoTexto} numberOfLines={2}>
-                    {item.display_name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {resultadosUbicacion.map((item, index) => {
+                if (!item) return null;
+                const textoMostrar = typeof item === 'string' ? item : (item.display_name || item.name || 'Ubicación');
+                
+                return (
+                  <TouchableOpacity
+                    key={item.place_id ? `ub-${item.place_id}` : `ub-idx-${index}`}
+                    style={styles.resultadoItem}
+                    onPress={() => seleccionarUbicacion(item)}
+                  >
+                    <Ionicons name="pin-outline" size={16} color="#007bff" style={{ marginRight: 8 }} />
+                    <Text style={styles.resultadoTexto} numberOfLines={2}>
+                      {textoMostrar}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
         </View>
 
-        {/* ADJUNTOS */}
-        <View style={styles.rowActions}>
-          <TouchableOpacity style={styles.actionBtn}>
-            <Ionicons name="camera-outline" size={20} color="#007bff" />
-            <Text style={styles.actionBtnText}>Adjuntar foto</Text>
-          </TouchableOpacity>
+        {/* BOTÓN PUBLICAR USANDO CustomButton IGUAL QUE EN PERFIL */}
+        <View style={styles.footerButton}>
+          {guardando ? (
+            <ActivityIndicator size="large" color="#007bff" />
+          ) : (
+            <CustomButton title="Publicar en la comunidad" onPress={crearPublicacion} />
+          )}
         </View>
-
-        {/* BOTÓN PUBLICAR */}
-        <TouchableOpacity style={styles.publicarButton} onPress={crearPublicacion} activeOpacity={0.85}>
-          <Text style={styles.publicarText}>Publicar en la comunidad</Text>
-        </TouchableOpacity>
 
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* MODAL DE SELECCIÓN DE MARCA / MODELO */}
+      {/* MODAL MARCA Y MODELO */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setModalVisible(false)}>
           <View style={styles.modalContent}>
@@ -297,7 +349,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#0f172a' },
   scrollContent: { paddingHorizontal: 20, paddingTop: 20 },
 
-  sectionLabel: { fontSize: 13, fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: 8, marginLeft: 2 },
+  sectionLabel: { fontSize: 13, fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: 8, marginTop: 10, marginLeft: 2 },
 
   inputCard: {
     flexDirection: 'row',
@@ -308,31 +360,25 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 6,
-    elevation: 1,
+    marginBottom: 15,
   },
   input: { flex: 1, fontSize: 15, color: '#0f172a' },
-  textArea: { flex: 1, minHeight: 90, textAlignVertical: 'top', fontSize: 15, color: '#0f172a' },
 
-  // Estilos Ubicación LocationIQ
   locationContainer: {
     marginBottom: 20,
-    zIndex: 1000,
   },
   resultadosCard: {
     backgroundColor: '#ffffff',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    marginTop: 6,
-    elevation: 4,
+    marginTop: -8,
+    marginBottom: 15,
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
   resultadoItem: {
     flexDirection: 'row',
@@ -344,7 +390,7 @@ const styles = StyleSheet.create({
   },
   resultadoTexto: { fontSize: 13, color: '#334155', flex: 1 },
 
-  chipsScroll: { flexDirection: 'row', marginBottom: 20 },
+  chipsScroll: { flexDirection: 'row', marginBottom: 15 },
   chip: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
@@ -358,7 +404,7 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
   chipTextSelected: { color: '#ffffff' },
 
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
   selectCard: {
     width: '48%',
     backgroundColor: '#ffffff',
@@ -371,29 +417,9 @@ const styles = StyleSheet.create({
   selectCardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
   selectCardValue: { fontSize: 15, fontWeight: '600', color: '#0f172a' },
 
-  rowActions: { marginBottom: 25 },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#eff6ff',
-    borderRadius: 14,
-    paddingVertical: 14,
+  footerButton: {
+    marginTop: 20,
   },
-  actionBtnText: { fontSize: 14, fontWeight: '600', color: '#007bff', marginLeft: 8 },
-
-  publicarButton: {
-    backgroundColor: '#007bff',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    shadowColor: '#007bff',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  publicarText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'flex-end' },
   modalContent: {
