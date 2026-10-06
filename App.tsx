@@ -3,10 +3,25 @@ import { ActivityIndicator, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider } from './assets/theme/ThemeContext';
 import { useAppTimeTracker } from './src/utils/hooks/useAppTimeTracker';
+import { AvisoTiempoModal } from './src/components/AvisoTiempoModal';
 import RootNavigator from './src/navigation/RootNavigator';
 
+function AppContent({ isFirstLaunch }: { isFirstLaunch: boolean }) {
+  const { mostrarModalAviso, minutosAvisoActual, cerrarModalAviso } = useAppTimeTracker();
+
+  return (
+    <>
+      <RootNavigator isFirstLaunch={isFirstLaunch} />
+      <AvisoTiempoModal
+        visible={mostrarModalAviso}
+        minutos={minutosAvisoActual}
+        onClose={cerrarModalAviso}
+      />
+    </>
+  );
+}
+
 export default function App() {
-  useAppTimeTracker();
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -31,7 +46,7 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <RootNavigator isFirstLaunch={isFirstLaunch} />
+      <AppContent isFirstLaunch={isFirstLaunch} />
     </ThemeProvider>
   );
 }

@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { navigationRef } from '../utils/helper/navigationRef';
 
 // Estilo y colores
 import { useTheme } from '../../assets/theme/ThemeContext';
@@ -23,13 +24,14 @@ import PerfilScreen from '../screens/main/PerfilScreen';
 import AyudaScreen from '../screens/main/AyudaScreen';
 import ConfiguracionScreen from '../screens/main/ConfiguracionScreen';
 import TiempoUsoScreen from '../screens/main/config/TiempoUsoScreen';
+import { NotificacionesScreen } from '../screens/main/config/NotificacionesScreen';
+import LimiteAlcanzadoScreen from '../screens/main/config/LimiteAlcanzadoScreen';
+import CambiarContrasenaScreen from '../screens/main/config/CambiarContrasenaScreen';
 
 import MisMotosScreen from '../screens/main/MisMotosScreen';
 import MotoFormScreen from '../screens/main/MotoFormScreen';
 import CalendarioScreen from '../screens/main/CalendarioScreen';
 import EventoFormScreen from '../screens/main/EventoFormScreen';
-
-import { useAppTimeTracker } from '../utils/hooks/useAppTimeTracker';
 
 // ============================================================================
 // ZONA DE IMPORTACIONES: JOSHUA
@@ -148,7 +150,7 @@ export default function RootNavigator({ isFirstLaunch }: { isFirstLaunch: boolea
   return (
     <>
       <StatusBar style={isDarkMode ? 'light' : 'dark'} />
-      <NavigationContainer theme={navigationTheme}>
+      <NavigationContainer ref={navigationRef} theme={navigationTheme}>
         <Stack.Navigator
           screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}
           initialRouteName={isFirstLaunch ? 'Onboarding' : 'Login'}
@@ -166,6 +168,9 @@ export default function RootNavigator({ isFirstLaunch }: { isFirstLaunch: boolea
           <Stack.Screen name="Ayuda" component={AyudaScreen} />
           <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
           <Stack.Screen name="TiempoUso" component={TiempoUsoScreen} />
+          <Stack.Screen name="Notificaciones" component={NotificacionesScreen} />
+          <Stack.Screen name="LimiteAlcanzado" component={LimiteAlcanzadoScreen} />
+          <Stack.Screen name="CambiarContrasena" component={CambiarContrasenaScreen} />
 
           <Stack.Screen name="MisMotos" component={MisMotosScreen} />
           <Stack.Screen name="MotoForm" component={MotoFormScreen} />

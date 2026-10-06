@@ -1,5 +1,3 @@
-# En formato JSON
-
 [
 {
 "table_name": "diagnosticos",
@@ -243,6 +241,54 @@
 },
 {
 "table_name": "foro_publicaciones",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "insignias",
+"column_name": "id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "insignias",
+"column_name": "nombre",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "insignias",
+"column_name": "descripcion",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "insignias",
+"column_name": "icono",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "insignias",
+"column_name": "racha_requerida",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "insignias",
 "column_name": "created_at",
 "data_type": "timestamp with time zone",
 "character_maximum_length": null,
@@ -546,6 +592,86 @@
 "column_default": null
 },
 {
+"table_name": "perfiles",
+"column_name": "limite_notificacion",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "60"
+},
+{
+"table_name": "perfiles",
+"column_name": "limite_bloqueo",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "120"
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "racha_actual",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "0"
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "racha_maxima",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "0"
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "ultimo_checkin",
+"data_type": "date",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "comodines_disponibles",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "1"
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "ultimo_comodin_usado",
+"data_type": "date",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "updated_at",
+"data_type": "timestamp with time zone",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
 "table_name": "resenas",
 "column_name": "id",
 "data_type": "uuid",
@@ -600,5 +726,77 @@
 "character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "fecha",
+"data_type": "date",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "CURRENT_DATE"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "minutos_usados",
+"data_type": "numeric",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "0"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "limite_diario_minutos",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "120"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "recordatorio_minutos",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "60"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "usuario_insignias",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "usuario_insignias",
+"column_name": "insignia_id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
 }
 ]
