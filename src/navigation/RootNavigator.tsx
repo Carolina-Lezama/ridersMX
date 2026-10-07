@@ -37,7 +37,7 @@ import EventoFormScreen from '../screens/main/EventoFormScreen';
 // ZONA DE IMPORTACIONES: JOSHUA
 // ============================================================================
 import ForoScreen from '../screens/menu_options/ForoScreen';
-import ForoCrearPublicacion from '../screens/menu_options/foro_crear_publicacion';
+import ForoCrearPublicacion from '../screens/menu_options/foro_crear_publicacionScreen';
 
 
 
