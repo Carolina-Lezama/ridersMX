@@ -24,6 +24,8 @@ export const lightTheme = {
   
   // Marca / Interfaz
   primary: '#007bff',          // Azul para el switch encendido
+  accent: '#FF6347',           // Coral usado para acentos y acciones destacadas
+  cardHeader: '#f1f5f9',       // Fondo secundario para encabezados de tarjetas
   switchTrackFalse: '#cbd5e1', // Color del switch apagado
 };
 
@@ -51,6 +53,8 @@ export const darkTheme = {
   
   // Marca / Interfaz
   primary: '#3b82f6',          // Azul ajustado para mejor contraste
+  accent: '#FF7A5C',           // Coral más claro para mantener contraste en oscuro
+  cardHeader: '#243247',       // Fondo secundario para encabezados de tarjetas
   switchTrackFalse: '#475569', // Color del switch apagado en oscuro
 };
 

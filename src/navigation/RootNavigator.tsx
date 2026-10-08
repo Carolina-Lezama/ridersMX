@@ -27,11 +27,14 @@ import TiempoUsoScreen from '../screens/main/config/TiempoUsoScreen';
 import { NotificacionesScreen } from '../screens/main/config/NotificacionesScreen';
 import LimiteAlcanzadoScreen from '../screens/main/config/LimiteAlcanzadoScreen';
 import CambiarContrasenaScreen from '../screens/main/config/CambiarContrasenaScreen';
+import AgregarCuentaScreen from '../screens/main/config/AgregarCuentaScreen';
 
 import MisMotosScreen from '../screens/main/MisMotosScreen';
 import MotoFormScreen from '../screens/main/MotoFormScreen';
 import CalendarioScreen from '../screens/main/CalendarioScreen';
 import EventoFormScreen from '../screens/main/EventoFormScreen';
+
+
 
 // ============================================================================
 // ZONA DE IMPORTACIONES: JOSHUA
@@ -171,6 +174,8 @@ export default function RootNavigator({ isFirstLaunch }: { isFirstLaunch: boolea
           <Stack.Screen name="Notificaciones" component={NotificacionesScreen} />
           <Stack.Screen name="LimiteAlcanzado" component={LimiteAlcanzadoScreen} />
           <Stack.Screen name="CambiarContrasena" component={CambiarContrasenaScreen} />
+          <Stack.Screen name="AgregarCuenta" component={AgregarCuentaScreen} />
+
 
           <Stack.Screen name="MisMotos" component={MisMotosScreen} />
           <Stack.Screen name="MotoForm" component={MotoFormScreen} />

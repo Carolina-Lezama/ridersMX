@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import { RachaWidget } from '../../components/RachaWidget'; 
@@ -13,6 +14,7 @@ export default function InicioScreen({ navigation }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const [userId, setUserId] = useState<string>();
+  const [nombreUsuario, setNombreUsuario] = useState('');
 
   const {
     loading: cargandoRacha,
@@ -26,22 +28,48 @@ export default function InicioScreen({ navigation }: any) {
   const [quizVisible, setQuizVisible] = useState(false);
   const [preguntaDiaria, setPreguntaDiaria] = useState<PreguntaQuiz | undefined>();
 
-  useEffect(() => {
-    const cargarUsuario = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        setUserId(session?.user.id);
-      } catch (error) {
-        Alert.alert(
-          'Error al cargar sesión',
-          error instanceof Error ? error.message : 'No se pudo obtener la sesión del usuario.',
-        );
-      }
-    };
+  useFocusEffect(
+    useCallback(() => {
+      let activo = true;
 
-    void cargarUsuario();
-  }, []);
+      const cargarUsuario = async () => {
+        setNombreUsuario('');
+        setUserId(undefined);
+
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          if (error) throw error;
+
+          if (!activo) return;
+          setUserId(session?.user.id);
+          if (!session?.user) return;
+
+          const { data, error: perfilError } = await supabase
+            .from('perfiles')
+            .select('nombre_completo, username')
+            .eq('id', session.user.id)
+            .single();
+
+          if (perfilError) throw perfilError;
+          if (activo) {
+            setNombreUsuario(data.nombre_completo?.trim() || data.username?.trim() || '');
+          }
+        } catch (error) {
+          if (activo) {
+            Alert.alert(
+              'Error al cargar perfil',
+              error instanceof Error ? error.message : 'No se pudo obtener el perfil del usuario.',
+            );
+          }
+        }
+      };
+
+      void cargarUsuario();
+      return () => {
+        activo = false;
+      };
+    }, []),
+  );
   
   useEffect(() => {
     const pregunta = getPreguntaDelDia();
@@ -59,7 +87,7 @@ export default function InicioScreen({ navigation }: any) {
       {/* 1. ENCABEZADO */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.saludo}>Hola, Carolina 👋</Text>
+          <Text style={styles.saludo}>Hola{nombreUsuario ? `, ${nombreUsuario}` : ''} 👋</Text>
           <Text style={styles.info}>Tu garaje digital está activo</Text>
         </View>
         <TouchableOpacity style={styles.btnNotificacion}>

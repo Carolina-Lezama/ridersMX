@@ -164,7 +164,10 @@ export default function ConfiguracionScreen({ navigation }: any) {
 
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.row}>
+            <TouchableOpacity
+            style={styles.row}
+            onPress={() => navigation.navigate('CambiarContrasena')}
+          >
             <View style={styles.rowLeft}>
               <Ionicons name="person-add-outline" size={22} color={theme.iconPrimary} />
               <Text style={styles.rowText}>Agregar otra cuenta</Text>
@@ -176,15 +179,6 @@ export default function ConfiguracionScreen({ navigation }: any) {
         {/* NUEVA SECCIÓN: ACTIVIDAD Y TIEMPO */}
         <Text style={styles.sectionTitle}>Actividad y Bienestar</Text>
         <View style={styles.card}>
-          <TouchableOpacity style={styles.row}>
-            <View style={styles.rowLeft}>
-              <Ionicons name="pulse-outline" size={22} color={theme.iconPrimary} />
-              <Text style={styles.rowText}>Mi actividad reciente</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.iconSecondary} />
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
 
           {/* NUEVO: Gestionar mi tiempo de uso */}
           <TouchableOpacity 
@@ -214,19 +208,6 @@ export default function ConfiguracionScreen({ navigation }: any) {
             <Ionicons name="chevron-forward" size={18} color={theme.iconSecondary} />
           </TouchableOpacity>
 
-          <View style={styles.divider} />
-
-          <View style={styles.row}>
-            <View style={styles.rowLeft}>
-              <Ionicons name="construct-outline" size={22} color={theme.iconPrimary} />
-              <Text style={styles.rowText}>Recordatorios de Mantenimiento</Text>
-            </View>
-            <Switch
-              value={alertasMantenimiento}
-              onValueChange={setAlertasMantenimiento}
-              trackColor={{ false: theme.switchTrackFalse, true: theme.primary }}
-            />
-          </View>
 
           <View style={styles.divider} />
 

@@ -55,6 +55,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
 
   const [opcionSeleccionada, setOpcionSeleccionada] = useState<number | null>(null);
   const [respondido, setRespondido] = useState<boolean>(false);
+  const esRespuestaCorrecta = opcionSeleccionada === preguntaData.respuestaCorrecta;
 
   // Reiniciar estado cada vez que se abre el modal
   useEffect(() => {
@@ -81,9 +82,15 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   };
 
   const handleReclamarRacha = () => {
-    const esCorrecto = opcionSeleccionada === preguntaData.respuestaCorrecta;
-    onCompletarCheckIn(esCorrecto);
+    if (!respondido || !esRespuestaCorrecta) return;
+
+    onCompletarCheckIn(true);
     onClose();
+  };
+
+  const handleReintentar = () => {
+    setOpcionSeleccionada(null);
+    setRespondido(false);
   };
 
   return (
@@ -175,7 +182,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
           </ScrollView>
 
           {/* 5. BOTÓN DE CIERRE / RECOMPENSA */}
-          {respondido && (
+          {respondido && esRespuestaCorrecta && (
             <TouchableOpacity
               activeOpacity={0.85}
               style={styles.btnReclamar}
@@ -183,6 +190,20 @@ export const QuizModal: React.FC<QuizModalProps> = ({
             >
               <Text style={styles.btnReclamarTexto}>Reclamar mi día de racha 🔥</Text>
             </TouchableOpacity>
+          )}
+          {respondido && !esRespuestaCorrecta && (
+            <View style={styles.errorRespuesta}>
+              <Text style={styles.errorRespuestaTexto}>
+                Respuesta incorrecta. ¡Sigue intentando!
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={styles.btnReintentar}
+                onPress={handleReintentar}
+              >
+                <Text style={styles.btnReintentarTexto}>Intentar de nuevo</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </View>
@@ -347,5 +368,31 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       color: '#ffffff',
       fontSize: 16,
       fontWeight: '800',
+    },
+    errorRespuesta: {
+      marginTop: 8,
+      padding: 12,
+      borderRadius: 16,
+      backgroundColor: theme.dangerBg,
+      alignItems: 'center',
+      gap: 10,
+    },
+    errorRespuestaTexto: {
+      color: theme.dangerText,
+      fontSize: 15,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    btnReintentar: {
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.dangerBorder,
+    },
+    btnReintentarTexto: {
+      color: theme.dangerText,
+      fontSize: 15,
+      fontWeight: '700',
     },
   });

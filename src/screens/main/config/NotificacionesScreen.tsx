@@ -16,8 +16,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNotificationConfig } from '../../../utils/hooks/useNotificationConfig';
 import { useStreak } from '../../../utils/hooks/useStreak';
 import { supabase } from '../../../services/supabase';
+import { useTheme } from '../../../../assets/theme/ThemeContext';
+import type { Theme } from '../../../../assets/theme/theme';
 
-export const NotificacionesScreen = () => {
+export const NotificacionesScreen = ({ navigation }: any) => {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const [userId, setUserId] = useState<string>();
   const [cargandoUsuario, setCargandoUsuario] = useState(true);
   const [selectorHoraVisible, setSelectorHoraVisible] = useState(false);
@@ -115,13 +119,28 @@ export const NotificacionesScreen = () => {
     }
   };
 
+  const ScreenHeader = () => (
+    <View style={styles.header}>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Regresar"
+        onPress={() => navigation.goBack()}
+        style={styles.backButton}
+      >
+        <Ionicons name="arrow-back" size={24} color={theme.iconPrimary} />
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>Notificaciones</Text>
+      <View style={styles.headerSpacer} />
+    </View>
+  );
+
   // --- Componentes Reutilizables de la UI ---
   
   // 1. Contenedor de Sección
   const Section = ({ title, icon, children, isComingSoon = false }: any) => (
     <View style={[styles.sectionContainer, isComingSoon && styles.sectionDisabled]}>
       <View style={styles.sectionHeader}>
-        <Ionicons name={icon} size={22} color={isComingSoon ? "#888" : "#FF6347"} />
+        <Ionicons name={icon} size={22} color={isComingSoon ? theme.textSecondary : theme.accent} />
         <Text style={[styles.sectionTitle, isComingSoon && styles.textDisabled]}>
           {title} {isComingSoon && <Text style={styles.badgeSoon}>(Próximamente)</Text>}
         </Text>
@@ -137,9 +156,9 @@ export const NotificacionesScreen = () => {
     <View style={styles.row}>
       <Text style={[styles.rowLabel, disabled && styles.textDisabled]}>{label}</Text>
       <Switch
-        trackColor={{ false: '#767577', true: '#FF6347' }}
-        thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : (value ? '#FFFFFF' : '#f4f3f4')}
-        ios_backgroundColor="#3e3e3e"
+        trackColor={{ false: theme.switchTrackFalse, true: theme.accent }}
+        thumbColor={theme.card}
+        ios_backgroundColor={theme.switchTrackFalse}
         onValueChange={onValueChange}
         value={value}
         disabled={disabled}
@@ -158,52 +177,59 @@ export const NotificacionesScreen = () => {
       <Text style={[styles.rowLabel, disabled && styles.textDisabled]}>{label}</Text>
       <View style={styles.actionValueContainer}>
         <Text style={[styles.actionValue, disabled && styles.textDisabled]}>{value}</Text>
-        <Ionicons name="chevron-forward" size={18} color={disabled ? "#666" : "#aaa"} />
+        <Ionicons name="chevron-forward" size={18} color={disabled ? theme.textSecondary : theme.iconSecondary} />
       </View>
     </TouchableOpacity>
   );
 
   if (cargandoUsuario || (userId && (loading || cargandoRacha))) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color="#FF6347" />
+      <View style={styles.container}>
+        <ScreenHeader />
+        <View style={[styles.loadingContainer, styles.fill]}>
+          <ActivityIndicator size="large" color={theme.accent} />
+        </View>
       </View>
     );
   }
 
   if (!userId) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <Text style={styles.rowLabel}>Inicia sesión para configurar tus notificaciones.</Text>
+      <View style={styles.container}>
+        <ScreenHeader />
+        <View style={[styles.loadingContainer, styles.fill]}>
+          <Text style={styles.rowLabel}>Inicia sesión para configurar tus notificaciones.</Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      
-      <Text style={styles.mainHeader}>PREFERENCIAS DE NOTIFICACIONES</Text>
+    <View style={styles.container}>
+      <ScreenHeader />
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.mainHeader}>PREFERENCIAS DE NOTIFICACIONES</Text>
 
-      {/* SECCIÓN 1: RACHA Y HÁBITOS */}
-      <Section title="RACHA Y HÁBITOS" icon="flame-outline">
-        <SwitchRow 
-          label="Recordatorio de Check-in Diario" 
-          value={config.checkInEnabled}
-          onValueChange={(enabled: boolean) => {
-            void toggleCheckIn(enabled).catch((error) => {
-              console.error('Error actualizando recordatorios de racha:', error);
-              mostrarError(error instanceof Error ? error.message : 'No se pudo actualizar el recordatorio de check-in.');
-            });
-          }}
-        />
-        {config.checkInEnabled && (
-          <ActionRow 
-            label="Hora del Recordatorio" 
-            value={config.checkInTime}
-            onPress={abrirSelectorHora}
+        {/* SECCIÓN 1: RACHA Y HÁBITOS */}
+        <Section title="RACHA Y HÁBITOS" icon="flame-outline">
+          <SwitchRow 
+            label="Recordatorio de Check-in Diario" 
+            value={config.checkInEnabled}
+            onValueChange={(enabled: boolean) => {
+              void toggleCheckIn(enabled).catch((error) => {
+                console.error('Error actualizando recordatorios de racha:', error);
+                mostrarError(error instanceof Error ? error.message : 'No se pudo actualizar el recordatorio de check-in.');
+              });
+            }}
           />
-        )}
-      </Section>
+          {config.checkInEnabled && (
+            <ActionRow 
+              label="Hora del Recordatorio" 
+              value={config.checkInTime}
+              onPress={abrirSelectorHora}
+            />
+          )}
+        </Section>
 
       {/* SECCIÓN 2: BIENESTAR Y TIEMPO DE USO */}
       <Section title="BIENESTAR Y TIEMPO DE USO" icon="timer-outline">
@@ -277,14 +303,42 @@ export const NotificacionesScreen = () => {
         />
       )}
 
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212', // Fondo oscuro (adaptado a tu app de motos)
+    backgroundColor: theme.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+    backgroundColor: theme.card,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    color: theme.textPrimary,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  fill: {
+    flex: 1,
   },
   loadingContainer: {
     justifyContent: 'center',
@@ -300,10 +354,10 @@ const styles = StyleSheet.create({
   pickerCard: {
     borderRadius: 16,
     padding: 16,
-    backgroundColor: '#1E1E1E',
+    backgroundColor: theme.card,
   },
   pickerTitle: {
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     fontSize: 18,
     fontWeight: '600',
     textAlign: 'center',
@@ -316,11 +370,11 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   pickerCancel: {
-    color: '#CCCCCC',
+    color: theme.textSecondary,
     fontSize: 16,
   },
   pickerSave: {
-    color: '#FF6347',
+    color: theme.accent,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -331,17 +385,17 @@ const styles = StyleSheet.create({
   mainHeader: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#888',
+    color: theme.textSecondary,
     marginBottom: 20,
     letterSpacing: 1.5,
   },
   sectionContainer: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: theme.card,
     borderRadius: 12,
     marginBottom: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: theme.border,
   },
   sectionDisabled: {
     opacity: 0.6,
@@ -350,21 +404,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#242424',
+    backgroundColor: theme.cardHeader,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: theme.border,
   },
   sectionTitle: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginLeft: 10,
     letterSpacing: 0.5,
   },
   badgeSoon: {
     fontSize: 11,
     fontWeight: 'normal',
-    color: '#888',
+    color: theme.textSecondary,
     fontStyle: 'italic',
   },
   sectionBody: {
@@ -376,16 +430,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: theme.divider,
   },
   rowLabel: {
     fontSize: 16,
-    color: '#E0E0E0',
+    color: theme.textPrimary,
     flex: 1,
     paddingRight: 10,
   },
   textDisabled: {
-    color: '#666666',
+    color: theme.textSecondary,
   },
   actionValueContainer: {
     flexDirection: 'row',
@@ -393,7 +447,7 @@ const styles = StyleSheet.create({
   },
   actionValue: {
     fontSize: 16,
-    color: '#FF6347', // Un tono naranja/rojo vibrante, puedes cambiarlo al primary color de tu app
+    color: theme.accent,
     marginRight: 6,
     fontWeight: '600',
   },

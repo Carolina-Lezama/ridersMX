@@ -1,25 +1,4 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-arreglar el apartado de las preguntas de recha
-
-
-
-
-
-
-
-
+borre el chat de gemini de la app
 
 
 
@@ -30,11 +9,11 @@ SIGUIENTE APARTADO, HACER PLAN DE TRABAJO: Notificaciones Push
 hacer los apartados de configuracion:
 
 Recordatorios de Mantenimiento
-cambiar contraseña
-agregar otra cuenta
+
+
 mi actividad reciente
 
-que en dashboard se ocupe el nombre del usuario y no uno predeterminado 
+
 
 
 
