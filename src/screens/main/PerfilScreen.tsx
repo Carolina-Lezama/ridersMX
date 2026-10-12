@@ -17,7 +17,7 @@ export default function PerfilScreen({ navigation }: any) {
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [telefono, setTelefono] = useState('');
   const [ciudad, setCiudad] = useState('');
-  const [bio, setBio] = useState('');
+  const [bio, setBio] = useState(':?');
   
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [tipoSangre, setTipoSangre] = useState('');
