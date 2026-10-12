@@ -14,7 +14,6 @@
 
 
 
-
 Para tu perfil como desarrolladora y con múltiples proyectos en puerta (como tu sistema de papelería en PHP/MySQL y tus aplicaciones web/móviles), lo más inteligente y económico es comprar un VPS único (como un servidor en Hetzner o DigitalOcean).
 
 pero no se guardan kilometros ni nada, sino que solo son fechas, pero me diste una gran idea, porque no agregar un apartado, despues de que la rodada pase(ese mismo dia o al siguiente), que se le pregunte al usuario como estuvo, duracion, distancias, etc. y de eso si podemos hacer registros y graficos para el lobby 
