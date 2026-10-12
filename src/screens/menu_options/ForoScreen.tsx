@@ -1,473 +1,460 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
+  TextInput,
   TouchableOpacity,
-  FlatList,
+  ScrollView,
   StatusBar,
+  Modal,
+  FlatList,
   ActivityIndicator,
-  RefreshControl,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import CustomButton from '../../components/CustomButton';
+import CustomInput from '../../components/CustomInput';
 import { supabase } from '../../services/supabase';
+import { useTheme } from '../../../assets/theme/ThemeContext';
+import type { Theme } from '../../../assets/theme/theme';
 
-export default function ForoScreen({ navigation }: any) {
-  const [publicaciones, setPublicaciones] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+export default function ForoCrearPublicacion({ navigation }: any) {
+  const { isDarkMode, theme } = useTheme();
+  const styles = createStyles(theme);
 
-  // Cargar publicaciones y reacciones al enfocar la pantalla
-  useFocusEffect(
-    useCallback(() => {
-      cargarDatos();
-    }, [])
-  );
+  const [titulo, setTitulo] = useState('');
+  const [marca, setMarca] = useState('Italika');
+  const [modeloMoto, setModeloMoto] = useState('');
+  const [categoria, setCategoria] = useState('Rutas');
+  const [descripcion, setDescripcion] = useState('');
+  const [guardando, setGuardando] = useState(false);
 
-  const cargarDatos = async () => {
-    try {
-      setLoading(true);
+  // Ubicación LocationIQ
+  const [ubicacionQuery, setUbicacionQuery] = useState('');
+  const [resultadosUbicacion, setResultadosUbicacion] = useState<any[]>([]);
+  const [cargandoUbicacion, setCargandoUbicacion] = useState(false);
 
-      // 1. Obtener la sesión activa
-      const { data: { session } } = await supabase.auth.getSession();
-      const userId = session?.user?.id || null;
-      setCurrentUserId(userId);
+  // Modales Marca/Modelo
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalTipo, setModalTipo] = useState<'marca' | 'modelo' | null>(null);
 
-      // 2. Traer publicaciones ordenadas por fecha reciente con datos del autor
-      const { data: posts, error: postsError } = await supabase
-        .from('foro_publicaciones')
-        .select(`
-          *,
-          perfiles (
-            username,
-            nombre_completo,
-            avatar_url
-          )
-        `)
-        .order('created_at', { ascending: false });
+  const LOCATIONIQ_KEY = 'pk.55df4ad365d5d977461ab6f7adfadfa8';
 
-      if (postsError) throw postsError;
+  const motosPorMarca: Record<string, string[]> = {
+    Italika: ['FT150', 'FT125', 'FT250', 'DM150', 'DM200', 'Vort-X 300'],
+    Bajaj: ['Pulsar NS160', 'Pulsar NS200', 'Pulsar NS250', 'Dominar 250', 'Dominar 400'],
+    Yamaha: ['FZ16', 'FZ25', 'MT03', 'R15'],
+    Honda: ['CB190R', 'CB300R', 'CBR250R'],
+    Suzuki: ['Gixxer 150', 'Gixxer 250', 'GSX-R150'],
+    KTM: ['RC200', 'RC390', 'Duke 200', 'Duke 390'],
+  };
 
-      // 3. Obtener los likes registrados en la tabla 'foro_likes'
-      const { data: likes, error: likesError } = await supabase
-        .from('foro_likes')
-        .select('publicacion_id, perfil_id');
+  const categorias = [
+    'Rutas',
+    'Mecánica',
+    'Compra/Venta',
+    'Off-Topic',
+  ];
 
-      if (likesError) throw likesError;
-
-      // 4. Mapear likes y estado del usuario actual
-      const postsConLikes = (posts || []).map((post) => {
-        const postLikes = likes ? likes.filter((l) => l.publicacion_id === post.id) : [];
-        const dioLike = userId ? postLikes.some((l) => l.perfil_id === userId) : false;
-
-        return {
-          ...post,
-          likesCount: postLikes.length,
-          userLiked: dioLike,
-        };
-      });
-
-      setPublicaciones(postsConLikes);
-    } catch (error: any) {
-      console.error('Error al cargar publicaciones del foro:', error.message);
-      Alert.alert('Error', 'No se pudieron obtener las publicaciones del foro.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  // Mostrar mensaje unificado (Web / Móvil)
+  const mostrarMensaje = (tituloMsg: string, mensaje: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${tituloMsg}: ${mensaje}`);
+    } else {
+      Alert.alert(tituloMsg, mensaje);
     }
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    cargarDatos();
-  };
+  // Buscador de Ubicación a prueba de fallos
+  const buscarUbicacion = async (texto: string) => {
+    setUbicacionQuery(texto);
 
-  // Acción para dar o quitar Me Gusta
-  const handleToggleLike = async (post: any) => {
-    if (!currentUserId) {
-      Alert.alert('Inicia sesión', 'Debes estar autenticado para dar me gusta.');
+    if (!texto || texto.trim().length < 3) {
+      setResultadosUbicacion([]);
       return;
     }
 
-    const anteriorLiked = post.userLiked;
-    const anteriorCount = post.likesCount;
-
-    // Actualización visual inmediata (Optimistic UI)
-    setPublicaciones((prev) =>
-      prev.map((item) =>
-        item.id === post.id
-          ? {
-              ...item,
-              userLiked: !item.userLiked,
-              likesCount: item.userLiked ? item.likesCount - 1 : item.likesCount + 1,
-            }
-          : item
-      )
-    );
-
+    setCargandoUbicacion(true);
     try {
-      if (anteriorLiked) {
-        // Eliminar Like
-        const { error } = await supabase
-          .from('foro_likes')
-          .delete()
-          .eq('publicacion_id', post.id)
-          .eq('perfil_id', currentUserId);
-
-        if (error) throw error;
-      } else {
-        // Insertar Like
-        const { error } = await supabase
-          .from('foro_likes')
-          .insert([{ publicacion_id: post.id, perfil_id: currentUserId }]);
-
-        if (error) throw error;
-      }
-    } catch (error: any) {
-      // Revertir estado si ocurre un error
-      setPublicaciones((prev) =>
-        prev.map((item) =>
-          item.id === post.id
-            ? { ...item, userLiked: anteriorLiked, likesCount: anteriorCount }
-            : item
-        )
+      const response = await fetch(
+        `https://api.locationiq.com/v1/autocomplete?key=${LOCATIONIQ_KEY}&q=${encodeURIComponent(
+          texto
+        )}&countrycodes=mx&limit=5&format=json&lang=es`
       );
-      console.error('Error al actualizar like:', error.message);
+      const data = await response.json();
+
+      if (Array.isArray(data)) {
+        setResultadosUbicacion(data);
+      } else {
+        setResultadosUbicacion([]);
+      }
+    } catch (error) {
+      console.error('Error buscando ubicación:', error);
+      setResultadosUbicacion([]);
+    } finally {
+      setCargandoUbicacion(false);
     }
   };
 
-  const formatearFecha = (fechaIso: string) => {
-    if (!fechaIso) return '';
-    const date = new Date(fechaIso);
-    return date.toLocaleDateString('es-MX', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+  const seleccionarUbicacion = (item: any) => {
+    const texto = typeof item === 'string' ? item : item?.display_name || '';
+    setUbicacionQuery(texto);
+    setResultadosUbicacion([]);
   };
 
-  const renderItem = ({ item }: any) => {
-    const usuarioNombre =
-      item.perfiles?.username
-        ? `@${item.perfiles.username}`
-        : item.perfiles?.nombre_completo || 'Rider Anónimo';
+  const abrirModal = (tipo: 'marca' | 'modelo') => {
+    setModalTipo(tipo);
+    setModalVisible(true);
+  };
 
-    const inicial = usuarioNombre.replace('@', '').charAt(0).toUpperCase();
+  const seleccionarOpcion = (item: string) => {
+    if (modalTipo === 'marca') {
+      setMarca(item);
+      setModeloMoto('');
+    } else if (modalTipo === 'modelo') {
+      setModeloMoto(item);
+    }
+    setModalVisible(false);
+  };
 
-    return (
-      <View style={styles.card}>
-        {/* Header del Post: Autor y Fecha */}
-        <View style={styles.userContainer}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{inicial}</Text>
-          </View>
+  // Función principal para crear la publicación
+  const crearPublicacion = async () => {
+    console.log('Iniciando creación de publicación...');
 
-          <View style={styles.userInfo}>
-            <Text style={styles.nombre}>{usuarioNombre}</Text>
-            <Text style={styles.fecha}>{formatearFecha(item.created_at)}</Text>
-          </View>
+    if (!titulo.trim() || !descripcion.trim()) {
+      mostrarMensaje('Campos requeridos', 'Por favor ingresa un título y una descripción.');
+      return;
+    }
 
-          <TouchableOpacity style={styles.btnOptions}>
-            <Ionicons name="ellipsis-horizontal" size={20} color="#94a3b8" />
-          </TouchableOpacity>
-        </View>
+    try {
+      setGuardando(true);
 
-        {/* Contenido principal */}
-        <Text style={styles.cardTitulo}>{item.titulo}</Text>
-        <Text style={styles.descripcion}>{item.contenido}</Text>
+      // Obtener sesión igual que en PerfilScreen
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        {/* Categoría Tag (si existe) */}
-        {item.categoria && (
-          <View style={styles.ubicacionContainer}>
-            <Ionicons name="pricetag-outline" size={16} color="#3b82f6" />
-            <Text style={styles.ubicacionTexto}>{item.categoria}</Text>
-          </View>
-        )}
+      if (sessionError || !session?.user) {
+        mostrarMensaje('Error de Sesión', 'No se pudo verificar la sesión. Intenta reiniciar la sesión.');
+        setGuardando(false);
+        return;
+      }
 
-        {/* Footer del Post: Interacciones */}
-        <View style={styles.cardFooter}>
-          <TouchableOpacity
-            style={styles.actionBtn}
-            onPress={() => handleToggleLike(item)}
-          >
-            <Ionicons
-              name={item.userLiked ? 'heart' : 'heart-outline'}
-              size={20}
-              color={item.userLiked ? '#ef4444' : '#64748b'}
-            />
-            <Text
-              style={[
-                styles.actionText,
-                item.userLiked && { color: '#ef4444', fontWeight: 'bold' },
-              ]}
-            >
-              {item.likesCount > 0 ? `${item.likesCount} Me gusta` : 'Me gusta'}
-            </Text>
-          </TouchableOpacity>
+      let contenidoCompleto = descripcion.trim();
+      const detallesExtras = [];
 
-          <TouchableOpacity style={styles.actionBtn}>
-            <Ionicons name="chatbubble-outline" size={18} color="#64748b" />
-            <Text style={styles.actionText}>Comentar</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
+      if (marca) detallesExtras.push(`Moto: ${marca}${modeloMoto ? ' ' + modeloMoto : ''}`);
+      if (ubicacionQuery) detallesExtras.push(`Punto: ${ubicacionQuery}`);
+
+      if (detallesExtras.length > 0) {
+        contenidoCompleto += `\n\n📍 ${detallesExtras.join(' | ')}`;
+      }
+
+      // Guardar en la base de datos
+      const { error } = await supabase.from('foro_publicaciones').insert([
+        {
+          perfil_id: session.user.id,
+          titulo: titulo.trim(),
+          contenido: contenidoCompleto,
+          categoria: categoria,
+        },
+      ]);
+
+      if (error) {
+        console.error('Error devuelto por Supabase:', error);
+        mostrarMensaje('Error al guardar', error.message);
+        return;
+      }
+
+      console.log('¡Publicación creada exitosamente!');
+      mostrarMensaje('¡Éxito!', 'Tu publicación ha sido creada.');
+      navigation.goBack();
+    } catch (err: any) {
+      console.error('Error inesperado:', err);
+      mostrarMensaje('Error inesperado', err.message || 'Ocurrió un error al publicar.');
+    } finally {
+      setGuardando(false);
+    }
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.card}
+      />
 
-      {/* 1. HEADER INTEGRADO */}
+      {/* ENCABEZADO */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={22} color="#0f172a" />
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={22} color={theme.iconPrimary} />
         </TouchableOpacity>
-
-        <View>
-          <Text style={styles.tituloHeader}>Comunidad Riders</Text>
-          <Text style={styles.subtituloHeader}>Foro de discusión y rutas</Text>
-        </View>
-
+        <Text style={styles.headerTitle}>Nueva Publicación</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007bff" />
-        </View>
-      ) : (
-        <FlatList
-          data={publicaciones}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          ListHeaderComponent={
-            <>
-              {/* 2. BOTÓN PRIMARIO CREAR */}
-              <TouchableOpacity
-                style={styles.crearBtn}
-                onPress={() => navigation.navigate('ForoCrearPublicacion')}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name="add-circle-outline"
-                  size={22}
-                  color="#ffffff"
-                  style={{ marginRight: 8 }}
-                />
-                <Text style={styles.crearBtnText}>Crear publicación</Text>
-              </TouchableOpacity>
-
-              <Text style={styles.sectionTitle}>Publicaciones recientes</Text>
-            </>
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>Aún no hay publicaciones en el foro.</Text>
-            </View>
-          }
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* TÍTULO */}
+        <CustomInput
+          label="Título de la publicación"
+          placeholder="Ej. Rodada al Volcán este domingo"
+          value={titulo}
+          onChangeText={setTitulo}
         />
-      )}
+
+        {/* CATEGORÍAS */}
+        <Text style={styles.sectionLabel}>Categoría</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
+          {categorias.map((cat) => {
+            const isSelected = categoria === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.chip, isSelected && styles.chipSelected]}
+                onPress={() => setCategoria(cat)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* MARCA Y MODELO */}
+        <Text style={styles.sectionLabel}>Detalles de la Moto</Text>
+        <View style={styles.row}>
+          <TouchableOpacity style={styles.selectCard} onPress={() => abrirModal('marca')}>
+            <Text style={styles.selectCardSub}>Marca</Text>
+            <View style={styles.selectCardRow}>
+              <Text style={styles.selectCardValue}>{marca}</Text>
+              <Ionicons name="chevron-down" size={18} color={theme.primary} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.selectCard} onPress={() => abrirModal('modelo')}>
+            <Text style={styles.selectCardSub}>Modelo</Text>
+            <View style={styles.selectCardRow}>
+              <Text style={[styles.selectCardValue, !modeloMoto && { color: theme.textSecondary }]}>
+                {modeloMoto || 'Seleccionar'}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={theme.primary} />
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* DESCRIPCIÓN */}
+        <CustomInput
+          label="Descripción"
+          placeholder="Escribe el itinerario, recomendaciones, punto de encuentro..."
+          value={descripcion}
+          onChangeText={setDescripcion}
+        />
+
+        {/* BUSCADOR DE UBICACIÓN */}
+        <Text style={styles.sectionLabel}>Punto de salida / Ubicación</Text>
+        <View style={styles.locationContainer}>
+          <View style={styles.inputCard}>
+            <Ionicons name="location-outline" size={20} color={theme.iconSecondary} style={{ marginRight: 10 }} />
+            <TextInput
+              style={styles.input}
+              placeholder="Ej. Gasolinera Zavaleta, Puebla"
+              placeholderTextColor={theme.textSecondary}
+              value={ubicacionQuery}
+              onChangeText={buscarUbicacion}
+            />
+            {cargandoUbicacion && <ActivityIndicator size="small" color={theme.primary} />}
+          </View>
+
+          {/* LISTA RESULTADOS UBICACIÓN */}
+          {Array.isArray(resultadosUbicacion) && resultadosUbicacion.length > 0 && (
+            <View style={styles.resultadosCard}>
+              {resultadosUbicacion.map((item, index) => {
+                if (!item) return null;
+                const textoMostrar = typeof item === 'string' ? item : (item.display_name || item.name || 'Ubicación');
+
+                return (
+                  <TouchableOpacity
+                    key={item.place_id ? `ub-${item.place_id}` : `ub-idx-${index}`}
+                    style={styles.resultadoItem}
+                    onPress={() => seleccionarUbicacion(item)}
+                  >
+                    <Ionicons name="pin-outline" size={16} color={theme.primary} style={{ marginRight: 8 }} />
+                    <Text style={styles.resultadoTexto} numberOfLines={2}>
+                      {textoMostrar}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        {/* BOTÓN PUBLICAR USANDO CustomButton IGUAL QUE EN PERFIL */}
+        <View style={styles.footerButton}>
+          {guardando ? (
+            <ActivityIndicator size="large" color={theme.primary} />
+          ) : (
+            <CustomButton title="Publicar en la comunidad" onPress={crearPublicacion} />
+          )}
+        </View>
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+
+      {/* MODAL MARCA Y MODELO */}
+      <Modal visible={modalVisible} transparent animationType="slide">
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setModalVisible(false)}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalBar} />
+            <Text style={styles.modalTitle}>
+              {modalTipo === 'marca' ? 'Selecciona una Marca' : 'Selecciona un Modelo'}
+            </Text>
+
+            <FlatList
+              data={modalTipo === 'marca' ? Object.keys(motosPorMarca) : (motosPorMarca[marca] || [])}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.modalOption} onPress={() => seleccionarOpcion(item)}>
+                  <Text style={styles.modalOptionText}>{item}</Text>
+                  <Ionicons name="checkmark-circle-outline" size={22} color={theme.primary} />
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.background },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 50,
+      paddingBottom: 15,
+      paddingHorizontal: 20,
+      backgroundColor: theme.card,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: theme.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary },
+    scrollContent: { paddingHorizontal: 20, paddingTop: 20 },
 
-  // Header principal
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 50,
-    paddingBottom: 15,
-    paddingHorizontal: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#f8fafc',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tituloHeader: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    textAlign: 'center',
-  },
-  subtituloHeader: {
-    fontSize: 12,
-    color: '#64748b',
-    textAlign: 'center',
-    marginTop: 2,
-  },
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.textSecondary,
+      textTransform: 'uppercase',
+      marginBottom: 8,
+      marginTop: 10,
+      marginLeft: 2,
+    },
 
-  listContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 30,
-  },
+    inputCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      marginBottom: 15,
+    },
+    input: { flex: 1, fontSize: 15, color: theme.textPrimary },
 
-  // Botón Principal Estilizado
-  crearBtn: {
-    backgroundColor: '#007bff',
-    borderRadius: 16,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 25,
-    shadowColor: '#007bff',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  crearBtnText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
+    locationContainer: {
+      marginBottom: 20,
+    },
+    resultadosCard: {
+      backgroundColor: theme.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      marginTop: -8,
+      marginBottom: 15,
+      elevation: 5,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+    },
+    resultadoItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.divider,
+    },
+    resultadoTexto: { fontSize: 13, color: theme.textPrimary, flex: 1 },
 
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    marginBottom: 15,
-  },
+    chipsScroll: { flexDirection: 'row', marginBottom: 15 },
+    chip: {
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 20,
+      marginRight: 10,
+    },
+    chipSelected: { backgroundColor: theme.primary, borderColor: theme.primary },
+    chipText: { fontSize: 14, fontWeight: '600', color: theme.textSecondary },
+    chipTextSelected: { color: '#ffffff' },
 
-  // Card Estilo Dashboard
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
-  },
+    row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
+    selectCard: {
+      width: '48%',
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    selectCardSub: { fontSize: 11, fontWeight: '700', color: theme.textSecondary, textTransform: 'uppercase' },
+    selectCardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
+    selectCardValue: { fontSize: 15, fontWeight: '600', color: theme.textPrimary },
 
-  userContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#eff6ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2563eb',
-  },
-  userInfo: {
-    flex: 1,
-  },
-  nombre: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#0f172a',
-  },
-  fecha: {
-    color: '#64748b',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  btnOptions: {
-    padding: 4,
-  },
+    footerButton: {
+      marginTop: 20,
+    },
 
-  cardTitulo: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    marginBottom: 6,
-  },
-  descripcion: {
-    color: '#475569',
-    fontSize: 14,
-    lineHeight: 22,
-    marginBottom: 14,
-  },
-
-  // Badge de Categoría
-  ubicacionContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#eff6ff',
-    alignSelf: 'flex-start',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    marginBottom: 15,
-  },
-  ubicacionTexto: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2563eb',
-    marginLeft: 6,
-  },
-
-  // Footer / Acciones
-  cardFooter: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#f8fafc',
-    paddingTop: 12,
-    marginTop: 4,
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 24,
-  },
-  actionText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748b',
-    marginLeft: 6,
-  },
-  emptyContainer: {
-    padding: 30,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#94a3b8',
-  },
-});
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'flex-end' },
+    modalContent: {
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 20,
+      maxHeight: '50%',
+    },
+    modalBar: { width: 40, height: 4, backgroundColor: theme.border, borderRadius: 2, alignSelf: 'center', marginBottom: 15 },
+    modalTitle: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 15, textAlign: 'center' },
+    modalOption: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.divider,
+    },
+    modalOptionText: { fontSize: 15, color: theme.textPrimary, fontWeight: '600' },
+  });
