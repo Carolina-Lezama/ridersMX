@@ -134,7 +134,7 @@ function MainTabs() {
   );
 }
 
-export default function RootNavigator({ isFirstLaunch }: { isFirstLaunch: boolean }) {
+export default function RootNavigator({ isFirstLaunch, hasSession }: { isFirstLaunch: boolean; hasSession: boolean }) {
   const { isDarkMode, theme } = useTheme();
   
   const navigationTheme = {
@@ -156,7 +156,7 @@ export default function RootNavigator({ isFirstLaunch }: { isFirstLaunch: boolea
       <NavigationContainer ref={navigationRef} theme={navigationTheme}>
         <Stack.Navigator
           screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}
-          initialRouteName={isFirstLaunch ? 'Onboarding' : 'Login'}
+          initialRouteName={isFirstLaunch ? 'Onboarding' : hasSession ? 'MainApp' : 'Login'}
         >
           
           {/* ============================================================================ */}

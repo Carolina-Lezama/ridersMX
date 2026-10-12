@@ -1,4 +1,7 @@
-borre el chat de gemini de la app
+
+
+
+
 
 
 

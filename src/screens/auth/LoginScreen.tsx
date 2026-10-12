@@ -3,9 +3,16 @@ import { View, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import { supabase } from '../../services/supabase';
+import { MultiAccountService } from '../../services/MultiAccountService';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import type { Session } from '@supabase/supabase-js';
 
-export default function LoginScreen({ navigation }: any) {
+interface Props {
+  navigation: any;
+  addingAccount?: boolean;
+}
+
+export default function LoginScreen({ navigation, addingAccount = false }: Props) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
@@ -20,20 +27,41 @@ export default function LoginScreen({ navigation }: any) {
     }
 
     setLoading(true);
+    let previousSession: Session | null = null;
+    let authenticatedSession: Session | null = null;
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: previousSessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      previousSession = previousSessionData.session;
+
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
         password: password,
       });
 
       if (error) throw error;
+      if (!data.session) throw new Error('Supabase no devolvió una sesión para esta cuenta.');
 
-      // Si no hay error, el inicio de sesión fue exitoso
-      navigation.replace('MainApp'); // Usamos replace para que no pueda volver atrás con el botón de Android
-      
-    } catch (error: any) {
-      Alert.alert('Error de acceso', 'Credenciales incorrectas o el usuario no existe.');
+      authenticatedSession = data.session;
+      await MultiAccountService.saveSession(data.session);
+      authenticatedSession = null;
+      navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
+    } catch (error: unknown) {
+      console.error('Error al iniciar sesión:', error);
+      if (authenticatedSession && previousSession) {
+        const { error: restoreError } = await supabase.auth.setSession({
+          access_token: previousSession.access_token,
+          refresh_token: previousSession.refresh_token,
+        });
+        if (restoreError) console.error('No se pudo restaurar la sesión anterior:', restoreError);
+      } else if (authenticatedSession) {
+        const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+        if (signOutError) console.error('No se pudo cerrar la sesión que no se logró guardar:', signOutError);
+      }
+
+      const message = error instanceof Error ? error.message : 'Ocurrió un error inesperado.';
+      Alert.alert('Error de acceso', message);
     } finally {
       setLoading(false);
     }
@@ -41,7 +69,7 @@ export default function LoginScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.titulo}>Bienvenido a Riders</Text>
+      <Text style={styles.titulo}>{addingAccount ? 'Agregar cuenta' : 'Bienvenido a Riders'}</Text>
       
       <CustomInput 
         label="Correo electrónico" 
@@ -63,7 +91,11 @@ export default function LoginScreen({ navigation }: any) {
       ) : (
         <>
           <CustomButton title="Iniciar Sesión" onPress={handleLogin} />
-          <CustomButton title="Crear cuenta nueva" tipo="secundario" onPress={() => navigation.navigate('Register')} />
+          <CustomButton
+            title="Crear cuenta nueva"
+            tipo="secundario"
+            onPress={() => navigation.navigate('Register', { returnToMain: addingAccount })}
+          />
         </>
       )}
     </View>
