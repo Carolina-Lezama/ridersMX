@@ -17,8 +17,12 @@ import { Ionicons } from '@expo/vector-icons';
 import CustomButton from '../../components/CustomButton';
 import CustomInput from '../../components/CustomInput';
 import { supabase } from '../../services/supabase';
+import { useTheme } from '../../../assets/theme/ThemeContext';
+import type { Theme } from '../../../assets/theme/theme';
 
 export default function ForoCrearPublicacion({ navigation }: any) {
+  const { isDarkMode, theme } = useTheme();
+  const styles = createStyles(theme);
   const [titulo, setTitulo] = useState('');
   const [marca, setMarca] = useState('Italika');
   const [modeloMoto, setModeloMoto] = useState('');
@@ -174,12 +178,12 @@ export default function ForoCrearPublicacion({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.card} />
 
       {/* ENCABEZADO */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={22} color="#0f172a" />
+          <Ionicons name="arrow-back" size={22} color={theme.iconPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Nueva Publicación</Text>
         <View style={{ width: 40 }} />
@@ -225,17 +229,17 @@ export default function ForoCrearPublicacion({ navigation }: any) {
             <Text style={styles.selectCardSub}>Marca</Text>
             <View style={styles.selectCardRow}>
               <Text style={styles.selectCardValue}>{marca}</Text>
-              <Ionicons name="chevron-down" size={18} color="#007bff" />
+              <Ionicons name="chevron-down" size={18} color={theme.primary} />
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.selectCard} onPress={() => abrirModal('modelo')}>
             <Text style={styles.selectCardSub}>Modelo</Text>
             <View style={styles.selectCardRow}>
-              <Text style={[styles.selectCardValue, !modeloMoto && { color: '#94a3b8' }]}>
+              <Text style={[styles.selectCardValue, !modeloMoto && { color: theme.textSecondary }]}>
                 {modeloMoto || 'Seleccionar'}
               </Text>
-              <Ionicons name="chevron-down" size={18} color="#007bff" />
+              <Ionicons name="chevron-down" size={18} color={theme.primary} />
             </View>
           </TouchableOpacity>
         </View>
@@ -252,15 +256,15 @@ export default function ForoCrearPublicacion({ navigation }: any) {
         <Text style={styles.sectionLabel}>Punto de salida / Ubicación</Text>
         <View style={styles.locationContainer}>
           <View style={styles.inputCard}>
-            <Ionicons name="location-outline" size={20} color="#64748b" style={{ marginRight: 10 }} />
+            <Ionicons name="location-outline" size={20} color={theme.iconSecondary} style={{ marginRight: 10 }} />
             <TextInput
               style={styles.input}
               placeholder="Ej. Gasolinera Zavaleta, Puebla"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={theme.textSecondary}
               value={ubicacionQuery}
               onChangeText={buscarUbicacion}
             />
-            {cargandoUbicacion && <ActivityIndicator size="small" color="#007bff" />}
+            {cargandoUbicacion && <ActivityIndicator size="small" color={theme.primary} />}
           </View>
 
           {/* LISTA RESULTADOS UBICACIÓN */}
@@ -276,7 +280,7 @@ export default function ForoCrearPublicacion({ navigation }: any) {
                     style={styles.resultadoItem}
                     onPress={() => seleccionarUbicacion(item)}
                   >
-                    <Ionicons name="pin-outline" size={16} color="#007bff" style={{ marginRight: 8 }} />
+                    <Ionicons name="pin-outline" size={16} color={theme.primary} style={{ marginRight: 8 }} />
                     <Text style={styles.resultadoTexto} numberOfLines={2}>
                       {textoMostrar}
                     </Text>
@@ -290,7 +294,7 @@ export default function ForoCrearPublicacion({ navigation }: any) {
         {/* BOTÓN PUBLICAR USANDO CustomButton IGUAL QUE EN PERFIL */}
         <View style={styles.footerButton}>
           {guardando ? (
-            <ActivityIndicator size="large" color="#007bff" />
+            <ActivityIndicator size="large" color={theme.primary} />
           ) : (
             <CustomButton title="Publicar en la comunidad" onPress={crearPublicacion} />
           )}
@@ -314,7 +318,7 @@ export default function ForoCrearPublicacion({ navigation }: any) {
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.modalOption} onPress={() => seleccionarOpcion(item)}>
                   <Text style={styles.modalOptionText}>{item}</Text>
-                  <Ionicons name="checkmark-circle-outline" size={22} color="#007bff" />
+                  <Ionicons name="checkmark-circle-outline" size={22} color={theme.primary} />
                 </TouchableOpacity>
               )}
             />
@@ -325,8 +329,8 @@ export default function ForoCrearPublicacion({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+const createStyles = (theme: Theme) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -334,44 +338,44 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: theme.border,
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#0f172a' },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary },
   scrollContent: { paddingHorizontal: 20, paddingTop: 20 },
 
-  sectionLabel: { fontSize: 13, fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: 8, marginTop: 10, marginLeft: 2 },
+  sectionLabel: { fontSize: 13, fontWeight: '700', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 8, marginTop: 10, marginLeft: 2 },
 
   inputCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.card,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
     marginBottom: 15,
   },
-  input: { flex: 1, fontSize: 15, color: '#0f172a' },
+  input: { flex: 1, fontSize: 15, color: theme.textPrimary },
 
   locationContainer: {
     marginBottom: 20,
   },
   resultadosCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
     marginTop: -8,
     marginBottom: 15,
     elevation: 5,
@@ -386,36 +390,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: theme.divider,
   },
-  resultadoTexto: { fontSize: 13, color: '#334155', flex: 1 },
+  resultadoTexto: { fontSize: 13, color: theme.textPrimary, flex: 1 },
 
   chipsScroll: { flexDirection: 'row', marginBottom: 15 },
   chip: {
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 20,
     marginRight: 10,
   },
-  chipSelected: { backgroundColor: '#007bff', borderColor: '#007bff' },
-  chipText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
+  chipSelected: { backgroundColor: theme.primary, borderColor: theme.primary },
+  chipText: { fontSize: 14, fontWeight: '600', color: theme.textSecondary },
   chipTextSelected: { color: '#ffffff' },
 
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
   selectCard: {
     width: '48%',
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.card,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
   },
-  selectCardSub: { fontSize: 11, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' },
+  selectCardSub: { fontSize: 11, fontWeight: '700', color: theme.textSecondary, textTransform: 'uppercase' },
   selectCardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  selectCardValue: { fontSize: 15, fontWeight: '600', color: '#0f172a' },
+  selectCardValue: { fontSize: 15, fontWeight: '600', color: theme.textPrimary },
 
   footerButton: {
     marginTop: 20,
@@ -423,21 +427,21 @@ const styles = StyleSheet.create({
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'flex-end' },
   modalContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
     maxHeight: '50%',
   },
-  modalBar: { width: 40, height: 4, backgroundColor: '#cbd5e1', borderRadius: 2, alignSelf: 'center', marginBottom: 15 },
-  modalTitle: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', marginBottom: 15, textAlign: 'center' },
+  modalBar: { width: 40, height: 4, backgroundColor: theme.border, borderRadius: 2, alignSelf: 'center', marginBottom: 15 },
+  modalTitle: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 15, textAlign: 'center' },
   modalOption: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: theme.divider,
   },
-  modalOptionText: { fontSize: 15, color: '#1e293b', fontWeight: '600' },
+  modalOptionText: { fontSize: 15, color: theme.textPrimary, fontWeight: '600' },
 });

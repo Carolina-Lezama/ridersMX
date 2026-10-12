@@ -5,16 +5,8 @@
 
 
 
-SIGUIENTE APARTADO, HACER PLAN DE TRABAJO: Notificaciones Push
 
 
-
-hacer los apartados de configuracion:
-
-Recordatorios de Mantenimiento
-
-
-mi actividad reciente
 
 
 
