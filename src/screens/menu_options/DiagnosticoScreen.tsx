@@ -56,6 +56,7 @@ export default function DiagnosticoScreen({ navigation }: any) {
       sender: 'user',
     };
 
+    
     setMessages(prev => [...prev, newUserMessage]);
     setInputText('');
     setIsLoading(true);

@@ -1,6 +1,5 @@
 // src/services/api.ts
 const API_URL = 'http://192.168.100.43:5000';
-
 const geminiapi = {
   enviarMensaje: async (mensaje: string): Promise<string> => {
     try {

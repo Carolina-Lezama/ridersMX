@@ -14,7 +14,7 @@ client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 # for modelo in client.models.list():
 #     # Filtramos para que solo muestre los que pueden generar contenido
 #     if "generateContent" in modelo.supported_actions:
-#         print(modelo.name)
+#         print(modelo.name) 
 
 @app.after_request
 def add_cors_headers(response):
