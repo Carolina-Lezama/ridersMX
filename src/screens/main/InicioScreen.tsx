@@ -5,8 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import { RachaWidget } from '../../components/RachaWidget'; 
 import { QuizModal, type PreguntaQuiz } from '../../components/QuizModal';
+import PostRideReviewModal from '../../components/PostRideReviewModal';
 import { getPreguntaDelDia } from '../../services/quizService';
 import { supabase } from '../../services/supabase';
+import { obtenerEventoPendiente, obtenerTotalKilometros } from '../../services/reviewService';
 import { useStreak } from '../../utils/hooks/useStreak';
 
 
@@ -26,7 +28,28 @@ export default function InicioScreen({ navigation }: any) {
   } = useStreak(userId);
 
   const [quizVisible, setQuizVisible] = useState(false);
+  const [reviewVisible, setReviewVisible] = useState(false);
+  const [eventoPendiente, setEventoPendiente] = useState<any>(null);
+  const [kilometrosTotales, setKilometrosTotales] = useState(0);
   const [preguntaDiaria, setPreguntaDiaria] = useState<PreguntaQuiz | undefined>();
+
+  const cargarEventoPendiente = useCallback(async (uid?: string) => {
+    if (!uid) {
+      setEventoPendiente(null);
+      return;
+    }
+
+    try {
+      const evento = await obtenerEventoPendiente(uid);
+      setEventoPendiente(evento);
+      setReviewVisible(Boolean(evento));
+
+      const totalKm = await obtenerTotalKilometros(uid);
+      setKilometrosTotales(totalKm);
+    } catch (error) {
+      console.error('Error cargando evento pendiente:', error);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -41,19 +64,22 @@ export default function InicioScreen({ navigation }: any) {
           if (error) throw error;
 
           if (!activo) return;
-          setUserId(session?.user.id);
-          if (!session?.user) return;
+          const uid = session?.user.id;
+          setUserId(uid);
+          if (!uid) return;
 
           const { data, error: perfilError } = await supabase
             .from('perfiles')
             .select('nombre_completo, username')
-            .eq('id', session.user.id)
+            .eq('id', uid)
             .single();
 
           if (perfilError) throw perfilError;
           if (activo) {
             setNombreUsuario(data.nombre_completo?.trim() || data.username?.trim() || '');
           }
+
+          await cargarEventoPendiente(uid);
         } catch (error) {
           if (activo) {
             Alert.alert(
@@ -78,6 +104,12 @@ export default function InicioScreen({ navigation }: any) {
 
   const handleOpenQuiz = () => {
     setQuizVisible(true);
+  };
+
+  const handleReviewSuccess = async () => {
+    if (userId) {
+      await cargarEventoPendiente(userId);
+    }
   };
 
   return (
@@ -133,14 +165,14 @@ export default function InicioScreen({ navigation }: any) {
         <View style={styles.metricsGrid}>
           <View style={styles.metricItem}>
             <Ionicons name="speedometer-outline" size={18} color={theme.textSecondary} />
-            <Text style={styles.metricValue}>12,450 km</Text>
+            <Text style={styles.metricValue}>{kilometrosTotales.toLocaleString('es-MX')} km</Text>
             <Text style={styles.metricLabel}>Kilometraje</Text>
           </View>
           <View style={styles.dividerVertical} />
           <View style={styles.metricItem}>
             <Ionicons name="build-outline" size={18} color={theme.textSecondary} />
-            <Text style={styles.metricValue}>En 550 km</Text>
-            <Text style={styles.metricLabel}>Próx. Servicio</Text>
+            <Text style={styles.metricValue}>{kilometrosTotales >= 1000 ? 'Insignia desbloqueada' : `${Math.max(0, 1000 - kilometrosTotales)} km`}</Text>
+            <Text style={styles.metricLabel}>{kilometrosTotales >= 1000 ? '1,000 Km recorridos' : 'Próximo logro'}</Text>
           </View>
         </View>
       </View>
@@ -210,6 +242,13 @@ export default function InicioScreen({ navigation }: any) {
           realizarCheckIn();
         }
       }}
+    />
+
+    <PostRideReviewModal
+      visible={reviewVisible}
+      evento={eventoPendiente}
+      onClose={() => setReviewVisible(false)}
+      onSuccess={handleReviewSuccess}
     />
     </>
   );

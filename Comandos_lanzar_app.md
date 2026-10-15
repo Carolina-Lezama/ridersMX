@@ -1,7 +1,33 @@
 # 1. Comandos:
 
-npx expo start
-npx expo start --web --clear // reiniciando cache
+## Iniciar la app y el chatbot
+
+El comando de desarrollo inicia automáticamente el servidor Python del chatbot y
+después Expo. Ya no es necesario abrir otra terminal para lanzar Flask:
+
+```powershell
+npm start
+```
+
+Con Android Studio y el emulador abiertos, presiona `a` en esa misma terminal.
+Para compilar e iniciar Android directamente usa `npm run android`; para web,
+`npm run web`.
+
+La primera vez, instala Python 3 y las dependencias del backend:
+
+```powershell
+py -3 -m pip install -r requirements.txt
+```
+
+Agrega `GEMINI_API_KEY` a `.env` (puedes usar `.env.example` como referencia).
+La clave solo se usa en Python; no la agregues a variables `EXPO_PUBLIC_*`.
+Si el comando `py` no está disponible, define `PYTHON_EXECUTABLE` con la ruta
+de `python.exe` antes de ejecutar npm.
+
+El teléfono/emulador debe poder acceder por la red local a la computadora que
+ejecuta Expo. Para una app distribuida fuera de esta computadora, publica el
+backend en un servidor HTTPS y define `EXPO_PUBLIC_GEMINI_API_URL` con la URL
+base de ese servidor al compilar.
 
 # Git
 
@@ -32,10 +58,10 @@ $env:Path = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:Path"
 Abre una terminal nueva si guardaste estas variables de forma permanente en
 Windows.
 
-npx expo run:android
+npm run android
 
 ### iOS (se necesita mac con Xcode)
-npx expo run:ios
+npm run ios
 
 # Remoto con EAS:
 eas build --profile development --platform android

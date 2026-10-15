@@ -20,7 +20,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.jpeg"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.RidersApp"
+      "package": "com.ridersmx"
     },
     "web": {
       "favicon": "./assets/icon.jpeg"
