@@ -68,3 +68,6 @@ eas build --profile development --platform android
 
 # o para iOS
 eas build --profile development --platform ios
+
+# Pruebas aab:
+npx eas-cli@latest build --platform android --profile production

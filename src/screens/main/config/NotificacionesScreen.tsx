@@ -7,7 +7,6 @@ import {
   Switch,
   TouchableOpacity,
   Platform,
-  ActivityIndicator,
   Alert,
   Modal,
 } from 'react-native';
@@ -18,6 +17,7 @@ import { useStreak } from '../../../utils/hooks/useStreak';
 import { supabase } from '../../../services/supabase';
 import { useTheme } from '../../../../assets/theme/ThemeContext';
 import type { Theme } from '../../../../assets/theme/theme';
+import Skeleton from '../../../components/Skeleton';
 
 export const NotificacionesScreen = ({ navigation }: any) => {
   const { theme } = useTheme();
@@ -186,9 +186,19 @@ export const NotificacionesScreen = ({ navigation }: any) => {
     return (
       <View style={styles.container}>
         <ScreenHeader />
-        <View style={[styles.loadingContainer, styles.fill]}>
-          <ActivityIndicator size="large" color={theme.accent} />
-        </View>
+        <ScrollView contentContainerStyle={styles.content} accessible={false}>
+          <Skeleton width={230} height={17} style={{ marginBottom: 22 }} />
+          {[0, 1, 2].map((section) => (
+            <View key={section} style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <Skeleton width={22} height={22} borderRadius={11} />
+                <Skeleton width={165} height={17} style={{ marginLeft: 10 }} />
+              </View>
+              <Skeleton width="100%" height={42} style={{ marginTop: 14 }} />
+              {section === 0 && <Skeleton width="76%" height={14} style={{ marginTop: 14 }} />}
+            </View>
+          ))}
+        </ScrollView>
       </View>
     );
   }
@@ -311,6 +321,14 @@ export const NotificacionesScreen = ({ navigation }: any) => {
 const createStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  fill: {
+    flex: 1,
     backgroundColor: theme.background,
   },
   header: {
@@ -336,14 +354,6 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   },
   headerSpacer: {
     width: 40,
-  },
-  fill: {
-    flex: 1,
-  },
-  loadingContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
   },
   pickerOverlay: {
     flex: 1,

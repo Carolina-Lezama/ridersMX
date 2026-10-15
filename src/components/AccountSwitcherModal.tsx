@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Image, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../assets/theme/ThemeContext';
 import { MultiAccountService, StoredAccount } from '../services/MultiAccountService';
+import Skeleton from './Skeleton';
 
 interface Props {
   visible: boolean;
@@ -151,7 +152,20 @@ export default function AccountSwitcherModal({
           <Text style={styles.modalTitle}>Cambiar de cuenta</Text>
 
           {loading ? (
-            <ActivityIndicator color={theme.primary} style={styles.loading} />
+            <View accessible={false}>
+              {[0, 1, 2].map((item) => (
+                <View key={item} style={styles.accountItem}>
+                  <View style={styles.accountSelect}>
+                    <Skeleton width={48} height={48} borderRadius={24} style={{ marginRight: 12 }} />
+                    <View style={styles.accountInfo}>
+                      <Skeleton width="72%" height={15} style={{ marginBottom: 8 }} />
+                      <Skeleton width="90%" height={13} />
+                    </View>
+                  </View>
+                  <Skeleton width={22} height={22} borderRadius={11} />
+                </View>
+              ))}
+            </View>
           ) : (
             <FlatList
               data={accounts}
@@ -236,7 +250,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   },
   headerIndicator: { width: 40, height: 4, borderRadius: 2, backgroundColor: theme.border, alignSelf: 'center', marginBottom: 16 },
   modalTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 20, textAlign: 'center' },
-  loading: { paddingVertical: 24 },
   emptyText: { color: theme.textSecondary, textAlign: 'center', paddingVertical: 18 },
   accountItem: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: theme.border },
   accountSelect: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },

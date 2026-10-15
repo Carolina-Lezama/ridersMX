@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIn
 import { Ionicons } from '@expo/vector-icons';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
+import Skeleton from '../../components/Skeleton';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 
@@ -189,9 +190,28 @@ export default function MotoFormScreen({ navigation, route }: any) {
 
   if (loading) {
     return (
-      <View style={styles.centerContent}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={styles.loadingText}>Cargando especificaciones...</Text>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Skeleton width={28} height={28} borderRadius={14} />
+          <Skeleton width={180} height={21} />
+          <View style={{ width: 28 }} />
+        </View>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {[7, 3, 2].map((fieldCount, sectionIndex) => (
+            <View key={sectionIndex} style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Skeleton width={20} height={20} borderRadius={6} />
+                <Skeleton width={160} height={19} style={{ marginLeft: 10 }} />
+              </View>
+              {Array.from({ length: fieldCount }, (_, fieldIndex) => (
+                <View key={fieldIndex} style={{ marginBottom: 16 }}>
+                  <Skeleton width={120} height={13} style={{ marginBottom: 9 }} />
+                  <Skeleton height={44} borderRadius={10} />
+                </View>
+              ))}
+            </View>
+          ))}
+        </ScrollView>
       </View>
     );
   }
@@ -283,9 +303,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   
   scrollContent: { padding: 20, paddingBottom: 40 },
-  centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background },
-  loadingText: { marginTop: 10, color: theme.textSecondary },
-  
   card: { backgroundColor: theme.card, padding: 20, borderRadius: 16, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.divider, paddingBottom: 10 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginLeft: 10 },

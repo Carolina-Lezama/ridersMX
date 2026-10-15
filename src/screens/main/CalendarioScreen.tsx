@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
 import EventoCard from '../../components/EventoCard';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import Skeleton from '../../components/Skeleton';
 
 // Configuración del idioma del calendario a Español
 LocaleConfig.locales['es'] = {
@@ -148,7 +149,25 @@ export default function CalendarioScreen({ navigation }: any) {
 
         {/* CONTENIDO DE LA LISTA */}
         {loading ? (
-          <ActivityIndicator size="large" color="#007bff" style={{ marginTop: 20 }} />
+          <View style={{ gap: 14, paddingTop: 4 }} accessible={false}>
+            {[0, 1, 2].map((item) => (
+              <View
+                key={item}
+                style={{
+                  backgroundColor: theme.card,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: theme.border,
+                  padding: 16,
+                  gap: 10,
+                }}
+              >
+                <Skeleton width="62%" height={17} />
+                <Skeleton width="42%" height={13} />
+                <Skeleton width="78%" height={13} />
+              </View>
+            ))}
+          </View>
         ) : eventosAMostrar.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="calendar-clear-outline" size={50} color="#cbd5e1" />

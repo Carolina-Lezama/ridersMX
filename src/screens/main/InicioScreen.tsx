@@ -10,6 +10,7 @@ import { getPreguntaDelDia } from '../../services/quizService';
 import { supabase } from '../../services/supabase';
 import { obtenerEventoPendiente, obtenerTotalKilometros } from '../../services/reviewService';
 import { useStreak } from '../../utils/hooks/useStreak';
+import Skeleton from '../../components/Skeleton';
 
 
 export default function InicioScreen({ navigation }: any) {
@@ -17,6 +18,7 @@ export default function InicioScreen({ navigation }: any) {
   const styles = createStyles(theme);
   const [userId, setUserId] = useState<string>();
   const [nombreUsuario, setNombreUsuario] = useState('');
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
 
   const {
     loading: cargandoRacha,
@@ -56,9 +58,6 @@ export default function InicioScreen({ navigation }: any) {
       let activo = true;
 
       const cargarUsuario = async () => {
-        setNombreUsuario('');
-        setUserId(undefined);
-
         try {
           const { data: { session }, error } = await supabase.auth.getSession();
           if (error) throw error;
@@ -87,6 +86,8 @@ export default function InicioScreen({ navigation }: any) {
               error instanceof Error ? error.message : 'No se pudo obtener el perfil del usuario.',
             );
           }
+        } finally {
+          if (activo) setLoadingDashboard(false);
         }
       };
 
@@ -119,8 +120,17 @@ export default function InicioScreen({ navigation }: any) {
       {/* 1. ENCABEZADO */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.saludo}>Hola{nombreUsuario ? `, ${nombreUsuario}` : ''} 👋</Text>
-          <Text style={styles.info}>Tu garaje digital está activo</Text>
+          {loadingDashboard ? (
+            <>
+              <Skeleton width={190} height={31} />
+              <Skeleton width={170} height={15} style={{ marginTop: 7 }} />
+            </>
+          ) : (
+            <>
+              <Text style={styles.saludo}>Hola{nombreUsuario ? `, ${nombreUsuario}` : ''} 👋</Text>
+              <Text style={styles.info}>Tu garaje digital está activo</Text>
+            </>
+          )}
         </View>
         <TouchableOpacity style={styles.btnNotificacion}>
           <Ionicons name="notifications-outline" size={22} color={theme.textPrimary} />
@@ -165,13 +175,21 @@ export default function InicioScreen({ navigation }: any) {
         <View style={styles.metricsGrid}>
           <View style={styles.metricItem}>
             <Ionicons name="speedometer-outline" size={18} color={theme.textSecondary} />
-            <Text style={styles.metricValue}>{kilometrosTotales.toLocaleString('es-MX')} km</Text>
+            {loadingDashboard ? (
+              <Skeleton width={90} height={21} style={{ marginVertical: 2 }} />
+            ) : (
+              <Text style={styles.metricValue}>{kilometrosTotales.toLocaleString('es-MX')} km</Text>
+            )}
             <Text style={styles.metricLabel}>Kilometraje</Text>
           </View>
           <View style={styles.dividerVertical} />
           <View style={styles.metricItem}>
             <Ionicons name="build-outline" size={18} color={theme.textSecondary} />
-            <Text style={styles.metricValue}>{kilometrosTotales >= 1000 ? 'Insignia desbloqueada' : `${Math.max(0, 1000 - kilometrosTotales)} km`}</Text>
+            {loadingDashboard ? (
+              <Skeleton width={125} height={21} style={{ marginVertical: 2 }} />
+            ) : (
+              <Text style={styles.metricValue}>{kilometrosTotales >= 1000 ? 'Insignia desbloqueada' : `${Math.max(0, 1000 - kilometrosTotales)} km`}</Text>
+            )}
             <Text style={styles.metricLabel}>{kilometrosTotales >= 1000 ? '1,000 Km recorridos' : 'Próximo logro'}</Text>
           </View>
         </View>

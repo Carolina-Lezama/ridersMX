@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import Skeleton from '../../components/Skeleton';
 import type { Theme } from '../../../assets/theme/theme';
 import { supabase } from '../../services/supabase';
 import appConfig from '../../../app.json';
@@ -137,7 +138,13 @@ export default function AyudaScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.sectionTitle}>Preguntas Frecuentes</Text>
         {loadingFaqs ? (
-          <ActivityIndicator size="large" color={theme.primary} style={styles.faqLoading} />
+          <View style={styles.faqContainer} accessible={false}>
+            {[0, 1, 2, 3].map((item) => (
+              <View key={item} style={styles.faqItem}>
+                <Skeleton width="78%" height={16} />
+              </View>
+            ))}
+          </View>
         ) : faqError ? (
           <View style={styles.messageCard}>
             <Text style={styles.bodyText}>{faqError}</Text>
@@ -311,7 +318,6 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   headerSpacer: { width: 28 },
   scrollContent: { padding: 20, paddingBottom: 40 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 15 },
-  faqLoading: { marginTop: 20 },
   faqContainer: {
     backgroundColor: theme.card,
     borderRadius: 12,
