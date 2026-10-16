@@ -24,19 +24,30 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import emailjs from '@emailjs/react-native';
 
+
+import { supabase } from '../../services/supabase';
+
 // Tema global (el mismo que usa Configuración)
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import type { Theme } from '../../../assets/theme/theme';
 
 // ─── CONFIGURACIÓN DEL CORREO DE SOPORTE (EmailJS) ───────────────────────────
-// Crea una cuenta en https://www.emailjs.com y pega aquí tus 3 datos (ver instrucciones).
-// El destinatario (riders.mx67@gmail.com) se define en la plantilla de EmailJS.
+
+
 const EMAILJS = {
-  serviceId: 'TU_SERVICE_ID',
-  templateId: 'TU_TEMPLATE_ID',
-  publicKey: 'TU_PUBLIC_KEY',
+  serviceId: process.env.EXPO_PUBLIC_EMAILJS_SERVICE_ID ?? '',
+  templateId: process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID ?? '',
+  publicKey: process.env.EXPO_PUBLIC_EMAILJS_PUBLIC_KEY ?? '',
 };
-const EMAILJS_CONFIGURADO = !Object.values(EMAILJS).some((v) => v.startsWith('TU_'));
+const EMAILJS_CONFIGURADO = Object.values(EMAILJS).every((v) => v.length > 0);
+
+// ─── CONFIGURACIÓN DE BASE DE DATOS ──────────────────────────────────────────
+
+// Tabla de la que se lee el nombre de quien escribió cada reseña.
+// Si ves "Usuario" en vez del nombre real en reseñas de OTRAS personas, es porque la política RLS
+// de `perfiles` solo deja leer tu propia fila. Solución: crear la vista `perfiles_publicos`
+// (está en el .sql, opcional) y cambiar este valor a 'perfiles_publicos'.
+const TABLA_PERFILES = 'perfiles';
 
 // ─── TIPOS ───────────────────────────────────────────────────────────────────
 
@@ -45,16 +56,17 @@ interface Comentario {
   texto: string;
   puntuacion?: number;
   esPropia?: boolean;
+  deBD?: boolean; // true si viene de la tabla `resenas`
 }
 
 interface Moto {
   id: string;
   nombre: string;
   marca: string;
-  modelo: number; // año del modelo (2024, 2025...)
+  modelo: number; 
   tipo: string;
-  cilindrada: number; // en cc
-  precio: number; // en MXN
+  cilindrada: number; 
+  precio: number; 
   puntuacion: number;
   descripcion: string;
   /**
@@ -86,6 +98,13 @@ type DatosMoto = Pick<
 
 // ─── DATOS DE EJEMPLO ────────────────────────────────────────────────────────
 // Precios y textos son de ejemplo: cámbialos por los reales de tu proyecto.
+//
+// ⚠️ AQUÍ FALTA LA TABLA `motos_catalogo` (nombre, marca, modelo, tipo, cilindrada, precio,
+// descripcion, imagen_url, propietario). Mientras no exista, el catálogo sale de este arreglo
+// local y las motos que publica la gente se pierden al cerrar la app.
+// El SQL para crearla está en `resenas_tablas_faltantes.sql`.
+// Cuando la tengas: carga el catálogo con supabase.from('motos_catalogo').select('*')
+// y usa estos datos solo como semilla (insert inicial).
 
 const MOTOS: Moto[] = [
   {
@@ -507,9 +526,10 @@ function filtrar(motos: Moto[], filtros: Filtros, busqueda: string): Moto[] {
 
 /** La calificación de la moto se actualiza cuando el usuario publica su reseña. */
 function calcularPuntuacion(moto: Moto, comentarios: Comentario[]): number {
-  const propias = comentarios.filter((c) => c.esPropia && c.puntuacion);
+  // Cuentan las reseñas guardadas en la BD (de cualquier usuario) y las propias recién publicadas
+  const propias = comentarios.filter((c) => (c.esPropia || c.deBD) && c.puntuacion);
   if (propias.length === 0) return moto.puntuacion;
-  const base = moto.comentarios.length; // reseñas originales (0 en motos nuevas)
+  const base = moto.comentarios.length; // reseñas de ejemplo originales (0 en motos nuevas)
   const suma = propias.reduce((acc, c) => acc + (c.puntuacion ?? 0), 0);
   return Math.round(((moto.puntuacion * base + suma) / (base + propias.length)) * 10) / 10;
 }
@@ -1072,27 +1092,24 @@ function DetalleResena({
 }: {
   moto: Moto;
   onBack: () => void;
-  onPublicar: (comentario: Comentario) => void;
+  // Devuelve true si la reseña se guardó (entonces el formulario se cierra)
+  onPublicar: (comentario: Comentario) => Promise<boolean>;
 }) {
   const { C, styles } = useResenasTheme();
   const yaResene = moto.comentarios.some((c) => c.esPropia);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [textoResena, setTextoResena] = useState('');
   const [estrellaSeleccionada, setEstrellaSeleccionada] = useState(0);
-  const [nombreUsuario, setNombreUsuario] = useState('');
+  const [enviando, setEnviando] = useState(false);
 
   const limpiarFormulario = () => {
     setMostrarFormulario(false);
     setTextoResena('');
-    setNombreUsuario('');
     setEstrellaSeleccionada(0);
   };
 
-  const enviarResena = () => {
-    if (!nombreUsuario.trim()) {
-      Alert.alert('Falta tu nombre', 'Escribe tu nombre o usuario para publicar la reseña.');
-      return;
-    }
+  const enviarResena = async () => {
+    if (enviando) return;
     if (estrellaSeleccionada === 0) {
       Alert.alert('Falta la calificación', 'Elige de 1 a 5 estrellas para calificar la moto.');
       return;
@@ -1101,13 +1118,16 @@ function DetalleResena({
       Alert.alert('Falta tu comentario', 'Cuéntanos tu experiencia antes de publicar.');
       return;
     }
-    onPublicar({
-      usuario: nombreUsuario.trim(),
+    setEnviando(true);
+    // El nombre que se muestra sale de `perfiles.username`; la pantalla principal lo completa.
+    const guardada = await onPublicar({
+      usuario: '',
       texto: textoResena.trim(),
       puntuacion: estrellaSeleccionada,
       esPropia: true,
     });
-    limpiarFormulario();
+    setEnviando(false);
+    if (guardada) limpiarFormulario();
   };
 
   const specs: { icon: IconName; label: string; valor: string }[] = [
@@ -1220,15 +1240,6 @@ function DetalleResena({
             <View style={styles.formularioResena}>
               <Text style={styles.formularioTitulo}>Tu reseña</Text>
 
-              <Text style={styles.formularioLabel}>Tu nombre o usuario</Text>
-              <TextInput
-                style={styles.formularioInput}
-                placeholder="Ej. Carlos G."
-                placeholderTextColor={C.textMuted}
-                value={nombreUsuario}
-                onChangeText={setNombreUsuario}
-              />
-
               <Text style={styles.formularioLabel}>Calificación</Text>
               <CalificacionInteractiva valor={estrellaSeleccionada} onChange={setEstrellaSeleccionada} />
 
@@ -1248,8 +1259,13 @@ function DetalleResena({
                 <TouchableOpacity style={styles.btnCancelar} onPress={limpiarFormulario}>
                   <Text style={styles.btnCancelarText}>Cancelar</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.btnEnviar} onPress={enviarResena} activeOpacity={0.85}>
-                  <Text style={styles.btnEnviarText}>Publicar reseña</Text>
+                <TouchableOpacity
+                  style={[styles.btnEnviar, enviando && { opacity: 0.6 }]}
+                  onPress={enviarResena}
+                  disabled={enviando}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.btnEnviarText}>{enviando ? 'Publicando…' : 'Publicar reseña'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1464,6 +1480,9 @@ function FormularioMoto({
       cilindrada: cc,
       precio: precioNum,
       descripcion: descripcion.trim(),
+      // ⚠️ AQUÍ FALTA EL BUCKET DE STORAGE `motos` (y la tabla `motos_catalogo`, columna imagen_url).
+      // `foto` es una ruta local del teléfono: solo sirve en esta sesión. Para que la foto sea
+      // permanente hay que subirla a Storage y guardar su URL pública en `imagen_url`.
       imagen: foto ?? undefined,
       propietario: propietario.trim() || undefined,
     });
@@ -2127,13 +2146,73 @@ export default function ResenasScreen({ navigation }: any) {
     }, {})
   );
 
+  // Reseñas guardadas en la tabla `resenas` (de todos los usuarios), agrupadas por moto
+  const [resenasBD, setResenasBD] = useState<Record<string, Comentario[]>>({});
+  const [usuarioActual, setUsuarioActual] = useState<{ id: string; username: string } | null>(null);
+
+  // Carga el usuario logueado y todas las reseñas de motos al abrir la pantalla
+  useEffect(() => {
+    let activo = true;
+    (async () => {
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const uid: string | null = auth?.user?.id ?? null;
+
+        if (uid) {
+          const { data: perfil } = await supabase.from(TABLA_PERFILES).select('username').eq('id', uid).maybeSingle();
+          if (activo) setUsuarioActual({ id: uid, username: perfil?.username ?? 'Tú' });
+        }
+
+        // Tabla `resenas`: una fila por reseña. La moto se identifica con entidad_evaluada (id de la moto).
+        const { data: filas, error } = await supabase
+          .from('resenas')
+          .select('perfil_id, entidad_evaluada, calificacion, comentario, created_at')
+          .eq('tipo_entidad', 'moto')
+          .order('created_at', { ascending: true });
+        if (error || !filas) {
+          console.warn('No se pudieron cargar las reseñas:', error?.message);
+          return;
+        }
+
+        // Nombres de quienes reseñaron (tabla `perfiles`)
+        const ids: string[] = Array.from(new Set(filas.map((f: any) => f.perfil_id).filter(Boolean)));
+        const nombres: Record<string, string> = {};
+        if (ids.length > 0) {
+          const { data: perfiles } = await supabase.from(TABLA_PERFILES).select('id, username').in('id', ids);
+          (perfiles ?? []).forEach((p: any) => {
+            nombres[p.id] = p.username;
+          });
+        }
+
+        const agrupadas: Record<string, Comentario[]> = {};
+        filas.forEach((f: any) => {
+          const lista = agrupadas[f.entidad_evaluada] ?? (agrupadas[f.entidad_evaluada] = []);
+          lista.push({
+            usuario: nombres[f.perfil_id] ?? 'Usuario',
+            texto: f.comentario ?? '',
+            puntuacion: f.calificacion ?? undefined,
+            esPropia: !!uid && f.perfil_id === uid,
+            deBD: true,
+          });
+        });
+        if (activo) setResenasBD(agrupadas);
+      } catch (e: any) {
+        console.warn('Error al conectar con la base de datos:', e?.message);
+      }
+    })();
+    return () => {
+      activo = false;
+    };
+  }, []);
+
   const motos = useMemo(
     () =>
       catalogo.map((m) => {
-        const coms = comentarios[m.id] ?? m.comentarios;
+        // reseñas de ejemplo (locales) + reseñas reales guardadas en la BD
+        const coms = [...(comentarios[m.id] ?? m.comentarios), ...(resenasBD[m.id] ?? [])];
         return { ...m, comentarios: coms, puntuacion: calcularPuntuacion(m, coms) };
       }),
-    [catalogo, comentarios]
+    [catalogo, comentarios, resenasBD]
   );
 
   const marcasExistentes = useMemo(() => {
@@ -2185,10 +2264,40 @@ export default function ResenasScreen({ navigation }: any) {
     return () => sub.remove();
   }, [motoId, mostrarFormulario]);
 
-  const publicarResena = (id: string, nueva: Comentario) =>
-    setComentarios((prev) => ({ ...prev, [id]: [...(prev[id] ?? []), nueva] }));
+  // Guarda la reseña en la tabla `resenas`. Devuelve true si se guardó bien.
+  const publicarResena = async (id: string, nueva: Comentario): Promise<boolean> => {
+    if (!usuarioActual) {
+      Alert.alert('Inicia sesión', 'Necesitas una sesión iniciada para publicar una reseña.');
+      return false;
+    }
+    const { error } = await supabase.from('resenas').insert({
+      perfil_id: usuarioActual.id,
+      entidad_evaluada: id, // id de la moto (texto)
+      tipo_entidad: 'moto',
+      calificacion: nueva.puntuacion, // 1 a 5
+      comentario: nueva.texto,
+    });
+    if (error) {
+      Alert.alert('No se pudo publicar tu reseña', error.message);
+      return false;
+    }
+    setResenasBD((prev) => ({
+      ...prev,
+      [id]: [
+        ...(prev[id] ?? []),
+        { usuario: usuarioActual.username, texto: nueva.texto, puntuacion: nueva.puntuacion, esPropia: true, deBD: true },
+      ],
+    }));
+    return true;
+  };
 
   const publicarMoto = (datos: DatosMoto) => {
+    // ⚠️ AQUÍ FALTA LA TABLA `motos_catalogo`: por ahora la moto solo se guarda en el estado local
+    // (se pierde al cerrar la app) y su id es temporal ('u' + fecha).
+    // Las reseñas que escriban sobre ella SÍ se guardan en `resenas`, pero quedarán huérfanas
+    // hasta que la moto exista en la BD. Con la tabla creada, aquí va:
+    //   const { data } = await supabase.from('motos_catalogo').insert({ perfil_id: usuarioActual.id, ...datos,
+    //     imagen_url }).select().single();   // y usar data.id como id de la moto
     const nueva: Moto = {
       ...datos,
       id: `u${Date.now()}`,

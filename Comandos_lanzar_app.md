@@ -42,3 +42,9 @@ eas build --profile development --platform android
 
 # o para iOS
 eas build --profile development --platform ios
+
+
+# variables del emailjs
+  serviceId: 'service_hlq2t1z',
+  templateId: 'template_6yy0l2h',
+  publicKey: 'Sj58fbJfDk_iX4tSP',
