@@ -25,9 +25,16 @@ Si el comando `py` no está disponible, define `PYTHON_EXECUTABLE` con la ruta
 de `python.exe` antes de ejecutar npm.
 
 El teléfono/emulador debe poder acceder por la red local a la computadora que
-ejecuta Expo. Para una app distribuida fuera de esta computadora, publica el
-backend en un servidor HTTPS y define `EXPO_PUBLIC_GEMINI_API_URL` con la URL
-base de ese servidor al compilar.
+ejecuta Expo. En desarrollo, el cliente móvil obtiene la IP del servidor Expo y
+la versión web usa `http://localhost:5000`; por eso inicia la app con `npm start`
+o `npm run web`, que también levanta el backend.
+
+Para una app distribuida, publica el backend en un servidor HTTPS y define
+`EXPO_PUBLIC_GEMINI_API_URL` con la URL base (origen) del servidor al compilar,
+por ejemplo `https://chat.ejemplo.com`. La app agrega `/api/chat` a esa URL.
+Esta variable es pública y queda incluida en la app; nunca guardes aquí
+`GEMINI_API_KEY` ni otra clave privada. Si cambias variables de entorno, reinicia
+Expo y recarga completamente la app; normalmente no hace falta limpiar la caché.
 
 # Git
 

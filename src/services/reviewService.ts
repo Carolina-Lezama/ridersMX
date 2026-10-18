@@ -7,6 +7,7 @@ export interface ReviewEvent {
   hora?: string;
   perfil_id?: string;
   estado_review?: string;
+  recordar_despues_de?: string | null;
   descripcion?: string;
   moto_asociada?: string;
   tipo?: string;
@@ -19,6 +20,7 @@ export const parseEventoDateTime = (fecha?: string, hora?: string) => {
 
   try {
     const base = new Date(`${fecha}T00:00:00`);
+    if (Number.isNaN(base.getTime())) return null;
 
     if (!hora) return base;
 
@@ -32,6 +34,13 @@ export const parseEventoDateTime = (fecha?: string, hora?: string) => {
     let horas = Number(match[1]);
     const minutos = Number(match[2]);
     const periodo = (match[3] || '').toUpperCase();
+    if (
+      minutos > 59
+      || (periodo && (horas < 1 || horas > 12))
+      || (!periodo && horas > 23)
+    ) {
+      return null;
+    }
 
     if (periodo === 'PM' && horas < 12) horas += 12;
     if (periodo === 'AM' && horas === 12) horas = 0;
@@ -48,25 +57,50 @@ export const parseEventoDateTime = (fecha?: string, hora?: string) => {
 export const obtenerEventoPendiente = async (userId: string): Promise<ReviewEvent | null> => {
   if (!userId) return null;
 
+  const ahora = new Date();
+  const fechaLocal = [
+    ahora.getFullYear(),
+    String(ahora.getMonth() + 1).padStart(2, '0'),
+    String(ahora.getDate()).padStart(2, '0'),
+  ].join('-');
+
   const { data, error } = await supabase
     .from('eventos')
     .select('*')
     .eq('perfil_id', userId)
     .eq('estado_review', 'pendiente')
+    .lte('fecha', fechaLocal)
+    .or(`recordar_despues_de.is.null,recordar_despues_de.lte.${ahora.toISOString()}`)
     .order('fecha', { ascending: false });
 
   if (error) {
-    console.error('Error cargando evento pendiente:', error);
-    return null;
+    throw error;
   }
 
-  const ahora = new Date();
   const evento = (data ?? []).find((item) => {
     const fechaHora = parseEventoDateTime(item.fecha, item.hora);
     return !!fechaHora && fechaHora.getTime() <= ahora.getTime();
   });
 
   return evento ?? null;
+};
+
+export const posponerEventoPendiente = async (userId: string, eventoId: string) => {
+  const manana = new Date();
+  manana.setDate(manana.getDate() + 1);
+
+  const { error } = await supabase
+    .from('eventos')
+    .update({
+      recordar_despues_de: manana.toISOString(),
+    })
+    .eq('id', eventoId)
+    .eq('perfil_id', userId)
+    .eq('estado_review', 'pendiente');
+
+  if (error) {
+    throw error;
+  }
 };
 
 export const obtenerTotalKilometros = async (userId: string): Promise<number> => {

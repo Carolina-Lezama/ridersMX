@@ -13,7 +13,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../assets/theme/ThemeContext';
-import { guardarResenaRodada, ignorarEventoPendiente } from '../services/reviewService';
+import {
+  guardarResenaRodada,
+  ignorarEventoPendiente,
+  parseEventoDateTime,
+  posponerEventoPendiente,
+} from '../services/reviewService';
 import { supabase } from '../services/supabase';
 
 export interface ReviewEventLike {
@@ -48,6 +53,14 @@ export default function PostRideReviewModal({
   const [notas, setNotas] = useState('');
   const [fotoUri, setFotoUri] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+
+  const fechaEvento = parseEventoDateTime(evento?.fecha, evento?.hora);
+  const fechaFormateada = fechaEvento?.toLocaleDateString('es-MX', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const horaFormateada = evento?.hora ? formatearHora(evento.hora, fechaEvento) : null;
 
   useEffect(() => {
     if (!visible) {
@@ -86,7 +99,7 @@ export default function PostRideReviewModal({
 
   const handleGuardar = async () => {
     if (!evento?.id) {
-      Alert.alert('No hay rodade pendiente', 'No pudimos localizar la rodada para guardar la reseña.');
+      Alert.alert('No hay rodada pendiente', 'No pudimos localizar la rodada para guardar la reseña.');
       return;
     }
 
@@ -127,16 +140,41 @@ export default function PostRideReviewModal({
     }
   };
 
-  const handleIgnorar = async () => {
+  const handleRecordarManana = async () => {
     if (!evento?.id) {
-      onClose();
+      Alert.alert('No hay rodada pendiente', 'No pudimos localizar la rodada para posponer el recordatorio.');
       return;
     }
 
     try {
+      setGuardando(true);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
-        onClose();
+        Alert.alert('Sesión requerida', 'Inicia sesión para posponer el recordatorio de tu rodada.');
+        return;
+      }
+
+      await posponerEventoPendiente(session.user.id, evento.id);
+      onClose();
+    } catch (error) {
+      console.error('Error posponiendo reseña pendiente', error);
+      Alert.alert('Error al posponer', error instanceof Error ? error.message : 'No se pudo posponer el recordatorio.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const handleIgnorar = async () => {
+    if (!evento?.id) {
+      Alert.alert('No hay rodada pendiente', 'No pudimos localizar la rodada para ignorar.');
+      return;
+    }
+
+    try {
+      setGuardando(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        Alert.alert('Sesión requerida', 'Inicia sesión para actualizar esta rodada.');
         return;
       }
 
@@ -144,7 +182,9 @@ export default function PostRideReviewModal({
       onClose();
     } catch (error) {
       console.error('Error ignorando reseña pendiente', error);
-      onClose();
+      Alert.alert('Error al actualizar', error instanceof Error ? error.message : 'No se pudo ignorar esta rodada.');
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -155,9 +195,18 @@ export default function PostRideReviewModal({
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <Text style={styles.titulo}>¡Parece que ya pasó una rodada!</Text>
-          <Text style={styles.subtitulo}>
-            ¿Qué tal estuvo tu salida a {evento.titulo || 'esta ruta'}?
-          </Text>
+          <View style={styles.eventoInfoContainer}>
+            <Text style={styles.eventoTitulo}>{evento.titulo || 'Rodada sin título'}</Text>
+            {(fechaFormateada || horaFormateada) ? (
+              <View style={styles.eventoFechaContainer}>
+                <Ionicons name="calendar-outline" size={16} color={theme.textSecondary} />
+                <Text style={styles.eventoFecha}>
+                  {[fechaFormateada, horaFormateada].filter(Boolean).join(' · ')}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={styles.subtitulo}>¿Qué tal estuvo el viaje?</Text>
 
           <View style={styles.starsContainer}>
             {[1, 2, 3, 4, 5].map((star) => (
@@ -223,9 +272,30 @@ export default function PostRideReviewModal({
             {guardando ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Guardar en mi bitácora</Text>}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.skipBtn} onPress={handleIgnorar} activeOpacity={0.8}>
-            <Text style={styles.skipBtnText}>Saltar por ahora</Text>
-          </TouchableOpacity>
+          {guardando ? (
+            <ActivityIndicator color={theme.primary} style={styles.actionLoader} />
+          ) : (
+            <View style={styles.secondaryActionsRow}>
+              <TouchableOpacity
+                style={styles.secondaryBtn}
+                onPress={handleRecordarManana}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="time-outline" size={18} color={theme.textSecondary} />
+                <Text style={styles.secondaryBtnText}>Recordarme mañana</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.secondaryBtn}
+                onPress={handleIgnorar}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="close-circle-outline" size={18} color={theme.dangerText} />
+                <Text style={[styles.secondaryBtnText, { color: theme.dangerText }]}>
+                  No me interesa guardar esta
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
     </Modal>
@@ -255,11 +325,37 @@ const createStyles = (theme: any) =>
       fontWeight: '800',
       textAlign: 'center',
     },
+    eventoInfoContainer: {
+      backgroundColor: theme.background,
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      marginTop: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    eventoTitulo: {
+      color: theme.textPrimary,
+      fontSize: 16,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    eventoFechaContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 6,
+      gap: 6,
+    },
+    eventoFecha: {
+      color: theme.textSecondary,
+      fontSize: 13,
+    },
     subtitulo: {
       color: theme.textSecondary,
       fontSize: 15,
       textAlign: 'center',
-      marginTop: 8,
+      marginTop: 12,
       marginBottom: 18,
     },
     starsContainer: {
@@ -340,13 +436,46 @@ const createStyles = (theme: any) =>
       fontSize: 16,
       fontWeight: '700',
     },
-    skipBtn: {
-      alignItems: 'center',
-      paddingVertical: 10,
+    secondaryActionsRow: {
+      gap: 8,
     },
-    skipBtnText: {
+    secondaryBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      minHeight: 42,
+      paddingHorizontal: 8,
+    },
+    secondaryBtnText: {
       color: theme.textSecondary,
       fontWeight: '700',
       fontSize: 14,
+      textAlign: 'center',
+    },
+    actionLoader: {
+      marginVertical: 12,
     },
   });
+
+const formatearHora = (hora: string, fecha: Date | null) => {
+  const match = hora.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match || !fecha) return hora;
+
+  const horaOriginal = Number(match[1]);
+  const minutos = Number(match[2]);
+  const periodo = match[3]?.toUpperCase();
+  if (minutos > 59 || (periodo && (horaOriginal < 1 || horaOriginal > 12)) || (!periodo && horaOriginal > 23)) {
+    return hora;
+  }
+
+  const hora24 = periodo === 'PM'
+    ? (horaOriginal % 12) + 12
+    : periodo === 'AM'
+      ? horaOriginal % 12
+      : horaOriginal;
+  const hora12 = hora24 % 12 || 12;
+  const periodoFormateado = hora24 >= 12 ? 'PM' : 'AM';
+
+  return `${String(hora12).padStart(2, '0')}:${String(minutos).padStart(2, '0')} ${periodoFormateado}`;
+};

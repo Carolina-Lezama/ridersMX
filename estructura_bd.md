@@ -272,6 +272,14 @@
     "column_default": "'pendiente'::text"
   },
   {
+    "table_name": "eventos",
+    "column_name": "recordar_despues_de",
+    "data_type": "timestamp with time zone",
+    "character_maximum_length": null,
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
     "table_name": "faqs",
     "column_name": "id",
     "data_type": "uuid",
@@ -640,6 +648,102 @@
     "column_default": "timezone('utc'::text, now())"
   },
   {
+    "table_name": "motos_catalogo",
+    "column_name": "id",
+    "data_type": "uuid",
+    "character_maximum_length": null,
+    "is_nullable": "NO",
+    "column_default": "uuid_generate_v4()"
+  },
+  {
+    "table_name": "motos_catalogo",
+    "column_name": "perfil_id",
+    "data_type": "uuid",
+    "character_maximum_length": null,
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "motos_catalogo",
+    "column_name": "nombre",
+    "data_type": "text",
+    "character_maximum_length": null,
+    "is_nullable": "NO",
+    "column_default": null
+  },
+  {
+    "table_name": "motos_catalogo",
+    "column_name": "marca",
+    "data_type": "text",
+    "character_maximum_length": null,
+    "is_nullable": "NO",
+    "column_default": null
+  },
+  {
+    "table_name": "motos_catalogo",
+    "column_name": "modelo",
+    "data_type": "integer",
+    "character_maximum_length": null,
+    "is_nullable": "NO",
+    "column_default": null
+  },
+  {
+    "table_name": "motos_catalogo",
+    "column_name": "tipo",
+    "data_type": "text",
+    "character_maximum_length": null,
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "motos_catalogo",
+    "column_name": "cilindrada",
+    "data_type": "integer",
+    "character_maximum_length": null,
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "motos_catalogo",
+    "column_name": "precio",
+    "data_type": "numeric",
+    "character_maximum_length": null,
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "motos_catalogo",
+    "column_name": "descripcion",
+    "data_type": "text",
+    "character_maximum_length": null,
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "motos_catalogo",
+    "column_name": "imagen_url",
+    "data_type": "text",
+    "character_maximum_length": null,
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "motos_catalogo",
+    "column_name": "propietario",
+    "data_type": "text",
+    "character_maximum_length": null,
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "motos_catalogo",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "character_maximum_length": null,
+    "is_nullable": "YES",
+    "column_default": "timezone('utc'::text, now())"
+  },
+  {
     "table_name": "perfiles",
     "column_name": "id",
     "data_type": "uuid",
@@ -691,110 +795,6 @@
     "table_name": "perfiles",
     "column_name": "bio",
     "data_type": "text",
-    "character_maximum_length": null,
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "perfiles",
-    "column_name": "tipo_sangre",
-    "data_type": "text",
-    "character_maximum_length": null,
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "perfiles",
-    "column_name": "contacto_emergencia",
-    "data_type": "text",
-    "character_maximum_length": null,
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "perfiles",
-    "column_name": "nivel_experiencia",
-    "data_type": "text",
-    "character_maximum_length": null,
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "perfiles",
-    "column_name": "avatar_url",
-    "data_type": "text",
-    "character_maximum_length": null,
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "perfiles",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "character_maximum_length": null,
-    "is_nullable": "YES",
-    "column_default": "timezone('utc'::text, now())"
-  },
-  {
-    "table_name": "perfiles",
-    "column_name": "numero_licencia",
-    "data_type": "text",
-    "character_maximum_length": null,
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "perfiles",
-    "column_name": "limite_notificacion",
-    "data_type": "integer",
-    "character_maximum_length": null,
-    "is_nullable": "YES",
-    "column_default": "60"
-  },
-  {
-    "table_name": "perfiles",
-    "column_name": "limite_bloqueo",
-    "data_type": "integer",
-    "character_maximum_length": null,
-    "is_nullable": "YES",
-    "column_default": "120"
-  },
-  {
-    "table_name": "perfiles",
-    "column_name": "last_password_change_at",
-    "data_type": "timestamp with time zone",
-    "character_maximum_length": null,
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "rachas_usuario",
-    "column_name": "perfil_id",
-    "data_type": "uuid",
-    "character_maximum_length": null,
-    "is_nullable": "NO",
-    "column_default": null
-  },
-  {
-    "table_name": "rachas_usuario",
-    "column_name": "racha_actual",
-    "data_type": "integer",
-    "character_maximum_length": null,
-    "is_nullable": "NO",
-    "column_default": "0"
-  },
-  {
-    "table_name": "rachas_usuario",
-    "column_name": "racha_maxima",
-    "data_type": "integer",
-    "character_maximum_length": null,
-    "is_nullable": "NO",
-    "column_default": "0"
-  },
-  {
-    "table_name": "rachas_usuario",
-    "column_name": "ultimo_checkin",
-    "data_type": "date",
     "character_maximum_length": null,
     "is_nullable": "YES",
     "column_default": null

@@ -1,19 +1,47 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 const getApiUrl = (): string => {
   const configuredUrl = process.env.EXPO_PUBLIC_GEMINI_API_URL?.trim();
   if (configuredUrl) {
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(configuredUrl);
+    } catch {
+      throw new Error(
+        'EXPO_PUBLIC_GEMINI_API_URL debe ser una URL absoluta válida, por ejemplo https://tu-servidor.com.',
+      );
+    }
+
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      throw new Error('EXPO_PUBLIC_GEMINI_API_URL debe usar HTTP o HTTPS.');
+    }
+
     return configuredUrl.replace(/\/+$/, '');
   }
 
-  const host = Constants.expoConfig?.hostUri?.replace(/:\d+$/, '');
-  if (!host) {
-    throw new Error(
-      'No se configuró EXPO_PUBLIC_GEMINI_API_URL para el servidor de diagnóstico.',
-    );
+  if (__DEV__) {
+    if (Platform.OS === 'web') {
+      return 'http://localhost:5000';
+    }
+
+    const hostUri = Constants.expoConfig?.hostUri;
+    if (hostUri) {
+      try {
+        const host = new URL(hostUri.includes('://') ? hostUri : `http://${hostUri}`).hostname;
+        if (host) {
+          return `http://${host}:5000`;
+        }
+      } catch {
+        // Fall through to the actionable configuration error below.
+      }
+    }
   }
 
-  return `http://${host}:5000`;
+  throw new Error(
+    'No se configuró EXPO_PUBLIC_GEMINI_API_URL para el servidor de diagnóstico. ' +
+      'Configúrala con la URL base HTTPS de tu backend antes de compilar la app.',
+  );
 };
 
 const geminiapi = {
