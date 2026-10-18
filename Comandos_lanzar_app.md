@@ -44,10 +44,9 @@ git commit -m "onboarding"
 git push origin carolina
 
 
-# Ver problemas que requieren atencion
+# Revisar vulnerabilidades (sin cambiar versiones)
 npm audit fix
-# Ver todos los problemas
-npm audit fix --force
+# No uses `npm audit fix --force`: puede bajar Expo/React Native a versiones incompatibles.
 
 # Comandos para Reconstruir la App:
 ### Android
@@ -75,6 +74,7 @@ eas build --profile development --platform android
 
 # o para iOS
 eas build --profile development --platform ios
+
 
 # Pruebas aab:
 npx eas-cli@latest build --platform android --profile production

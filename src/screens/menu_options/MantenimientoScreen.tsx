@@ -1,16 +1,50 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import { useDiseno, nuevoDiseno, pedirFotoMoto, cargarAlmacen, nombreDeMoto } from './diseñostore';
+import { LienzoEstatico } from './SimuladorEditorScreen';
 
 export default function MantenimientoScreen({ navigation }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
+  const d = useDiseno();
+  const { width } = useWindowDimensions();
+  const anchoVista = Math.min(width - 42, 520); // 20 de padding por lado + 2 de borde
+
+  useEffect(() => { cargarAlmacen(); }, []);
+
+  const totalStickers = d.elementos.length;
+  const totalTrazos = d.trazos.length;
+  const hayDiseno = totalStickers > 0 || totalTrazos > 0 || d.fuente !== 'vector';
+
+  // Botón principal: elegir con qué moto empezar
+  const iniciarNuevoDiseno = () => {
+    Alert.alert(
+      'Nuevo diseño',
+      '¿Con qué moto quieres empezar? Se reemplazará el diseño actual (guárdalo en tu garaje si quieres conservarlo).',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Subir mi moto (foto)',
+          onPress: async () => {
+            if (await pedirFotoMoto(true)) navigation.navigate('SimuladorEditor', { tab: 'brocha' });
+          },
+        },
+        {
+          text: 'Moto del catálogo',
+          onPress: () => {
+            nuevoDiseno();
+            navigation.navigate('SimuladorEditor', { tab: 'moto' });
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
-      
-      {/* HEADER CON BOTÓN DE REGRESO (Mantiene tu diseño original) */}
+      {/* HEADER CON BOTÓN DE REGRESO */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color={theme.iconPrimary} />
@@ -19,60 +53,93 @@ export default function MantenimientoScreen({ navigation }: any) {
         <View style={{ width: 28 }} />
       </View>
 
-      {/* CONTENIDO DEL SIMULADOR (Reemplaza el estado de "En construcción") */}
       <ScrollView contentContainerStyle={styles.content}>
-        
-        {/* Botón Principal que navega al Editor */}
-        <TouchableOpacity 
-          style={styles.mainButton}
-          onPress={() => navigation.navigate('SimuladorEditor')}
-        >
-          <Ionicons name="camera-outline" size={48} color={theme.primary} />
+        {/* Botón principal: nuevo diseño */}
+        <TouchableOpacity style={styles.mainButton} onPress={iniciarNuevoDiseno}>
+          <Ionicons name="add-circle-outline" size={48} color={theme.primary} />
           <Text style={styles.mainButtonText}>Iniciar Nuevo Diseño</Text>
-          <Text style={styles.subButtonText}>(Seleccionar Foto de Galería)</Text>
+          <Text style={styles.subButtonText}>(Elige una moto del catálogo o sube la tuya)</Text>
         </TouchableOpacity>
 
-        {/* Sección Central: Progreso */}
+        {/* Diseño actual: vista previa y datos reales */}
         <Text style={styles.sectionTitle}>Estado del Diseño Actual</Text>
+        <TouchableOpacity
+          style={styles.previewCard}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('SimuladorEditor')}
+        >
+          <LienzoEstatico diseno={d} width={anchoVista} />
+          <Text style={styles.previewHint}>
+            {d.nombre || nombreDeMoto(d)} · toca para seguir editando
+          </Text>
+        </TouchableOpacity>
+
         <View style={styles.cardContainer}>
           <View style={styles.progressItem}>
-            <View style={[styles.circle, { borderColor: '#ef4444' }]}><Text style={styles.circleText}>40%</Text></View>
+            <View
+              style={[
+                styles.circle,
+                { borderColor: '#ef4444' },
+                d.fuente !== 'foto' && { backgroundColor: d.colorPrincipal },
+              ]}
+            >
+              {d.fuente === 'foto' && <Ionicons name="camera" size={24} color={theme.textPrimary} />}
+            </View>
             <Text style={styles.progressLabel}>Color Base</Text>
           </View>
           <View style={styles.progressItem}>
-            <View style={[styles.circle, { borderColor: '#10b981' }]}><Text style={styles.circleText}>75%</Text></View>
-            <Text style={styles.progressLabel}>Stickers (Izq)</Text>
+            <View style={[styles.circle, { borderColor: '#10b981' }]}>
+              <Text style={styles.circleText}>{totalStickers}</Text>
+            </View>
+            <Text style={styles.progressLabel}>Stickers y rines</Text>
           </View>
           <View style={styles.progressItem}>
-            <View style={[styles.circle, { borderColor: '#f59e0b' }]}><Text style={styles.circleText}>15%</Text></View>
-            <Text style={styles.progressLabel}>Stickers (Der)</Text>
+            <View style={[styles.circle, { borderColor: '#f59e0b' }]}>
+              <Text style={styles.circleText}>{totalTrazos}</Text>
+            </View>
+            <Text style={styles.progressLabel}>Trazos de brocha</Text>
           </View>
         </View>
 
-        {/* Sección Inferior: Acciones Rápidas */}
+        {!hayDiseno && (
+          <Text style={styles.vacioTexto}>Todavía no has personalizado nada. ¡Empieza con “Iniciar Nuevo Diseño”!</Text>
+        )}
+
+        {/* Acciones rápidas */}
         <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
         <View style={styles.gridContainer}>
-          <TouchableOpacity style={styles.gridItem}>
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('SimuladorLibreria', { tab: 'stickers' })}
+          >
             <Ionicons name="pricetag-outline" size={28} color="#10b981" />
             <Text style={styles.gridText}>Añadir Sticker</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.gridItem}>
+
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('SimuladorEditor', { tab: 'pintura' })}
+          >
             <Ionicons name="color-palette-outline" size={28} color="#3b82f6" />
-            <Text style={styles.gridText}>Crear Paleta</Text>
+            <Text style={styles.gridText}>Crear Paleta{d.paleta.length > 0 ? ` (${d.paleta.length})` : ''}</Text>
           </TouchableOpacity>
-          
-          {/* Botón que navega a la Librería */}
-          <TouchableOpacity style={styles.gridItem} onPress={() => navigation.navigate('SimuladorLibreria')}>
+
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('SimuladorLibreria', { tab: 'garaje' })}
+          >
             <Ionicons name="images-outline" size={28} color="#8b5cf6" />
-            <Text style={styles.gridText}>Mis Diseños</Text>
+            <Text style={styles.gridText}>Mis Diseños ({d.garaje.length})</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.gridItem}>
+
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('SimuladorEditor', { accion: 'compartir' })}
+          >
             <Ionicons name="share-social-outline" size={28} color="#64748b" />
             <Text style={styles.gridText}>Compartir</Text>
           </TouchableOpacity>
         </View>
-
       </ScrollView>
     </View>
   );
@@ -88,12 +155,15 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   mainButtonText: { color: theme.textPrimary, fontSize: 18, fontWeight: 'bold', marginTop: 10 },
   subButtonText: { color: theme.textSecondary, fontSize: 14, marginTop: 5 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 15 },
+  previewCard: { backgroundColor: theme.card, borderRadius: 16, borderWidth: 1, borderColor: theme.border, overflow: 'hidden', marginBottom: 15, alignItems: 'center' },
+  previewHint: { color: theme.textSecondary, fontSize: 12, paddingVertical: 8 },
   cardContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25, backgroundColor: theme.card, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: theme.border },
-  progressItem: { alignItems: 'center' },
+  progressItem: { alignItems: 'center', flex: 1 },
   circle: { width: 70, height: 70, borderRadius: 35, borderWidth: 4, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  circleText: { color: theme.textPrimary, fontWeight: 'bold', fontSize: 16 },
-  progressLabel: { color: theme.textSecondary, fontSize: 12 },
+  circleText: { color: theme.textPrimary, fontWeight: 'bold', fontSize: 20 },
+  progressLabel: { color: theme.textSecondary, fontSize: 12, textAlign: 'center' },
+  vacioTexto: { color: theme.textSecondary, fontSize: 13, textAlign: 'center', marginBottom: 20 },
   gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   gridItem: { backgroundColor: theme.card, width: '48%', height: 100, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 15, borderWidth: 1, borderColor: theme.border },
-  gridText: { color: theme.textPrimary, fontSize: 14, fontWeight: '600', marginTop: 8 }
+  gridText: { color: theme.textPrimary, fontSize: 14, fontWeight: '600', marginTop: 8 },
 });
