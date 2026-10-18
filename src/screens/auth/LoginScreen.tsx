@@ -5,6 +5,7 @@ import CustomButton from '../../components/CustomButton';
 import { supabase } from '../../services/supabase';
 import { MultiAccountService } from '../../services/MultiAccountService';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import { isValidEmail, isValidPassword, MIN_PASSWORD_LENGTH } from '../../utils/validations';
 import type { Session } from '@supabase/supabase-js';
 
 interface Props {
@@ -19,10 +20,22 @@ export default function LoginScreen({ navigation, addingAccount = false }: Props
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const emailError = email.length > 0 && !isValidEmail(email)
+    ? 'Ingresa un correo electrónico válido.'
+    : submitted && !email
+      ? 'El correo electrónico es obligatorio.'
+      : undefined;
+  const passwordError = password.length > 0 && !isValidPassword(password)
+    ? `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`
+    : submitted && !password
+      ? 'La contraseña es obligatoria.'
+      : undefined;
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Por favor ingresa tu correo y contraseña.');
+    setSubmitted(true);
+    if (!email || !password || !isValidEmail(email) || !isValidPassword(password)) {
       return;
     }
 
@@ -77,6 +90,7 @@ export default function LoginScreen({ navigation, addingAccount = false }: Props
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
+        error={emailError}
       />
       <CustomInput 
         label="Contraseña" 
@@ -84,6 +98,7 @@ export default function LoginScreen({ navigation, addingAccount = false }: Props
         secureTextEntry 
         value={password}
         onChangeText={setPassword}
+        error={passwordError}
       />
 
       {loading ? (

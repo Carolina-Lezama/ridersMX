@@ -31,7 +31,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const [tipo, setTipo] = useState('rodada'); // 'rodada' o 'mantenimiento'
+  const [tipo, setTipo] = useState(route.params?.tipo === 'mantenimiento' ? 'mantenimiento' : 'rodada');
   const [descripcion, setDescripcion] = useState('');
   const [motoAsociada, setMotoAsociada] = useState('');
   

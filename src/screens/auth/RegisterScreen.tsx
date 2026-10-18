@@ -5,6 +5,7 @@ import CustomButton from '../../components/CustomButton';
 import { supabase } from '../../services/supabase';
 import { MultiAccountService } from '../../services/MultiAccountService';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import { isValidEmail, isValidPassword, MIN_PASSWORD_LENGTH } from '../../utils/validations';
 
 export default function RegisterScreen({ navigation, route }: any) {
   const { theme } = useTheme();
@@ -15,10 +16,25 @@ export default function RegisterScreen({ navigation, route }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const usernameError = username.trim().length === 0 && submitted
+    ? 'El nombre de usuario es obligatorio.'
+    : undefined;
+  const emailError = email.length > 0 && !isValidEmail(email)
+    ? 'Ingresa un correo electrónico válido.'
+    : submitted && !email
+      ? 'El correo electrónico es obligatorio.'
+      : undefined;
+  const passwordError = password.length > 0 && !isValidPassword(password)
+    ? `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`
+    : submitted && !password
+      ? 'La contraseña es obligatoria.'
+      : undefined;
 
   const handleRegister = async () => {
-    if (!email || !password || !username) {
-      Alert.alert('Datos incompletos', 'El correo, contraseña y nombre de usuario son obligatorios.');
+    setSubmitted(true);
+    if (!email || !password || !username.trim() || !isValidEmail(email) || !isValidPassword(password)) {
       return;
     }
 
@@ -108,6 +124,7 @@ export default function RegisterScreen({ navigation, route }: any) {
         placeholder="ej. rider_pro" 
         value={username} 
         onChangeText={setUsername} 
+        error={usernameError}
       />
       <CustomInput 
         label="Correo Electrónico" 
@@ -115,6 +132,7 @@ export default function RegisterScreen({ navigation, route }: any) {
         keyboardType="email-address" 
         value={email} 
         onChangeText={setEmail} 
+        error={emailError}
       />
       <CustomInput 
         label="Contraseña" 
@@ -122,6 +140,7 @@ export default function RegisterScreen({ navigation, route }: any) {
         secureTextEntry 
         value={password} 
         onChangeText={setPassword} 
+        error={passwordError}
       />
 
       {loading ? (

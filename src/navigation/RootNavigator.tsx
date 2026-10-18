@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { Animated } from 'react-native';
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -103,6 +104,43 @@ import ResenasScreen from '../screens/menu_options/ResenasScreen';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+function AnimatedTabIcon({
+  name,
+  color,
+  focused,
+}: {
+  name: React.ComponentProps<typeof Ionicons>['name'];
+  color: string;
+  focused: boolean;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!focused) return;
+
+    Animated.sequence([
+      Animated.spring(scale, {
+        toValue: 1.2,
+        useNativeDriver: true,
+        speed: 30,
+        bounciness: 8,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 20,
+        bounciness: 4,
+      }),
+    ]).start();
+  }, [focused, scale]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Ionicons name={name} size={24} color={color} />
+    </Animated.View>
+  );
+}
+
 function MainTabs() {
   const { theme } = useTheme();
 
@@ -118,17 +156,29 @@ function MainTabs() {
       <Tab.Screen
         name="Inicio"
         component={InicioScreen}
-        options={{ tabBarIcon: ({ color }) => <Ionicons name="home" size={24} color={color} /> }}
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon name="home" color={color} focused={focused} />
+          ),
+        }}
       />
       <Tab.Screen
         name="Menu"
         component={MenuScreen}
-        options={{ tabBarIcon: ({ color }) => <Ionicons name="menu" size={24} color={color} /> }}
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon name="menu" color={color} focused={focused} />
+          ),
+        }}
       />
       <Tab.Screen
         name="Perfil"
         component={PerfilScreen}
-        options={{ tabBarIcon: ({ color }) => <Ionicons name="person" size={24} color={color} /> }}
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon name="person" color={color} focused={focused} />
+          ),
+        }}
       />
     </Tab.Navigator>
   );

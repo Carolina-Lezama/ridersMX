@@ -17,6 +17,7 @@ export default function MotoFormScreen({ navigation, route }: any) {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   // ESTADOS DEL FORMULARIO (Mapeados exactamente a las columnas de la BD)
   const [alias, setAlias] = useState('');
@@ -31,6 +32,9 @@ export default function MotoFormScreen({ navigation, route }: any) {
   const [combustible, setCombustible] = useState('');
   const [aseguradora, setAseguradora] = useState('');
   const [poliza, setPoliza] = useState('');
+
+  const marcaError = !marca.trim() && submitted ? 'La marca es obligatoria.' : undefined;
+  const modeloError = !modelo.trim() && submitted ? 'El modelo es obligatorio.' : undefined;
 
   useEffect(() => {
     if (esEdicion) {
@@ -74,8 +78,8 @@ export default function MotoFormScreen({ navigation, route }: any) {
 
   // FUNCIÓN PARA GUARDAR (CREAR O ACTUALIZAR)
   const handleGuardar = async () => {
+    setSubmitted(true);
     if (!marca.trim() || !modelo.trim()) {
-      Alert.alert('Campos obligatorios', 'Por favor introduce al menos la Marca y el Modelo.');
       return;
     }
 
@@ -239,8 +243,8 @@ export default function MotoFormScreen({ navigation, route }: any) {
           </View>
 
           <CustomInput label="Apodo / Alias de la moto" placeholder="Ej. La consentida, La negra" value={alias} onChangeText={setAlias} />
-          <CustomInput label="Marca *" placeholder="Ej. Yamaha, Honda, BMW" value={marca} onChangeText={setMarca} />
-          <CustomInput label="Modelo *" placeholder="Ej. MT-07, CB190R, R1250" value={modelo} onChangeText={setModelo} />
+          <CustomInput label="Marca *" placeholder="Ej. Yamaha, Honda, BMW" value={marca} onChangeText={setMarca} error={marcaError} />
+          <CustomInput label="Modelo *" placeholder="Ej. MT-07, CB190R, R1250" value={modelo} onChangeText={setModelo} error={modeloError} />
           <CustomInput label="Cilindrada (cc)" placeholder="Ej. 300, 600, 1000" keyboardType="numeric" value={cilindrada} onChangeText={setCilindrada} />
           <CustomInput label="Año" placeholder="Ej. 2024" keyboardType="numeric" value={anio} onChangeText={setAnio} />
           <CustomInput label="Color" placeholder="Ej. Negro Mate, Rojo" value={color} onChangeText={setColor} />
