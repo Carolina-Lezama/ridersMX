@@ -41,3 +41,11 @@ yarn-error.*
 /android
 
 .env
+
+# --- Backend Python / Vercel ---
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+.vercel/
