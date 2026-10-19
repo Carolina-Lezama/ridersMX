@@ -5,6 +5,7 @@ import { useTheme } from '../../../../assets/theme/ThemeContext';
 import { BarChart } from 'react-native-gifted-charts';
 import { obtenerMetricasSemanales, type BarDataPoint } from '../../../services/timeMetricsService';
 import { obtenerLimites, guardarLimites } from '../../../services/limitsService';
+import Skeleton from '../../../components/Skeleton';
 import { supabase } from '../../../services/supabase';
 
 export default function TiempoUsoScreen({ navigation }: any) {
@@ -140,7 +141,7 @@ export default function TiempoUsoScreen({ navigation }: any) {
           <Text style={styles.resumenTitulo}>Tiempo de hoy</Text>
           <View style={styles.rowCenter}>
             {cargandoMetricas ? (
-              <ActivityIndicator color={theme.primary} />
+              <Skeleton width={90} height={34} />
             ) : (
               <>
                 <Text style={styles.resumenValor}>{tiempoHoy}</Text>
@@ -150,9 +151,11 @@ export default function TiempoUsoScreen({ navigation }: any) {
           </View>
           <View style={styles.badgePromedio}>
             <Ionicons name="trending-up-outline" size={16} color={theme.textSecondary} />
-            <Text style={styles.textoPromedio}>
-              Promedio semanal: {cargandoMetricas ? '...' : `${promedioSemanal} min`}
-            </Text>
+            {cargandoMetricas ? (
+              <Skeleton width={145} height={14} />
+            ) : (
+              <Text style={styles.textoPromedio}>Promedio semanal: {promedioSemanal} min</Text>
+            )}
           </View>
         </View>
 
@@ -160,7 +163,7 @@ export default function TiempoUsoScreen({ navigation }: any) {
         <Text style={styles.sectionTitle}>Uso de los últimos 7 días</Text>
         <View style={styles.chartCard}>
           {cargandoMetricas ? (
-            <ActivityIndicator size="large" color={theme.primary} style={{ height: 180 }} />
+            <Skeleton width="100%" height={180} borderRadius={12} />
           ) : errorMetricas ? (
             <Text style={{ color: theme.dangerText, padding: 20 }}>
               No se pudieron cargar las métricas. Comprueba tu conexión e inténtalo de nuevo.
@@ -187,7 +190,6 @@ export default function TiempoUsoScreen({ navigation }: any) {
 
         {/* CONTROLES DE LÍMITES (Paso 3.1) */}
         <Text style={styles.sectionTitle}>Ajustes de Restricción</Text>
-        {cargandoLimites && <ActivityIndicator color={theme.primary} style={{ marginBottom: 10 }} />}
         <View style={styles.card}>
           
           {/* Límite de Notificación */}
@@ -204,7 +206,11 @@ export default function TiempoUsoScreen({ navigation }: any) {
               <TouchableOpacity disabled={cargandoLimites || guardandoLimites} onPress={() => ajustarLimite('notificacion', -5)} style={styles.stepperBtn}>
                 <Ionicons name="remove" size={18} color={theme.iconPrimary} />
               </TouchableOpacity>
-              <Text style={styles.stepperValue}>{limiteNotificacion}m</Text>
+              {cargandoLimites ? (
+                <Skeleton width={38} height={20} />
+              ) : (
+                <Text style={styles.stepperValue}>{limiteNotificacion}m</Text>
+              )}
               <TouchableOpacity disabled={cargandoLimites || guardandoLimites} onPress={() => ajustarLimite('notificacion', 5)} style={styles.stepperBtn}>
                 <Ionicons name="add" size={18} color={theme.iconPrimary} />
               </TouchableOpacity>
@@ -227,7 +233,11 @@ export default function TiempoUsoScreen({ navigation }: any) {
               <TouchableOpacity disabled={cargandoLimites || guardandoLimites} onPress={() => ajustarLimite('bloqueo', -5)} style={styles.stepperBtn}>
                 <Ionicons name="remove" size={18} color={theme.iconPrimary} />
               </TouchableOpacity>
-              <Text style={styles.stepperValue}>{limiteBloqueo}m</Text>
+              {cargandoLimites ? (
+                <Skeleton width={38} height={20} />
+              ) : (
+                <Text style={styles.stepperValue}>{limiteBloqueo}m</Text>
+              )}
               <TouchableOpacity disabled={cargandoLimites || guardandoLimites} onPress={() => ajustarLimite('bloqueo', 5)} style={styles.stepperBtn}>
                 <Ionicons name="add" size={18} color={theme.iconPrimary} />
               </TouchableOpacity>

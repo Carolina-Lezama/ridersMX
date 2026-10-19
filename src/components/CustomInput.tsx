@@ -10,6 +10,7 @@ interface Props {
   value?: string;
   onChangeText?: (text: string) => void;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  error?: string;
 }
 
 export default function CustomInput({ 
@@ -19,7 +20,8 @@ export default function CustomInput({
   keyboardType, 
   value, 
   onChangeText,
-  autoCapitalize = 'none' 
+  autoCapitalize = 'none',
+  error
 }: Props) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
@@ -28,7 +30,7 @@ export default function CustomInput({
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
       <TextInput 
-        style={styles.input}
+        style={[styles.input, error ? styles.inputError : undefined]}
         placeholder={placeholder}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
@@ -37,6 +39,7 @@ export default function CustomInput({
         onChangeText={onChangeText}
         autoCapitalize={autoCapitalize}
       />
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 }
@@ -52,5 +55,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     borderRadius: 10, 
     fontSize: 16,
     color: theme.textPrimary
-  }
+  },
+  inputError: { borderColor: theme.dangerText },
+  errorText: { color: theme.dangerText, fontSize: 12, marginTop: 5 }
 });

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
+import Skeleton from '../../components/Skeleton';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 
@@ -30,7 +31,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const [tipo, setTipo] = useState('rodada'); // 'rodada' o 'mantenimiento'
+  const [tipo, setTipo] = useState(route.params?.tipo === 'mantenimiento' ? 'mantenimiento' : 'rodada');
   const [descripcion, setDescripcion] = useState('');
   const [motoAsociada, setMotoAsociada] = useState('');
   
@@ -181,9 +182,31 @@ export default function EventoFormScreen({ navigation, route }: any) {
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={{ marginTop: 10, color: '#64748b' }}>Cargando actividad...</Text>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Skeleton width={28} height={28} borderRadius={14} />
+          <Skeleton width={145} height={21} />
+          <View style={{ width: 28 }} />
+        </View>
+        <ScrollView contentContainerStyle={styles.content}>
+          {[0, 1, 2].map((section) => (
+            <View key={section} style={styles.seccion}>
+              <Skeleton width={130} height={15} style={{ marginBottom: 10 }} />
+              {section === 0 && (
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+                  {[0, 1, 2].map((chip) => (
+                    <Skeleton key={chip} width={78} height={36} borderRadius={18} />
+                  ))}
+                </View>
+              )}
+              {Array.from({ length: section === 1 ? 2 : 1 }, (_, field) => (
+                <View key={field} style={{ marginBottom: 16 }}>
+                  <Skeleton height={44} borderRadius={10} />
+                </View>
+              ))}
+            </View>
+          ))}
+        </ScrollView>
       </View>
     );
   }

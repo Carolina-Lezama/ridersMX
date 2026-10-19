@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../services/supabase';
+import { MultiAccountService } from '../../services/MultiAccountService';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 
 export default function MenuScreen({ navigation }: any) {
@@ -33,9 +33,8 @@ export default function MenuScreen({ navigation }: any) {
   const handleCerrarSesion = () => {
     const ejecutarCierre = async () => {
       try {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
-        navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+        const nextAccountId = await MultiAccountService.signOutActiveAccount();
+        navigation.reset({ index: 0, routes: [{ name: nextAccountId ? 'MainApp' : 'Login' }] });
       } catch (error: any) {
         const mensajeError = 'No se pudo cerrar la sesión: ' + error.message;
         if (Platform.OS === 'web') {
