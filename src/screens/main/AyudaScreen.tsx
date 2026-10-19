@@ -213,7 +213,7 @@ export default function AyudaScreen({ navigation }: any) {
             accessibilityRole="button"
             onPress={() => abrirDocumentoLegal('privacy')}
             style={styles.legalLink}
-          >
+          > 
             <Text style={styles.legalText}>Política de Privacidad</Text>
           </TouchableOpacity>
           <Text style={styles.versionText}>Versión {version}</Text>

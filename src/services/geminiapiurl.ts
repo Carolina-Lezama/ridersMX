@@ -22,7 +22,8 @@ const getApiUrl = (): string => {
 
   if (__DEV__) {
     if (Platform.OS === 'web') {
-      return 'http://localhost:5000';
+      const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+      return `http://${hostname || 'localhost'}:5000`;
     }
 
     const hostUri = Constants.expoConfig?.hostUri;
@@ -58,7 +59,9 @@ const geminiapi = {
     } catch (error) {
       console.error('Error al llamar a Gemini:', error);
       throw new Error(
-        'No se pudo conectar con el servidor del chatbot. Inicia la app con npm start para levantarlo junto con Expo.',
+        `No se pudo conectar con el servidor del chatbot en ${apiUrl}. ` +
+          'Inicia Expo con npm start o npm run web para levantar también el backend ' +
+          'y verifica que el navegador pueda acceder a esa dirección.',
       );
     }
 

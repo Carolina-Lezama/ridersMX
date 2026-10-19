@@ -26,8 +26,12 @@ de `python.exe` antes de ejecutar npm.
 
 El teléfono/emulador debe poder acceder por la red local a la computadora que
 ejecuta Expo. En desarrollo, el cliente móvil obtiene la IP del servidor Expo y
-la versión web usa `http://localhost:5000`; por eso inicia la app con `npm start`
-o `npm run web`, que también levanta el backend.
+la versión web usa el mismo host desde el que se abrió Expo, en el puerto 5000.
+Inicia la app con `npm start` o `npm run web`, que también levanta el backend.
+Si la web se abre desde otra computadora, ambas deben estar en la misma red y
+
+mediante un túnel u otro host, define `EXPO_PUBLIC_GEMINI_API_URL` con una URL
+alcanzable del backend.
 
 Para una app distribuida, publica el backend en un servidor HTTPS y define
 `EXPO_PUBLIC_GEMINI_API_URL` con la URL base (origen) del servidor al compilar,
