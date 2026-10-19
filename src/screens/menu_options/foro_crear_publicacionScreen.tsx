@@ -17,8 +17,13 @@ import { Ionicons } from '@expo/vector-icons';
 import CustomButton from '../../components/CustomButton';
 import CustomInput from '../../components/CustomInput';
 import { supabase } from '../../services/supabase';
+import { useTheme } from '../../../assets/theme/ThemeContext';
+import type { Theme } from '../../../assets/theme/theme';
 
 export default function ForoCrearPublicacion({ navigation }: any) {
+  const { isDarkMode, theme } = useTheme();
+  const styles = createStyles(theme);
+
   const [titulo, setTitulo] = useState('');
   const [marca, setMarca] = useState('Italika');
   const [modeloMoto, setModeloMoto] = useState('');
@@ -46,14 +51,8 @@ export default function ForoCrearPublicacion({ navigation }: any) {
     KTM: ['RC200', 'RC390', 'Duke 200', 'Duke 390'],
   };
 
-  const categorias = [
-  'Rutas',
-  'Mecánica',
-  'Compra/Venta',
-  'Off-Topic',
-  ];
+  const categorias = ['Rutas', 'Mecánica', 'Compra/Venta', 'Off-Topic'];
 
-  // Mostrar mensaje unificado (Web / Móvil)
   const mostrarMensaje = (tituloMsg: string, mensaje: string) => {
     if (Platform.OS === 'web') {
       window.alert(`${tituloMsg}: ${mensaje}`);
@@ -62,7 +61,6 @@ export default function ForoCrearPublicacion({ navigation }: any) {
     }
   };
 
-  // Buscador de Ubicación a prueba de fallos
   const buscarUbicacion = async (texto: string) => {
     setUbicacionQuery(texto);
 
@@ -114,10 +112,7 @@ export default function ForoCrearPublicacion({ navigation }: any) {
     setModalVisible(false);
   };
 
-  // Función principal para crear la publicación
   const crearPublicacion = async () => {
-    console.log('Iniciando creación de publicación...');
-
     if (!titulo.trim() || !descripcion.trim()) {
       mostrarMensaje('Campos requeridos', 'Por favor ingresa un título y una descripción.');
       return;
@@ -125,8 +120,6 @@ export default function ForoCrearPublicacion({ navigation }: any) {
 
     try {
       setGuardando(true);
-
-      // Obtener sesión igual que en PerfilScreen
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !session?.user) {
@@ -145,7 +138,6 @@ export default function ForoCrearPublicacion({ navigation }: any) {
         contenidoCompleto += `\n\n📍 ${detallesExtras.join(' | ')}`;
       }
 
-      // Guardar en la base de datos
       const { error } = await supabase.from('foro_publicaciones').insert([
         {
           perfil_id: session.user.id,
@@ -161,7 +153,6 @@ export default function ForoCrearPublicacion({ navigation }: any) {
         return;
       }
 
-      console.log('¡Publicación creada exitosamente!');
       mostrarMensaje('¡Éxito!', 'Tu publicación ha sido creada.');
       navigation.goBack();
     } catch (err: any) {
@@ -174,126 +165,131 @@ export default function ForoCrearPublicacion({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.card}
+      />
 
       {/* ENCABEZADO */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={22} color="#0f172a" />
+          <Ionicons name="arrow-back" size={22} color={theme.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Nueva Publicación</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* TÍTULO */}
-        <CustomInput 
-          label="Título de la publicación" 
-          placeholder="Ej. Rodada al Volcán este domingo" 
-          value={titulo} 
-          onChangeText={setTitulo} 
-        />
+        <View style={styles.formWrapper}>
+          {/* TÍTULO */}
+          <CustomInput
+            label="Título de la publicación"
+            placeholder="Ej. Rodada al Volcán este domingo"
+            value={titulo}
+            onChangeText={setTitulo}
+          />
 
-        {/* CATEGORÍAS */}
-        <Text style={styles.sectionLabel}>Categoría</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
-          {categorias.map((cat) => {
-            const isSelected = categoria === cat;
-            return (
-              <TouchableOpacity
-                key={cat}
-                style={[styles.chip, isSelected && styles.chipSelected]}
-                onPress={() => setCategoria(cat)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                  {cat}
+          {/* CATEGORÍAS */}
+          <Text style={styles.sectionLabel}>Categoría</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
+            {categorias.map((cat) => {
+              const isSelected = categoria === cat;
+              return (
+                <TouchableOpacity
+                  key={cat}
+                  style={[styles.chip, isSelected && styles.chipSelected]}
+                  onPress={() => setCategoria(cat)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* MARCA Y MODELO */}
+          <Text style={styles.sectionLabel}>Detalles de la Moto</Text>
+          <View style={styles.row}>
+            <TouchableOpacity style={styles.selectCard} onPress={() => abrirModal('marca')}>
+              <Text style={styles.selectCardSub}>Marca</Text>
+              <View style={styles.selectCardRow}>
+                <Text style={styles.selectCardValue}>{marca}</Text>
+                <Ionicons name="chevron-down" size={18} color={theme.primary} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.selectCard} onPress={() => abrirModal('modelo')}>
+              <Text style={styles.selectCardSub}>Modelo</Text>
+              <View style={styles.selectCardRow}>
+                <Text style={[styles.selectCardValue, !modeloMoto && { color: theme.textSecondary }]}>
+                  {modeloMoto || 'Seleccionar'}
                 </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* MARCA Y MODELO */}
-        <Text style={styles.sectionLabel}>Detalles de la Moto</Text>
-        <View style={styles.row}>
-          <TouchableOpacity style={styles.selectCard} onPress={() => abrirModal('marca')}>
-            <Text style={styles.selectCardSub}>Marca</Text>
-            <View style={styles.selectCardRow}>
-              <Text style={styles.selectCardValue}>{marca}</Text>
-              <Ionicons name="chevron-down" size={18} color="#007bff" />
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.selectCard} onPress={() => abrirModal('modelo')}>
-            <Text style={styles.selectCardSub}>Modelo</Text>
-            <View style={styles.selectCardRow}>
-              <Text style={[styles.selectCardValue, !modeloMoto && { color: '#94a3b8' }]}>
-                {modeloMoto || 'Seleccionar'}
-              </Text>
-              <Ionicons name="chevron-down" size={18} color="#007bff" />
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* DESCRIPCIÓN */}
-        <CustomInput 
-          label="Descripción" 
-          placeholder="Escribe el itinerario, recomendaciones, punto de encuentro..." 
-          value={descripcion} 
-          onChangeText={setDescripcion} 
-        />
-
-        {/* BUSCADOR DE UBICACIÓN */}
-        <Text style={styles.sectionLabel}>Punto de salida / Ubicación</Text>
-        <View style={styles.locationContainer}>
-          <View style={styles.inputCard}>
-            <Ionicons name="location-outline" size={20} color="#64748b" style={{ marginRight: 10 }} />
-            <TextInput
-              style={styles.input}
-              placeholder="Ej. Gasolinera Zavaleta, Puebla"
-              placeholderTextColor="#94a3b8"
-              value={ubicacionQuery}
-              onChangeText={buscarUbicacion}
-            />
-            {cargandoUbicacion && <ActivityIndicator size="small" color="#007bff" />}
+                <Ionicons name="chevron-down" size={18} color={theme.primary} />
+              </View>
+            </TouchableOpacity>
           </View>
 
-          {/* LISTA RESULTADOS UBICACIÓN */}
-          {Array.isArray(resultadosUbicacion) && resultadosUbicacion.length > 0 && (
-            <View style={styles.resultadosCard}>
-              {resultadosUbicacion.map((item, index) => {
-                if (!item) return null;
-                const textoMostrar = typeof item === 'string' ? item : (item.display_name || item.name || 'Ubicación');
-                
-                return (
-                  <TouchableOpacity
-                    key={item.place_id ? `ub-${item.place_id}` : `ub-idx-${index}`}
-                    style={styles.resultadoItem}
-                    onPress={() => seleccionarUbicacion(item)}
-                  >
-                    <Ionicons name="pin-outline" size={16} color="#007bff" style={{ marginRight: 8 }} />
-                    <Text style={styles.resultadoTexto} numberOfLines={2}>
-                      {textoMostrar}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
-        </View>
+          {/* DESCRIPCIÓN */}
+          <CustomInput
+            label="Descripción"
+            placeholder="Escribe el itinerario, recomendaciones, punto de encuentro..."
+            value={descripcion}
+            onChangeText={setDescripcion}
+          />
 
-        {/* BOTÓN PUBLICAR USANDO CustomButton IGUAL QUE EN PERFIL */}
-        <View style={styles.footerButton}>
-          {guardando ? (
-            <ActivityIndicator size="large" color="#007bff" />
-          ) : (
-            <CustomButton title="Publicar en la comunidad" onPress={crearPublicacion} />
-          )}
+          {/* BUSCADOR DE UBICACIÓN */}
+          <Text style={styles.sectionLabel}>Punto de salida / Ubicación</Text>
+          <View style={styles.locationContainer}>
+            <View style={styles.inputCard}>
+              <Ionicons name="location-outline" size={20} color={theme.textSecondary} style={{ marginRight: 10 }} />
+              <TextInput
+                style={styles.input}
+                placeholder="Ej. Gasolinera Zavaleta, Puebla"
+                placeholderTextColor={theme.textSecondary}
+                value={ubicacionQuery}
+                onChangeText={buscarUbicacion}
+              />
+              {cargandoUbicacion && <ActivityIndicator size="small" color={theme.primary} />}
+            </View>
+
+            {/* LISTA RESULTADOS UBICACIÓN */}
+            {Array.isArray(resultadosUbicacion) && resultadosUbicacion.length > 0 && (
+              <View style={styles.resultadosCard}>
+                {resultadosUbicacion.map((item, index) => {
+                  if (!item) return null;
+                  const textoMostrar = typeof item === 'string' ? item : (item.display_name || item.name || 'Ubicación');
+
+                  return (
+                    <TouchableOpacity
+                      key={item.place_id ? `ub-${item.place_id}` : `ub-idx-${index}`}
+                      style={styles.resultadoItem}
+                      onPress={() => seleccionarUbicacion(item)}
+                    >
+                      <Ionicons name="pin-outline" size={16} color={theme.primary} style={{ marginRight: 8 }} />
+                      <Text style={styles.resultadoTexto} numberOfLines={2}>
+                        {textoMostrar}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+
+          {/* BOTÓN PUBLICAR */}
+          <View style={styles.footerButton}>
+            {guardando ? (
+              <ActivityIndicator size="large" color={theme.primary} />
+            ) : (
+              <CustomButton title="Publicar en la comunidad" onPress={crearPublicacion} />
+            )}
+          </View>
         </View>
 
         <View style={{ height: 40 }} />
@@ -314,7 +310,7 @@ export default function ForoCrearPublicacion({ navigation }: any) {
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.modalOption} onPress={() => seleccionarOpcion(item)}>
                   <Text style={styles.modalOptionText}>{item}</Text>
-                  <Ionicons name="checkmark-circle-outline" size={22} color="#007bff" />
+                  <Ionicons name="checkmark-circle-outline" size={22} color={theme.primary} />
                 </TouchableOpacity>
               )}
             />
@@ -325,119 +321,126 @@ export default function ForoCrearPublicacion({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 50,
-    paddingBottom: 15,
-    paddingHorizontal: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#f8fafc',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#0f172a' },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 20 },
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.background },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 50,
+      paddingBottom: 15,
+      paddingHorizontal: 20,
+      backgroundColor: theme.card,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: theme.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary },
+    scrollContent: { paddingHorizontal: 20, paddingTop: 20, alignItems: 'center' },
+    formWrapper: { width: '100%', maxWidth: 800 },
 
-  sectionLabel: { fontSize: 13, fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: 8, marginTop: 10, marginLeft: 2 },
+    sectionLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: theme.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
+      marginBottom: 8,
+      marginTop: 10,
+      marginLeft: 2,
+    },
 
-  inputCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 15,
-  },
-  input: { flex: 1, fontSize: 15, color: '#0f172a' },
+    inputCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      marginBottom: 15,
+    },
+    input: { flex: 1, fontSize: 15, color: theme.textPrimary },
 
-  locationContainer: {
-    marginBottom: 20,
-  },
-  resultadosCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginTop: -8,
-    marginBottom: 15,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  resultadoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  resultadoTexto: { fontSize: 13, color: '#334155', flex: 1 },
+    locationContainer: {
+      marginBottom: 20,
+    },
+    resultadosCard: {
+      backgroundColor: theme.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      marginTop: -8,
+      marginBottom: 15,
+      elevation: 5,
+    },
+    resultadoItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.divider,
+    },
+    resultadoTexto: { fontSize: 13, color: theme.textPrimary, flex: 1 },
 
-  chipsScroll: { flexDirection: 'row', marginBottom: 15 },
-  chip: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  chipSelected: { backgroundColor: '#007bff', borderColor: '#007bff' },
-  chipText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
-  chipTextSelected: { color: '#ffffff' },
+    chipsScroll: { flexDirection: 'row', marginBottom: 15 },
+    chip: {
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 20,
+      marginRight: 10,
+    },
+    chipSelected: { backgroundColor: theme.primary, borderColor: theme.primary },
+    chipText: { fontSize: 14, fontWeight: '600', color: theme.textSecondary },
+    chipTextSelected: { color: '#ffffff' },
 
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
-  selectCard: {
-    width: '48%',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  selectCardSub: { fontSize: 11, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' },
-  selectCardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  selectCardValue: { fontSize: 15, fontWeight: '600', color: '#0f172a' },
+    row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
+    selectCard: {
+      width: '48%',
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    selectCardSub: { fontSize: 11, fontWeight: '700', color: theme.textSecondary, textTransform: 'uppercase' },
+    selectCardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
+    selectCardValue: { fontSize: 15, fontWeight: '600', color: theme.textPrimary },
 
-  footerButton: {
-    marginTop: 20,
-  },
+    footerButton: {
+      marginTop: 20,
+    },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'flex-end' },
-  modalContent: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    maxHeight: '50%',
-  },
-  modalBar: { width: 40, height: 4, backgroundColor: '#cbd5e1', borderRadius: 2, alignSelf: 'center', marginBottom: 15 },
-  modalTitle: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', marginBottom: 15, textAlign: 'center' },
-  modalOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  modalOptionText: { fontSize: 15, color: '#1e293b', fontWeight: '600' },
-});
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', justifyContent: 'flex-end' },
+    modalContent: {
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 20,
+      maxHeight: '50%',
+    },
+    modalBar: { width: 40, height: 4, backgroundColor: theme.border, borderRadius: 2, alignSelf: 'center', marginBottom: 15 },
+    modalTitle: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 15, textAlign: 'center' },
+    modalOption: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.divider,
+    },
+    modalOptionText: { fontSize: 15, color: theme.textPrimary, fontWeight: '600' },
+  });
