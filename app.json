@@ -10,6 +10,8 @@
       "supportsTablet": true
     },
     "android": {
+      "versionCode": 2,
+      "package": "com.ridersmx",
       "permissions": [
         "android.permission.SCHEDULE_EXACT_ALARM"
       ],
@@ -19,8 +21,7 @@
         "backgroundImage": "./assets/android-icon-background.jpeg",
         "monochromeImage": "./assets/android-icon-monochrome.jpeg"
       },
-      "predictiveBackGestureEnabled": false,
-      "package": "com.ridersmx"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/icon.jpeg"

@@ -136,6 +136,7 @@ export const ignorarEventoPendiente = async (userId: string, eventoId: string) =
 export const guardarResenaRodada = async ({
   userId,
   eventoId,
+  motocicletaId,
   calificacion,
   distanciaKm,
   duracionMinutos,
@@ -144,6 +145,7 @@ export const guardarResenaRodada = async ({
 }: {
   userId: string;
   eventoId: string;
+  motocicletaId: string | null;
   calificacion: number;
   distanciaKm: number;
   duracionMinutos: number;
@@ -183,6 +185,7 @@ export const guardarResenaRodada = async ({
       {
         evento_id: eventoId,
         perfil_id: userId,
+        motocicleta_id: motocicletaId,
         distancia_km: Number(distanciaKm) || 0,
         duracion_minutos: Number(duracionMinutos) || 0,
         calificacion: Number(calificacion) || 0,

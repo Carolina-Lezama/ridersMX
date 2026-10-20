@@ -1,13 +1,20 @@
 nuevas cosas a revisar:
 
-![alt text](image.png)
-[{"id":"c653f7cf-df56-4dba-9183-02f7f9f016fa","evento_id":"0b3d90b1-d342-4128-b551-7683617c5ad6","perfil_id":"5ceb80ce-3a25-4c9d-bece-2708f430c3f1","distancia_km":"5","duracion_minutos":10,"calificacion":5,"comentarios_review":"meh","foto_url":null,"velocidad_promedio":null,"clima":null,"tipo_terreno":null,"gastos_ruta":"0","created_at":"2026-10-19 14:25:45.749812+00"}]
-no se guarda con que motocicleta del usuario se realizo el viaje, modificar la bd para agregar este apartado, luego incluir un apartado que me permita seleccionar cual
+
+politicas para la tabla reseñas, eliminar y actualizar
+
+en el dashboard tenemos un apartado de rachas, al hacer click muestra el modal de pregunta, al completarlo solo muestra "completado hoy" y el numero de racha, ahora me gustaria agregar esto: 
+calendario interactivo para mostrar que dias de racha hemos tenido
+
+
+
+
+
 
 el boton no guardar esta(rodada) no funciona, si cambiamos de apartado y regresamos la vuelve a mostrar
 lo mismo pasa si pulsamos el boton de recordar mañana, salimos del modal, vamos a otro apartado, regresamos, vuelve a mostrarse aunque sea el mismo dia
 
-calendario interactivo para mostrar que dias de racha hemos tenido
+
 
 en el apartado dashboard existe el Estado de tu Moto, aqui solo muestra una moto por defecto, mostrar cual querer mostrarse como top, opcion de mostrar todas en forma de lista, sea en apartado diferente(nueva pantalla/modal) o en el mismo bashboard
 
