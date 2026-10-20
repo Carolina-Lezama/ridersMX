@@ -43,35 +43,14 @@ que en dashboard se ocupe el nombre del usuario y no uno predeterminado
 
 Para tu perfil como desarrolladora y con múltiples proyectos en puerta (como tu sistema de papelería en PHP/MySQL y tus aplicaciones web/móviles), lo más inteligente y económico es comprar un VPS único (como un servidor en Hetzner o DigitalOcean).
 
-pero no se guardan kilometros ni nada, sino que solo son fechas, pero me diste una gran idea, porque no agregar un apartado, despues de que la rodada pase(ese mismo dia o al siguiente), que se le pregunte al usuario como estuvo, duracion, distancias, etc. y de eso si podemos hacer registros y graficos para el lobby 
-
+pero no se guardan kilometros ni nada, sino que solo son fechas, pero me diste una gran idea, porque no agregar un apartado, despues de que la rodada pase(ese mismo dia o al siguiente), que se le pregunte al usuario como estuvo, duracion, distancias, etc. y de eso si podemos hacer registros y graficos para el lobby
 
 Pedir al usuario al terminar la rodada —o recordárselo al día siguiente— que ingrese datos sencillos como la distancia aproximada, el tiempo de duración, una foto o una breve reseña transforma una simple fecha en una bitácora de experiencias.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 Fase 1: Blindaje de la Base de Datos (RLS para Motocicletas)
 Acción: Ejecutaremos un script SQL en Supabase para crear las Políticas de Seguridad (Policies) específicas para la tabla motocicletas.
 
 Justificación: Si recuerdas nuestro tropiezo con el error 401 en el registro, fue porque la tabla estaba bloqueada. Necesitamos decirle a Supabase: "Permite que un usuario inserte, actualice y borre motos, pero solo si el perfil_id de esa moto coincide con su sesión actual". Sin esto, el frontend fallará silenciosamente.
-
-
-
-
-
-
 
 2. Mejoras de UI/UX a tus módulos actuales
    Ya tienes la estructura funcional de varios apartados. Ahora podemos hacer que se sientan como una aplicación Premium:
@@ -90,9 +69,6 @@ Etapa 4: Animaciones y Microinteracciones (Opcional pero recomendado)
 ¿Qué haremos? Utilizaremos la API Animated nativa de React Native o la librería react-native-reanimated para hacer que los puntitos indicadores crezcan o cambien de color suavemente conforme el usuario desliza la pantalla.
 
 Justificación: Este es el "excelente ejercicio de diseño" que mencionaste. Las transiciones fluidas marcan la diferencia entre una app que se siente "de juguete" y una app que se siente "premium".
-
-
-
 
         {/* SECCIÓN 3: SOPORTE E INFORMACIÓN */}
         <Text style={styles.sectionTitle}>Soporte e Información</Text>

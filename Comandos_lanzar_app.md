@@ -43,3 +43,5 @@ eas build --profile development --platform android
 # o para iOS
 eas build --profile development --platform ios
 
+git commit -m "comentario"
+git push origin carolina
