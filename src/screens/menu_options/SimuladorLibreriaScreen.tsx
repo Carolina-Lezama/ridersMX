@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { catalogoStickers, coloresTexto, textosRapidos, ItemCatalogo } from './catalogos';
+import { useTheme } from '../../../assets/theme/ThemeContext';
+import type { Theme } from '../../../assets/theme/theme';
 import {
   useDiseno, agregarElemento, abrirDiseno, eliminarDeGaraje, cargarAlmacen, hayPersistencia, nombreDeMoto, DisenoGuardado,
 } from './diseñostore';
@@ -19,6 +21,8 @@ const fecha = (t: number) =>
   new Date(t).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
 
 export default function SimuladorLibreriaScreen({ navigation, route }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const [activeTab, setActiveTab] = useState<Tab>(route?.params?.tab ?? 'stickers');
   const [busqueda, setBusqueda] = useState('');
   const [texto, setTexto] = useState('');
@@ -62,7 +66,7 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#0f172a" />
+          <Ionicons name="arrow-back" size={28} color={theme.iconPrimary} />
         </TouchableOpacity>
         <Text style={styles.titulo}>Mi Inventario</Text>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.listoButton}>
@@ -204,24 +208,24 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 60, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#e2e8f0', backgroundColor: '#fff' },
+const createStyles = (theme: Theme) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 60, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.card },
   backButton: { padding: 5 },
-  titulo: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
-  listoButton: { backgroundColor: '#3b82f6', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
+  listoButton: { backgroundColor: theme.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
   listoText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  searchContainer: { backgroundColor: '#fff', paddingHorizontal: 20, paddingBottom: 15, paddingTop: 12, borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: 10, paddingHorizontal: 15, height: 45 },
-  searchInput: { flex: 1, marginLeft: 10, color: '#0f172a', fontSize: 16 },
-  tabContainer: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
+  searchContainer: { backgroundColor: theme.card, paddingHorizontal: 20, paddingBottom: 15, paddingTop: 12, borderBottomWidth: 1, borderBottomColor: theme.border },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.cardHeader, borderRadius: 10, paddingHorizontal: 15, height: 45 },
+  searchInput: { flex: 1, marginLeft: 10, color: theme.textPrimary, fontSize: 16 },
+  tabContainer: { flexDirection: 'row', backgroundColor: theme.card, borderBottomWidth: 1, borderBottomColor: theme.border },
   tab: { flex: 1, paddingVertical: 15, alignItems: 'center' },
-  activeTab: { borderBottomWidth: 3, borderBottomColor: '#3b82f6' },
-  tabText: { color: '#64748b', fontSize: 16, fontWeight: '600' },
-  activeTabText: { color: '#3b82f6' },
+  activeTab: { borderBottomWidth: 3, borderBottomColor: theme.primary },
+  tabText: { color: theme.textSecondary, fontSize: 16, fontWeight: '600' },
+  activeTabText: { color: theme.primary },
   listContainer: { flex: 1, padding: 20 },
-  listItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 15, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0' },
-  stickerPreview: { width: 50, height: 50, backgroundColor: '#f1f5f9', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  listItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, padding: 15, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: theme.border },
+  stickerPreview: { width: 50, height: 50, backgroundColor: theme.cardHeader, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   listTextInfo: { flex: 1 },
   itemName: { color: '#0f172a', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
   itemSubText: { color: '#64748b', fontSize: 12 },

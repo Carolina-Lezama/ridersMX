@@ -18,7 +18,11 @@ const geminiapi = {
       return data.respuesta;
     } catch (error) {
       console.error('Error al llamar a Gemini:', error);
-      throw error;
+      throw new Error(
+        `No se pudo conectar con el servidor del chatbot en ${API_URL}. ` +
+          'Inicia Expo con npm start o npm run web para levantar también el backend ' +
+          'y verifica que el navegador pueda acceder a esa dirección.',
+      );
     }
   },
 };

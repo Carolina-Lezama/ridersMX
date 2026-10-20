@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../assets/theme/ThemeContext'; // Ajusta la ruta según tu proyecto
+import Skeleton from './Skeleton';
 
 interface RachaWidgetProps {
   diasRacha: number;
@@ -30,45 +31,57 @@ export const RachaWidget: React.FC<RachaWidgetProps> = ({
         styles.card,
         completadoHoy && styles.cardCompletado,
         rachaSalvada && styles.cardSalvado,
-        loading && styles.cardLoading,
       ]}
       onPress={onPress}
       disabled={completadoHoy || loading}
     >
-      <View style={styles.contentLeft}>
-        <View style={[styles.iconContainer, completadoHoy && styles.iconCompletado]}>
-          <Text style={styles.llamaIcon}>{loading ? '…' : completadoHoy ? '🔥' : '⚡'}</Text>
-        </View>
+      {loading ? (
+        <>
+          <View style={styles.contentLeft}>
+            <Skeleton width={46} height={46} borderRadius={14} />
+            <View style={styles.infoContainer}>
+              <Skeleton width={150} height={16} />
+              <Skeleton width={190} height={12} />
+            </View>
+          </View>
+          <Skeleton width={22} height={22} borderRadius={11} />
+        </>
+      ) : (
+        <>
+          <View style={styles.contentLeft}>
+            <View style={[styles.iconContainer, completadoHoy && styles.iconCompletado]}>
+              <Text style={styles.llamaIcon}>{completadoHoy ? '🔥' : '⚡'}</Text>
+            </View>
 
-        <View style={styles.infoContainer}>
-          <View style={styles.rachaHeader}>
-            <Text style={styles.diasTexto}>{diasRacha} días en racha</Text>
-            <View style={styles.badgeComodines}>
-              <Text style={styles.comodinesTexto}>❄️ {comodines}/2</Text>
+            <View style={styles.infoContainer}>
+              <View style={styles.rachaHeader}>
+                <Text style={styles.diasTexto}>{diasRacha} días en racha</Text>
+                <View style={styles.badgeComodines}>
+                  <Text style={styles.comodinesTexto}>❄️ {comodines}/2</Text>
+                </View>
+              </View>
+
+              {rachaSalvada ? (
+                <Text style={styles.subtextoSalvado}>
+                  ¡Ayer faltaste! Tu racha fue salvada con ❄️
+                </Text>
+              ) : completadoHoy ? (
+                <Text style={styles.subtextoCompletado}>Check-in de hoy completado</Text>
+              ) : (
+                <Text style={styles.subtextoPendiente}>
+                  Responde el Quiz Diario para mantener tu racha
+                </Text>
+              )}
             </View>
           </View>
 
-          {loading ? (
-            <Text style={styles.subtextoPendiente}>Cargando tu racha...</Text>
-          ) : rachaSalvada ? (
-            <Text style={styles.subtextoSalvado}>
-              ¡Ayer faltaste! Tu racha fue salvada con ❄️
-            </Text>
-          ) : completadoHoy ? (
-            <Text style={styles.subtextoCompletado}>Check-in de hoy completado</Text>
-          ) : (
-            <Text style={styles.subtextoPendiente}>
-              Responde el Quiz Diario para mantener tu racha
-            </Text>
-          )}
-        </View>
-      </View>
-
-      <Ionicons
-        name={completadoHoy ? 'checkmark-circle' : 'chevron-forward'}
-        size={22}
-        color={completadoHoy ? '#10b981' : theme.textSecondary}
-      />
+          <Ionicons
+            name={completadoHoy ? 'checkmark-circle' : 'chevron-forward'}
+            size={22}
+            color={completadoHoy ? '#10b981' : theme.textSecondary}
+          />
+        </>
+      )}
     </TouchableOpacity>
   );
 };
@@ -86,9 +99,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       borderColor: theme.border,
       marginHorizontal: 16,
       marginVertical: 10,
-    },
-    cardLoading: {
-      opacity: 0.65,
     },
     cardCompletado: {
       borderColor: '#10b98140',

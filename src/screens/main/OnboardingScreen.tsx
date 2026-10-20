@@ -107,7 +107,7 @@ export default function OnboardingScreen({ navigation }: any) {
             [{ nativeEvent: { contentOffset: { x: scrollX } } }],
             { useNativeDriver: false }
           )}
-          scrollEventThrottle={32}
+          scrollEventThrottle={16}
           onViewableItemsChanged={viewableItemsChanged}
           viewabilityConfig={viewConfig}
           ref={slidesRef}

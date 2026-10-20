@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
+import Skeleton from '../../components/Skeleton';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 
@@ -123,10 +125,28 @@ const guardarPerfil = async () => {
 
   if (loading) {
     return (
-      <View style={styles.centerContent}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>Cargando perfil...</Text>
-      </View>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.headerBackground} />
+        <View style={styles.avatarContainer}>
+          <Skeleton width={110} height={110} borderRadius={55} />
+          <Skeleton width={150} height={23} style={{ marginTop: 14 }} />
+          <Skeleton width={105} height={15} style={{ marginTop: 8 }} />
+        </View>
+        {[4, 3, 1].map((fieldCount, sectionIndex) => (
+          <View key={sectionIndex} style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Skeleton width={20} height={20} borderRadius={6} />
+              <Skeleton width={145} height={19} style={{ marginLeft: 10 }} />
+            </View>
+            {Array.from({ length: fieldCount }, (_, fieldIndex) => (
+              <View key={fieldIndex} style={{ marginBottom: 16 }}>
+                <Skeleton width={105} height={13} style={{ marginBottom: 9 }} />
+                <Skeleton height={44} borderRadius={10} />
+              </View>
+            ))}
+          </View>
+        ))}
+      </ScrollView>
     );
   }
 
@@ -234,8 +254,6 @@ const guardarPerfil = async () => {
 
 const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: { backgroundColor: theme.background, flexGrow: 1, paddingBottom: 20 },
-  centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background },
-  loadingText: { marginTop: 10, color: theme.textSecondary },
   headerBackground: { backgroundColor: theme.primary, height: 120, width: '100%', position: 'absolute', top: 0, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
   avatarContainer: { alignItems: 'center', marginTop: 60, marginBottom: 20 },
   avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: theme.card, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, borderWidth: 3, borderColor: theme.background },

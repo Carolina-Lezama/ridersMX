@@ -63,10 +63,10 @@ interface Moto {
   id: string;
   nombre: string;
   marca: string;
-  modelo: number; 
+  modelo: number;
   tipo: string;
-  cilindrada: number; 
-  precio: number; 
+  cilindrada: number;
+  precio: number;
   puntuacion: number;
   descripcion: string;
   /**

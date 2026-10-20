@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIn
 import { Ionicons } from '@expo/vector-icons';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
+import Skeleton from '../../components/Skeleton';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 
@@ -16,6 +17,7 @@ export default function MotoFormScreen({ navigation, route }: any) {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   // ESTADOS DEL FORMULARIO (Mapeados exactamente a las columnas de la BD)
   const [alias, setAlias] = useState('');
@@ -30,6 +32,9 @@ export default function MotoFormScreen({ navigation, route }: any) {
   const [combustible, setCombustible] = useState('');
   const [aseguradora, setAseguradora] = useState('');
   const [poliza, setPoliza] = useState('');
+
+  const marcaError = !marca.trim() && submitted ? 'La marca es obligatoria.' : undefined;
+  const modeloError = !modelo.trim() && submitted ? 'El modelo es obligatorio.' : undefined;
 
   useEffect(() => {
     if (esEdicion) {
@@ -73,8 +78,8 @@ export default function MotoFormScreen({ navigation, route }: any) {
 
   // FUNCIÓN PARA GUARDAR (CREAR O ACTUALIZAR)
   const handleGuardar = async () => {
+    setSubmitted(true);
     if (!marca.trim() || !modelo.trim()) {
-      Alert.alert('Campos obligatorios', 'Por favor introduce al menos la Marca y el Modelo.');
       return;
     }
 
@@ -189,9 +194,28 @@ export default function MotoFormScreen({ navigation, route }: any) {
 
   if (loading) {
     return (
-      <View style={styles.centerContent}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={styles.loadingText}>Cargando especificaciones...</Text>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Skeleton width={28} height={28} borderRadius={14} />
+          <Skeleton width={180} height={21} />
+          <View style={{ width: 28 }} />
+        </View>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {[7, 3, 2].map((fieldCount, sectionIndex) => (
+            <View key={sectionIndex} style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Skeleton width={20} height={20} borderRadius={6} />
+                <Skeleton width={160} height={19} style={{ marginLeft: 10 }} />
+              </View>
+              {Array.from({ length: fieldCount }, (_, fieldIndex) => (
+                <View key={fieldIndex} style={{ marginBottom: 16 }}>
+                  <Skeleton width={120} height={13} style={{ marginBottom: 9 }} />
+                  <Skeleton height={44} borderRadius={10} />
+                </View>
+              ))}
+            </View>
+          ))}
+        </ScrollView>
       </View>
     );
   }
@@ -219,8 +243,8 @@ export default function MotoFormScreen({ navigation, route }: any) {
           </View>
 
           <CustomInput label="Apodo / Alias de la moto" placeholder="Ej. La consentida, La negra" value={alias} onChangeText={setAlias} />
-          <CustomInput label="Marca *" placeholder="Ej. Yamaha, Honda, BMW" value={marca} onChangeText={setMarca} />
-          <CustomInput label="Modelo *" placeholder="Ej. MT-07, CB190R, R1250" value={modelo} onChangeText={setModelo} />
+          <CustomInput label="Marca *" placeholder="Ej. Yamaha, Honda, BMW" value={marca} onChangeText={setMarca} error={marcaError} />
+          <CustomInput label="Modelo *" placeholder="Ej. MT-07, CB190R, R1250" value={modelo} onChangeText={setModelo} error={modeloError} />
           <CustomInput label="Cilindrada (cc)" placeholder="Ej. 300, 600, 1000" keyboardType="numeric" value={cilindrada} onChangeText={setCilindrada} />
           <CustomInput label="Año" placeholder="Ej. 2024" keyboardType="numeric" value={anio} onChangeText={setAnio} />
           <CustomInput label="Color" placeholder="Ej. Negro Mate, Rojo" value={color} onChangeText={setColor} />
@@ -283,9 +307,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   
   scrollContent: { padding: 20, paddingBottom: 40 },
-  centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background },
-  loadingText: { marginTop: 10, color: theme.textSecondary },
-  
   card: { backgroundColor: theme.card, padding: 20, borderRadius: 16, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.divider, paddingBottom: 10 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginLeft: 10 },

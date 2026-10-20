@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import Skeleton from '../../components/Skeleton';
 
 export default function MisMotosScreen({ navigation }: any) {
   const { theme } = useTheme();
@@ -77,9 +78,17 @@ export default function MisMotosScreen({ navigation }: any) {
 
       {/* CONTENIDO */}
       {loading ? (
-        <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={styles.loadingText}>Abriendo garaje...</Text>
+        <View style={styles.listContainer}>
+          {[0, 1, 2].map((item) => (
+            <View key={item} style={styles.motoCard} accessible={false}>
+              <Skeleton width={60} height={60} borderRadius={15} style={{ marginRight: 15 }} />
+              <View style={styles.motoInfo}>
+                <Skeleton width={150} height={18} style={{ marginBottom: 9 }} />
+                <Skeleton width={190} height={14} />
+              </View>
+              <Skeleton width={20} height={20} borderRadius={10} />
+            </View>
+          ))}
         </View>
       ) : motos.length === 0 ? (
         // ESTADO VACÍO: Cuando no hay motos
@@ -123,7 +132,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   
   centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 },
-  loadingText: { marginTop: 15, color: theme.textSecondary, fontSize: 16 },
   emptyTitle: { fontSize: 22, fontWeight: 'bold', color: theme.textPrimary, marginTop: 20, marginBottom: 10 },
   emptyText: { fontSize: 16, color: theme.textSecondary, textAlign: 'center', lineHeight: 24 },
   

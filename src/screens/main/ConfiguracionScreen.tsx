@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Alert, View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
+import { MultiAccountService } from '../../services/MultiAccountService';
+import AccountSwitcherModal from '../../components/AccountSwitcherModal';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import type { Theme } from '../../../assets/theme/theme';
 
 export default function ConfiguracionScreen({ navigation }: any) {
   // Estados para probar la interacción de los switches
   const [alertasMantenimiento, setAlertasMantenimiento] = useState(true);
+  const [accountSwitcherVisible, setAccountSwitcherVisible] = useState(false);
   const { isDarkMode, toggleTheme, theme } = useTheme();
   const styles = createStyles(theme);
 
@@ -17,13 +20,11 @@ export default function ConfiguracionScreen({ navigation }: any) {
   const handleLogout = () => {
     const confirmLogout = async () => {
       try {
-        const { error } = await supabase.auth.signOut();
-
-        if (error) throw error;
+        const nextAccountId = await MultiAccountService.signOutActiveAccount();
 
         navigation.reset({
           index: 0,
-          routes: [{ name: 'Login' }],
+          routes: [{ name: nextAccountId ? 'MainApp' : 'Login' }],
         });
       } catch (error: any) {
         Alert.alert('Error', 'Hubo un problema al intentar cerrar sesión. Inténtalo de nuevo.');
@@ -54,11 +55,11 @@ export default function ConfiguracionScreen({ navigation }: any) {
 
       if (error) throw error;
 
-      await supabase.auth.signOut();
+      const nextAccountId = await MultiAccountService.signOutActiveAccount();
 
       navigation.reset({
         index: 0,
-        routes: [{ name: 'Login' }],
+        routes: [{ name: nextAccountId ? 'MainApp' : 'Login' }],
       });
     } catch (error) {
       console.error('Error al borrar cuenta:', error);
@@ -164,10 +165,13 @@ export default function ConfiguracionScreen({ navigation }: any) {
 
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.row}>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => setAccountSwitcherVisible(true)}
+          >
             <View style={styles.rowLeft}>
-              <Ionicons name="person-add-outline" size={22} color={theme.iconPrimary} />
-              <Text style={styles.rowText}>Agregar otra cuenta</Text>
+              <Ionicons name="people-outline" size={22} color={theme.iconPrimary} />
+              <Text style={styles.rowText}>Cambiar o agregar cuenta</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={theme.iconSecondary} />
           </TouchableOpacity>
@@ -176,15 +180,6 @@ export default function ConfiguracionScreen({ navigation }: any) {
         {/* NUEVA SECCIÓN: ACTIVIDAD Y TIEMPO */}
         <Text style={styles.sectionTitle}>Actividad y Bienestar</Text>
         <View style={styles.card}>
-          <TouchableOpacity style={styles.row}>
-            <View style={styles.rowLeft}>
-              <Ionicons name="pulse-outline" size={22} color={theme.iconPrimary} />
-              <Text style={styles.rowText}>Mi actividad reciente</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.iconSecondary} />
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
 
           {/* NUEVO: Gestionar mi tiempo de uso */}
           <TouchableOpacity 
@@ -214,19 +209,6 @@ export default function ConfiguracionScreen({ navigation }: any) {
             <Ionicons name="chevron-forward" size={18} color={theme.iconSecondary} />
           </TouchableOpacity>
 
-          <View style={styles.divider} />
-
-          <View style={styles.row}>
-            <View style={styles.rowLeft}>
-              <Ionicons name="construct-outline" size={22} color={theme.iconPrimary} />
-              <Text style={styles.rowText}>Recordatorios de Mantenimiento</Text>
-            </View>
-            <Switch
-              value={alertasMantenimiento}
-              onValueChange={setAlertasMantenimiento}
-              trackColor={{ false: theme.switchTrackFalse, true: theme.primary }}
-            />
-          </View>
 
           <View style={styles.divider} />
 
@@ -265,6 +247,13 @@ export default function ConfiguracionScreen({ navigation }: any) {
           <Text style={styles.footerText}>Usuario desde: {usuarioDesde}</Text>
         </View>
       </ScrollView>
+      <AccountSwitcherModal
+        visible={accountSwitcherVisible}
+        onClose={() => setAccountSwitcherVisible(false)}
+        onAddAccount={() => navigation.navigate('AgregarCuenta')}
+        onAccountSwitched={() => navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] })}
+        onNoAccountsLoggedOut={() => navigation.reset({ index: 0, routes: [{ name: 'Login' }] })}
+      />
     </View>
   );
 }
