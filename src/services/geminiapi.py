@@ -3,6 +3,7 @@ from google import genai
 from dotenv import load_dotenv
 import os
 
+
 load_dotenv()
 app = Flask(__name__)
 api_key = os.environ.get("GEMINI_API_KEY")

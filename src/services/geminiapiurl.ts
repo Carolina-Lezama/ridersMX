@@ -84,4 +84,5 @@ const geminiapi = {
     return payload.respuesta;
   },
 };
+
 export default geminiapi;
