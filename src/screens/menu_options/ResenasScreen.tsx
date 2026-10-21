@@ -24,7 +24,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import emailjs from '@emailjs/react-native';
 
-
+// Cliente de Supabase (src/services/supabase.ts)
 import { supabase } from '../../services/supabase';
 
 // Tema global (el mismo que usa Configuración)
@@ -33,7 +33,7 @@ import type { Theme } from '../../../assets/theme/theme';
 
 // ─── CONFIGURACIÓN DEL CORREO DE SOPORTE (EmailJS) ───────────────────────────
 
-
+// Las llaves viven en el archivo .env (que NO se sube a git). Ver .env.example
 const EMAILJS = {
   serviceId: process.env.EXPO_PUBLIC_EMAILJS_SERVICE_ID ?? '',
   templateId: process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID ?? '',
@@ -49,6 +49,12 @@ const EMAILJS_CONFIGURADO = Object.values(EMAILJS).every((v) => v.length > 0);
 // (está en el .sql, opcional) y cambiar este valor a 'perfiles_publicos'.
 const TABLA_PERFILES = 'perfiles';
 
+// Valor que se guarda en resenas.tipo_entidad para las reseñas de motos.
+// ⚠️ La restricción `resenas_tipo_entidad_check` de la BD solo aceptaba
+// 'Taller', 'Accesorio', 'Ruta' y 'Refaccionaria': hay que agregar 'Moto' (ver el .sql, bloque 3).
+// Respeta las mayúsculas: 'moto' en minúscula sería rechazado.
+const TIPO_ENTIDAD_MOTO = 'Moto';
+
 // ─── TIPOS ───────────────────────────────────────────────────────────────────
 
 interface Comentario {
@@ -63,10 +69,10 @@ interface Moto {
   id: string;
   nombre: string;
   marca: string;
-  modelo: number;
+  modelo: number; 
   tipo: string;
-  cilindrada: number;
-  precio: number;
+  cilindrada: number; 
+  precio: number; 
   puntuacion: number;
   descripcion: string;
   /**
@@ -96,15 +102,96 @@ type DatosMoto = Pick<
   'nombre' | 'marca' | 'modelo' | 'tipo' | 'cilindrada' | 'precio' | 'descripcion' | 'imagen' | 'propietario'
 >;
 
+// ─── AYUDAS PARA LA BASE DE DATOS ────────────────────────────────────────────
+
+// Bucket de Supabase Storage donde se guardan las fotos de las motos publicadas.
+// ⚠️ Debe existir (público) y permitir subir a la carpeta del usuario: ver el .sql, bloque 2.
+// Si no existe, la moto se publica igual pero SIN foto.
+const BUCKET_MOTOS = 'motos';
+
+/** Convierte una fila de la tabla `motos_catalogo` en una Moto de la pantalla. */
+const filaAMoto = (f: any, uid: string | null): Moto => ({
+  id: String(f.id),
+  nombre: f.nombre ?? '',
+  marca: f.marca ?? '',
+  modelo: Number(f.modelo ?? 0),
+  tipo: f.tipo ?? '',
+  cilindrada: Number(f.cilindrada ?? 0),
+  precio: Number(f.precio ?? 0),
+  puntuacion: 0, // el promedio se calcula con las reseñas
+  descripcion: f.descripcion ?? '',
+  imagen: f.imagen_url ?? undefined,
+  comentarios: [],
+  propietario: f.propietario ?? undefined,
+  esPropia: !!uid && f.perfil_id === uid,
+});
+
+/** Sube la foto elegida (ruta local) al bucket `motos` y devuelve su URL pública, o null si falla. */
+const subirFotoMoto = async (uri: string, perfilId: string): Promise<string | null> => {
+  try {
+    const res = await fetch(uri);
+    const buffer = await res.arrayBuffer();
+    const extUri = (uri.split('?')[0].split('.').pop() ?? '').toLowerCase();
+    const tipoHeader = res.headers.get('content-type') ?? '';
+    const contentType = tipoHeader.startsWith('image/')
+      ? tipoHeader
+      : extUri === 'png'
+      ? 'image/png'
+      : extUri === 'webp'
+      ? 'image/webp'
+      : 'image/jpeg';
+    const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+    // La carpeta es el id del usuario: así lo exige la política del bucket
+    const ruta = `${perfilId}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from(BUCKET_MOTOS).upload(ruta, buffer, { contentType });
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Moto] subida de foto → ruta:', ruta, '| error:', error?.message ?? null);
+    if (error) return null;
+    return supabase.storage.from(BUCKET_MOTOS).getPublicUrl(ruta).data.publicUrl;
+  } catch (e: any) {
+    console.warn('[Moto] no se pudo subir la foto:', e?.message);
+    return null;
+  }
+};
+
+/** Borra una foto del bucket `motos` a partir de su URL pública. Si la foto es externa, no hace nada. */
+const borrarFotoMoto = async (url: string) => {
+  try {
+    const marcador = `/storage/v1/object/public/${BUCKET_MOTOS}/`;
+    const i = url.indexOf(marcador);
+    if (i === -1) return; // foto de otra página: no está en nuestro bucket
+    const ruta = decodeURIComponent(url.slice(i + marcador.length).split('?')[0]);
+    const { error } = await supabase.storage.from(BUCKET_MOTOS).remove([ruta]);
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Moto] borrar foto →', ruta, '| error:', error?.message ?? null);
+  } catch (e: any) {
+    console.warn('[Moto] no se pudo borrar la foto:', e?.message);
+  }
+};
+
+// ─── NOTIFICACIÓN FLOTANTE (reemplaza los cuadros del navegador) ─────────────
+
+interface AccionAviso {
+  texto: string;
+  onPress: () => void;
+  tipo?: 'primario' | 'secundario' | 'peligro' | 'neutro';
+}
+
+interface AvisoData {
+  icono: React.ComponentProps<typeof Ionicons>['name'];
+  tono: 'exito' | 'error' | 'alerta' | 'info';
+  titulo: string;
+  mensaje: string;
+  moto?: Moto; // vista previa de una moto dentro del aviso
+  acciones?: AccionAviso[]; // con botones el aviso espera una decisión; sin botones se cierra solo
+  alCerrar?: () => void; // botón "atrás" de Android cuando hay botones
+}
+
 // ─── DATOS DE EJEMPLO ────────────────────────────────────────────────────────
 // Precios y textos son de ejemplo: cámbialos por los reales de tu proyecto.
 //
-// ⚠️ AQUÍ FALTA LA TABLA `motos_catalogo` (nombre, marca, modelo, tipo, cilindrada, precio,
-// descripcion, imagen_url, propietario). Mientras no exista, el catálogo sale de este arreglo
-// local y las motos que publica la gente se pierden al cerrar la app.
-// El SQL para crearla está en `resenas_tablas_faltantes.sql`.
-// Cuando la tengas: carga el catálogo con supabase.from('motos_catalogo').select('*')
-// y usa estos datos solo como semilla (insert inicial).
+// Estas motos son locales (semilla). Las que publica la gente se guardan en la tabla
+// `motos_catalogo` y se muestran ANTES de estas en la lista.
 
 const MOTOS: Moto[] = [
   {
@@ -172,7 +259,7 @@ const MOTOS: Moto[] = [
     puntuacion: 4.0,
     descripcion:
       'La Italika RC200 Gris es una motocicleta de estilo chopper cruiser, con bastidor de baja cilindrada, diseñada principalmente para quienes buscan uno. Cuenta con un motor de 200 cc.',
-    imagen: 'https://images.unsplash.com/photo-1609630875176-b90c7a87265c?w=500',
+    imagen: 'https://elektra.vtexassets.com/arquivos/ids/33579086/34005722-d1.jpg?v=639264376627000000',
     comentarios: [
       {
         usuario: 'Usuario 1',
@@ -199,7 +286,7 @@ const MOTOS: Moto[] = [
     puntuacion: 4.0,
     descripcion:
       'Moto urbana de 150 cc pensada para el día a día: ligera, fácil de maniobrar y con un consumo de gasolina muy bajo. Una buena primera moto.',
-    imagen: undefined, // ← pon aquí tu imagen
+    imagen: 'https://comotos.co/wp-content/uploads/2021/11/Italika-DM150-1024x1024.jpg', // ← pon aquí tu imagen
     comentarios: [
       {
         usuario: 'Usuario 1',
@@ -219,132 +306,12 @@ const MOTOS: Moto[] = [
     puntuacion: 3.5,
     descripcion:
       'Moto de trabajo resistente, con suspensión reforzada y espacio para carga. Ideal para repartos y trayectos diarios largos.',
-    imagen: undefined, // ← pon aquí tu imagen
+    imagen: 'https://http2.mlstatic.com/D_Q_NP_2X_686522-MLM116127930218_092026-T.webp', // ← pon aquí tu imagen
     comentarios: [
       {
         usuario: 'Usuario 1',
         texto: 'Aguanta bien la carga y no me ha dado problemas en el trabajo diario. Es algo tosca a velocidades altas.',
         puntuacion: 3,
-      },
-    ],
-  },
-  {
-    id: '6',
-    nombre: 'Italika 250Z Naranja',
-    marca: 'Italika',
-    modelo: 2025,
-    tipo: 'Naked',
-    cilindrada: 250,
-    precio: 36999,
-    puntuacion: 4.0,
-    descripcion:
-      'Naked de 250 cc con posición de manejo erguida, faro LED y buena respuesta en aceleración. Cómoda tanto en ciudad como en salidas cortas a carretera.',
-    imagen: undefined, // ← pon aquí tu imagen
-    comentarios: [
-      {
-        usuario: 'Usuario 1',
-        texto: 'Se siente firme y tiene buen empuje. La posición de manejo es muy cómoda.',
-        puntuacion: 4,
-      },
-    ],
-  },
-  {
-    id: '7',
-    nombre: 'Honda CB190R',
-    marca: 'Honda',
-    modelo: 2025,
-    tipo: 'Naked',
-    cilindrada: 190,
-    precio: 49900,
-    puntuacion: 4.5,
-    descripcion:
-      'Naked ligera de estilo agresivo, con manejo ágil y un motor suave que rinde bien en ciudad. Destaca por el respaldo y la confiabilidad de la marca.',
-    imagen: undefined, // ← pon aquí tu imagen
-    comentarios: [
-      {
-        usuario: 'Usuario 1',
-        texto: 'Suave, confiable y muy bonita. Se nota la calidad de Honda en los acabados.',
-        puntuacion: 5,
-      },
-    ],
-  },
-  {
-    id: '8',
-    nombre: 'Honda CRF250L',
-    marca: 'Honda',
-    modelo: 2025,
-    tipo: 'Doble propósito',
-    cilindrada: 250,
-    precio: 99900,
-    puntuacion: 4.5,
-    descripcion:
-      'Doble propósito con suspensión de largo recorrido y buena altura al suelo. Lista para brecha, terracería y también para el asfalto diario.',
-    imagen: undefined, // ← pon aquí tu imagen
-    comentarios: [
-      {
-        usuario: 'Usuario 1',
-        texto: 'Va igual de bien en brecha que en ciudad. La suspensión hace toda la diferencia.',
-        puntuacion: 5,
-      },
-    ],
-  },
-  {
-    id: '9',
-    nombre: 'Yamaha FZ 25',
-    marca: 'Yamaha',
-    modelo: 2025,
-    tipo: 'Naked',
-    cilindrada: 250,
-    precio: 69900,
-    puntuacion: 4.5,
-    descripcion:
-      'Naked de 250 cc con motor eficiente y diseño musculoso. Combina buen consumo con potencia suficiente para carretera.',
-    imagen: undefined, // ← pon aquí tu imagen
-    comentarios: [
-      {
-        usuario: 'Usuario 1',
-        texto: 'Rinde mucho por litro y en carretera se comporta muy estable.',
-        puntuacion: 5,
-      },
-    ],
-  },
-  {
-    id: '10',
-    nombre: 'Yamaha MT-03',
-    marca: 'Yamaha',
-    modelo: 2026,
-    tipo: 'Naked',
-    cilindrada: 300,
-    precio: 109900,
-    puntuacion: 5.0,
-    descripcion:
-      'Naked de media cilindrada con motor bicilíndrico, aceleración inmediata y chasis muy preciso. Una de las favoritas para dar el salto a más potencia.',
-    imagen: undefined, // ← pon aquí tu imagen
-    comentarios: [
-      {
-        usuario: 'Usuario 1',
-        texto: 'Divertidísima. El motor jala desde abajo y el chasis te da mucha confianza.',
-        puntuacion: 5,
-      },
-    ],
-  },
-  {
-    id: '11',
-    nombre: 'Bajaj Pulsar NS200',
-    marca: 'Bajaj',
-    modelo: 2024,
-    tipo: 'Naked',
-    cilindrada: 200,
-    precio: 56900,
-    puntuacion: 4.0,
-    descripcion:
-      'Naked deportiva de 200 cc con buen aceleración y frenos de disco. Ofrece mucho desempeño por su precio.',
-    imagen: undefined, // ← pon aquí tu imagen
-    comentarios: [
-      {
-        usuario: 'Usuario 1',
-        texto: 'Muy buena relación precio-desempeño. Acelera bien y frena mejor.',
-        puntuacion: 4,
       },
     ],
   },
@@ -359,7 +326,7 @@ const MOTOS: Moto[] = [
     puntuacion: 4.5,
     descripcion:
       'Deportiva bicilíndrica de 400 cc con carenado completo y postura racing. Equilibrio ideal entre pista, carretera y uso diario.',
-    imagen: undefined, // ← pon aquí tu imagen
+    imagen: 'https://kawasakicapital.com.mx/cdn/shop/files/Ninja-zx4RR-abs_2026-04.jpg?v=1778895431&width=533', // ← pon aquí tu imagen
     comentarios: [
       {
         usuario: 'Usuario 1',
@@ -379,7 +346,7 @@ const MOTOS: Moto[] = [
     puntuacion: 4.5,
     descripcion:
       'Clásica de estilo retro con motor monocilíndrico de 350 cc. Su sonido y su torque a bajas revoluciones la hacen perfecta para paseos tranquilos.',
-    imagen: undefined, // ← pon aquí tu imagen
+    imagen: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQCx6RrNdFXS_H3gBVrZpVHPDdgkM2ukoNgqMNv5sGowXDAZIzrjBy1RJA&s=10', // ← pon aquí tu imagen
     comentarios: [
       {
         usuario: 'Usuario 1',
@@ -399,7 +366,7 @@ const MOTOS: Moto[] = [
     puntuacion: 4.0,
     descripcion:
       'Naked compacta y muy ágil, con carácter deportivo y estructura ligera. Perfecta para moverse rápido entre el tráfico.',
-    imagen: undefined, // ← pon aquí tu imagen
+    imagen: 'https://www.hiperbikes.com.mx/wp-content/uploads/2019/02/KTM-DUKE-200-2025.jpg', // ← pon aquí tu imagen
     comentarios: [
       {
         usuario: 'Usuario 1',
@@ -419,7 +386,7 @@ const MOTOS: Moto[] = [
     puntuacion: 3.5,
     descripcion:
       'Urbana de 250 cc con look retro-moderno y precio accesible. Una opción con estilo para quienes quieren más cilindrada sin gastar de más.',
-    imagen: undefined, // ← pon aquí tu imagen
+    imagen: 'https://www.vento.com/wp-content/uploads/ROCKETMAN-RACING-250-16.jpg', // ← pon aquí tu imagen
     comentarios: [
       {
         usuario: 'Usuario 1',
@@ -493,6 +460,31 @@ const normalizar = (s: string) =>
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
+
+// ─── DETECCIÓN DE MOTOS REPETIDAS ────────────────────────────────────────────
+
+/** Deja solo letras y números: "FT-150", "ft 150" y "FT150" quedan iguales. */
+const soloAlfanumerico = (t: string) => normalizar(t).replace(/[^a-z0-9]/g, '');
+
+/** Nombre comparable: sin símbolos y sin repetir la marca ("Italika FT150" = "FT150" de Italika). */
+const claveNombre = (m: { marca: string; nombre: string }) => {
+  const marca = soloAlfanumerico(m.marca);
+  const nombre = soloAlfanumerico(m.nombre);
+  return marca ? nombre.split(marca).join('') : nombre;
+};
+
+type DatosComparables = { marca: string; nombre: string; modelo: number; cilindrada: number };
+
+/**
+ * Dos motos son "la misma" si coinciden marca, nombre, año y cilindrada.
+ * Una versión distinta (ej. carburada vs inyección) se distingue escribiéndolo en el nombre:
+ * "FT150 Carburada" y "FT150 Inyección" ya NO se consideran repetidas.
+ */
+const esMismaMoto = (a: DatosComparables, b: DatosComparables) =>
+  soloAlfanumerico(a.marca) === soloAlfanumerico(b.marca) &&
+  claveNombre(a) === claveNombre(b) &&
+  Number(a.modelo) === Number(b.modelo) &&
+  Number(a.cilindrada) === Number(b.cilindrada);
 
 function cumpleFiltro(m: Moto, key: FiltroKey, valor: string): boolean {
   switch (key) {
@@ -1089,11 +1081,16 @@ function DetalleResena({
   moto,
   onBack,
   onPublicar,
+  onEditar,
+  onEliminar,
 }: {
   moto: Moto;
   onBack: () => void;
   // Devuelve true si la reseña se guardó (entonces el formulario se cierra)
   onPublicar: (comentario: Comentario) => Promise<boolean>;
+  // Solo se pasan cuando la moto es del usuario que la está viendo
+  onEditar?: () => void;
+  onEliminar?: () => void;
 }) {
   const { C, styles } = useResenasTheme();
   const yaResene = moto.comentarios.some((c) => c.esPropia);
@@ -1166,6 +1163,28 @@ function DetalleResena({
             <Text style={styles.detallePropietario}>
               Publicada por {moto.propietario ?? 'ti'}
             </Text>
+          )}
+
+          {/* Solo el dueño de la publicación ve estos botones */}
+          {moto.esPropia && (onEditar || onEliminar) && (
+            <View style={styles.accionesPropias}>
+              {onEditar && (
+                <TouchableOpacity style={styles.btnAccionPropia} onPress={onEditar} activeOpacity={0.85}>
+                  <Ionicons name="create-outline" size={18} color={C.textPri} />
+                  <Text style={styles.btnAccionPropiaText}>Editar</Text>
+                </TouchableOpacity>
+              )}
+              {onEliminar && (
+                <TouchableOpacity
+                  style={[styles.btnAccionPropia, styles.btnAccionPeligro]}
+                  onPress={onEliminar}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="trash-outline" size={18} color={C.danger} />
+                  <Text style={[styles.btnAccionPropiaText, { color: C.danger }]}>Eliminar</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
 
           {/* Calificación */}
@@ -1364,34 +1383,43 @@ function InputNumerico({
 
 function FormularioMoto({
   marcas,
+  inicial,
   onBack,
   onPublicar,
   sucioRef,
 }: {
   marcas: string[];
+  inicial?: Moto; // si viene, el formulario edita esa moto en lugar de crear una nueva
   onBack: () => void;
-  onPublicar: (datos: DatosMoto) => void;
+  // Guarda la moto en la BD; el formulario se cierra desde la pantalla principal si todo sale bien
+  onPublicar: (datos: DatosMoto) => Promise<void>;
   sucioRef: { current: boolean };
 }) {
   const { C, styles } = useResenasTheme();
   const scrollRef = useRef<ScrollView>(null);
   const posiciones = useRef<Partial<Record<CampoForm, number>>>({});
 
-  const [foto, setFoto] = useState<string | null>(null);
-  const [nombre, setNombre] = useState('');
-  const [marca, setMarca] = useState('');
-  const [modelo, setModelo] = useState('');
-  const [tipo, setTipo] = useState<string | null>(null);
-  const [cilindrada, setCilindrada] = useState('');
-  const [precio, setPrecio] = useState('');
-  const [descripcion, setDescripcion] = useState('');
-  const [propietario, setPropietario] = useState('');
+  const [foto, setFoto] = useState<string | null>(typeof inicial?.imagen === 'string' ? inicial.imagen : null);
+  const [nombre, setNombre] = useState(inicial?.nombre ?? '');
+  const [marca, setMarca] = useState(inicial?.marca ?? '');
+  const [modelo, setModelo] = useState(inicial ? String(inicial.modelo) : '');
+  const [tipo, setTipo] = useState<string | null>(inicial?.tipo || null);
+  const [cilindrada, setCilindrada] = useState(inicial ? String(inicial.cilindrada) : '');
+  const [precio, setPrecio] = useState(inicial ? String(inicial.precio) : '');
+  const [descripcion, setDescripcion] = useState(inicial?.descripcion ?? '');
+  const [propietario, setPropietario] = useState(inicial?.propietario ?? '');
   const [errores, setErrores] = useState<Errores>({});
+  const [publicando, setPublicando] = useState(false);
 
   const anioMaximo = new Date().getFullYear() + 1;
 
   // Avisa a la pantalla principal si hay datos escritos (para confirmar antes de salir)
-  const sucio = !!(foto || nombre || marca || modelo || tipo || cilindrada || precio || descripcion || propietario);
+  // "Sucio" = hay cambios respecto a como se abrió el formulario (vacío al crear, la moto al editar)
+  const valoresIniciales = useRef(
+    JSON.stringify([foto, nombre, marca, modelo, tipo, cilindrada, precio, descripcion, propietario])
+  ).current;
+  const sucio =
+    JSON.stringify([foto, nombre, marca, modelo, tipo, cilindrada, precio, descripcion, propietario]) !== valoresIniciales;
   useEffect(() => {
     sucioRef.current = sucio;
   }, [sucio, sucioRef]);
@@ -1446,7 +1474,8 @@ function FormularioMoto({
   };
 
   // ── Publicar ──
-  const publicar = () => {
+  const publicar = async () => {
+    if (publicando) return;
     const e: Errores = {};
     const nombreLimpio = nombre.trim();
     const marcaLimpia = marca.trim();
@@ -1472,20 +1501,23 @@ function FormularioMoto({
     // Si la marca ya existe (aunque la escriban en minúsculas) usamos la escritura original
     const marcaExistente = marcas.find((m) => normalizar(m) === normalizar(marcaLimpia));
 
-    onPublicar({
-      nombre: nombreLimpio,
-      marca: marcaExistente ?? marcaLimpia,
-      modelo: anio,
-      tipo: tipo as string,
-      cilindrada: cc,
-      precio: precioNum,
-      descripcion: descripcion.trim(),
-      // ⚠️ AQUÍ FALTA EL BUCKET DE STORAGE `motos` (y la tabla `motos_catalogo`, columna imagen_url).
-      // `foto` es una ruta local del teléfono: solo sirve en esta sesión. Para que la foto sea
-      // permanente hay que subirla a Storage y guardar su URL pública en `imagen_url`.
-      imagen: foto ?? undefined,
-      propietario: propietario.trim() || undefined,
-    });
+    setPublicando(true);
+    try {
+      await onPublicar({
+        nombre: nombreLimpio,
+        marca: marcaExistente ?? marcaLimpia,
+        modelo: anio,
+        tipo: tipo as string,
+        cilindrada: cc,
+        precio: precioNum,
+        descripcion: descripcion.trim(),
+        // `foto` es una ruta local: la pantalla principal la sube al bucket `motos` y guarda la URL
+        imagen: foto ?? undefined,
+        propietario: propietario.trim() || undefined,
+      });
+    } finally {
+      setPublicando(false);
+    }
   };
 
   return (
@@ -1497,7 +1529,7 @@ function FormularioMoto({
         <TouchableOpacity onPress={onBack} style={styles.iconBtn} accessibilityLabel="Volver a la lista">
           <Ionicons name="arrow-back" size={22} color={C.textPri} />
         </TouchableOpacity>
-        <Text style={styles.headerTitulo}>Publicar mi moto</Text>
+        <Text style={styles.headerTitulo}>{inicial ? 'Editar mi moto' : 'Publicar mi moto'}</Text>
         <BotonTema />
       </View>
 
@@ -1667,9 +1699,16 @@ function FormularioMoto({
           />
         </Campo>
 
-        <TouchableOpacity style={styles.btnPrimario} onPress={publicar} activeOpacity={0.85}>
-          <Ionicons name="cloud-upload-outline" size={18} color="#FFFFFF" />
-          <Text style={styles.btnPrimarioText}>Publicar moto</Text>
+        <TouchableOpacity
+          style={[styles.btnPrimario, publicando && { opacity: 0.6 }]}
+          onPress={publicar}
+          disabled={publicando}
+          activeOpacity={0.85}
+        >
+          <Ionicons name={inicial ? 'save-outline' : 'cloud-upload-outline'} size={18} color="#FFFFFF" />
+          <Text style={styles.btnPrimarioText}>
+            {publicando ? (inicial ? 'Guardando…' : 'Publicando…') : inicial ? 'Guardar cambios' : 'Publicar moto'}
+          </Text>
         </TouchableOpacity>
 
         <View style={{ height: 30 }} />
@@ -2136,6 +2175,8 @@ export default function ResenasScreen({ navigation }: any) {
   const [catalogo, setCatalogo] = useState<Moto[]>(MOTOS);
   const [motoId, setMotoId] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [motoEditandoId, setMotoEditandoId] = useState<string | null>(null); // moto que se está editando
+  const [aviso, setAviso] = useState<AvisoData | null>(null); // notificación flotante
   const formularioSucio = useRef(false); // el formulario avisa aquí si tiene datos sin publicar
 
   // Las reseñas viven aquí para que no se pierdan al ir y venir entre vistas
@@ -2163,12 +2204,27 @@ export default function ResenasScreen({ navigation }: any) {
           if (activo) setUsuarioActual({ id: uid, username: perfil?.username ?? 'Tú' });
         }
 
+        // Catálogo: motos publicadas por usuarios (tabla `motos_catalogo`), más nuevas primero
+        const { data: filasMotos, error: errorMotos } = await supabase
+          .from('motos_catalogo')
+          .select('*')
+          .order('created_at', { ascending: false });
+        // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+        console.log('[Catálogo] motos leídas:', filasMotos?.length, '| error:', errorMotos?.message ?? null);
+        if (!errorMotos && filasMotos && activo) {
+          setCatalogo([...filasMotos.map((f: any) => filaAMoto(f, uid)), ...MOTOS]);
+        }
+
         // Tabla `resenas`: una fila por reseña. La moto se identifica con entidad_evaluada (id de la moto).
         const { data: filas, error } = await supabase
           .from('resenas')
           .select('perfil_id, entidad_evaluada, calificacion, comentario, created_at')
-          .eq('tipo_entidad', 'moto')
+          .eq('tipo_entidad', TIPO_ENTIDAD_MOTO)
           .order('created_at', { ascending: true });
+        // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+        console.log('[Reseñas] usuario logueado:', uid);
+        console.log('[Reseñas] filas leídas:', filas?.length, '| error:', error);
+
         if (error || !filas) {
           console.warn('No se pudieron cargar las reseñas:', error?.message);
           return;
@@ -2230,9 +2286,46 @@ export default function ResenasScreen({ navigation }: any) {
   };
 
   // Cierra el formulario; si ya escribieron algo, pregunta antes de descartarlo
+  // Notificación flotante pasajera (se cierra sola)
+  const avisar = (titulo: string, mensaje: string, tono: AvisoData['tono'] = 'error') =>
+    setAviso({
+      titulo,
+      mensaje,
+      tono,
+      icono: tono === 'exito' ? 'checkmark-circle' : tono === 'error' ? 'close-circle' : tono === 'alerta' ? 'alert-circle' : 'information-circle',
+    });
+
+  // Notificación flotante con botones: devuelve el valor del botón que elija la persona
+  function preguntar<T>(cfg: {
+    icono: AvisoData['icono'];
+    tono: AvisoData['tono'];
+    titulo: string;
+    mensaje: string;
+    moto?: Moto;
+    opciones: { texto: string; valor: T; tipo?: AccionAviso['tipo'] }[];
+    valorAlCerrar: T;
+  }): Promise<T> {
+    return new Promise<T>((resolve) => {
+      const responder = (v: T) => {
+        setAviso(null);
+        resolve(v);
+      };
+      setAviso({
+        icono: cfg.icono,
+        tono: cfg.tono,
+        titulo: cfg.titulo,
+        mensaje: cfg.mensaje,
+        moto: cfg.moto,
+        acciones: cfg.opciones.map((o) => ({ texto: o.texto, tipo: o.tipo, onPress: () => responder(o.valor) })),
+        alCerrar: () => responder(cfg.valorAlCerrar),
+      });
+    });
+  }
+
   const cerrarFormulario = () => {
     if (!formularioSucio.current) {
       setMostrarFormulario(false);
+      setMotoEditandoId(null);
       return;
     }
     Alert.alert('¿Descartar tu publicación?', 'Si sales ahora, se perderán los datos que ya escribiste.', [
@@ -2243,6 +2336,7 @@ export default function ResenasScreen({ navigation }: any) {
         onPress: () => {
           formularioSucio.current = false;
           setMostrarFormulario(false);
+          setMotoEditandoId(null);
         },
       },
     ]);
@@ -2267,18 +2361,33 @@ export default function ResenasScreen({ navigation }: any) {
   // Guarda la reseña en la tabla `resenas`. Devuelve true si se guardó bien.
   const publicarResena = async (id: string, nueva: Comentario): Promise<boolean> => {
     if (!usuarioActual) {
-      Alert.alert('Inicia sesión', 'Necesitas una sesión iniciada para publicar una reseña.');
+      avisar('Inicia sesión', 'Necesitas una sesión iniciada para publicar una reseña.', 'alerta');
       return false;
     }
-    const { error } = await supabase.from('resenas').insert({
-      perfil_id: usuarioActual.id,
-      entidad_evaluada: id, // id de la moto (texto)
-      tipo_entidad: 'moto',
-      calificacion: nueva.puntuacion, // 1 a 5
-      comentario: nueva.texto,
-    });
+    const { data, error } = await supabase
+      .from('resenas')
+      .insert({
+        perfil_id: usuarioActual.id,
+        entidad_evaluada: id, // id de la moto (texto)
+        tipo_entidad: TIPO_ENTIDAD_MOTO,
+        calificacion: nueva.puntuacion, // 1 a 5
+        comentario: nueva.texto,
+      })
+      .select(); // devuelve la fila guardada: si trae `id` y `created_at`, se escribió en la BD
+
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Reseñas] insert → data:', JSON.stringify(data));
     if (error) {
-      Alert.alert('No se pudo publicar tu reseña', error.message);
+      console.log(
+        '[Reseñas] ERROR → code:', error.code,
+        '| message:', error.message,
+        '| details:', error.details,
+        '| hint:', error.hint
+      );
+    }
+
+    if (error) {
+      avisar('No se pudo publicar tu reseña', error.message);
       return false;
     }
     setResenasBD((prev) => ({
@@ -2291,26 +2400,182 @@ export default function ResenasScreen({ navigation }: any) {
     return true;
   };
 
-  const publicarMoto = (datos: DatosMoto) => {
-    // ⚠️ AQUÍ FALTA LA TABLA `motos_catalogo`: por ahora la moto solo se guarda en el estado local
-    // (se pierde al cerrar la app) y su id es temporal ('u' + fecha).
-    // Las reseñas que escriban sobre ella SÍ se guardan en `resenas`, pero quedarán huérfanas
-    // hasta que la moto exista en la BD. Con la tabla creada, aquí va:
-    //   const { data } = await supabase.from('motos_catalogo').insert({ perfil_id: usuarioActual.id, ...datos,
-    //     imagen_url }).select().single();   // y usar data.id como id de la moto
-    const nueva: Moto = {
-      ...datos,
-      id: `u${Date.now()}`,
-      puntuacion: 0,
-      comentarios: [],
-      esPropia: true,
+  // Crea o edita una moto en `motos_catalogo` (con su foto en Storage)
+  const guardarMoto = async (datos: DatosMoto): Promise<void> => {
+    if (!usuarioActual) {
+      avisar('Inicia sesión', 'Necesitas una sesión iniciada para publicar tu moto.', 'alerta');
+      return;
+    }
+    const editando = motoEditandoId ? catalogo.find((m) => m.id === motoEditandoId) ?? null : null;
+
+    // 0) ¿Ya existe esta moto? Se revisa el catálogo cargado (incluye las de ejemplo) y la BD,
+    //    por si otra persona la publicó después de que abriste la pantalla.
+    const { data: filasMismoAnio } = await supabase.from('motos_catalogo').select('*').eq('modelo', datos.modelo);
+    const candidatas = [...catalogo, ...(filasMismoAnio ?? []).map((f: any) => filaAMoto(f, usuarioActual.id))];
+    const repetida = candidatas.find((m) => m.id !== editando?.id && esMismaMoto(m, datos));
+    if (repetida) {
+      const decision = await preguntar<'ver' | 'seguir' | 'cancelar'>({
+        icono: 'copy-outline',
+        tono: 'alerta',
+        titulo: 'Esta moto ya existe',
+        mensaje:
+          'Ya está publicada en el catálogo. Si la tuya es otra versión (por ejemplo carburada o inyección), agrégalo al nombre y continúa.',
+        moto: repetida,
+        opciones: [
+          { texto: 'Ver la moto', valor: 'ver', tipo: 'primario' },
+          { texto: editando ? 'Guardar de todos modos' : 'Publicar de todos modos', valor: 'seguir', tipo: 'secundario' },
+          { texto: 'Seguir editando', valor: 'cancelar', tipo: 'neutro' },
+        ],
+        valorAlCerrar: 'cancelar',
+      });
+      if (decision === 'cancelar') return; // se queda en el formulario para cambiar el nombre u otros datos
+      if (decision === 'ver') {
+        // Si la publicó alguien más y aún no estaba en la lista, la agregamos para poder abrirla
+        setCatalogo((prev) => (prev.some((m) => m.id === repetida.id) ? prev : [repetida, ...prev]));
+        formularioSucio.current = false;
+        setMostrarFormulario(false);
+        setMotoEditandoId(null);
+        setMotoId(repetida.id); // te lleva a la publicación que ya existe
+        return;
+      }
+      // decision === 'seguir': continúa normalmente
+    }
+
+    // 1) Foto: una URL http(s) ya está subida (edición sin cambiar la foto); una ruta local se sube al bucket.
+    //    Si la subida falla, la moto se guarda igual (conservando la foto anterior si la había).
+    let imagenUrl: string | null = null;
+    let fotoFallo = false;
+    if (typeof datos.imagen === 'string' && datos.imagen) {
+      if (/^https?:\/\//i.test(datos.imagen)) {
+        imagenUrl = datos.imagen;
+      } else {
+        imagenUrl = await subirFotoMoto(datos.imagen, usuarioActual.id);
+        fotoFallo = imagenUrl === null;
+        if (fotoFallo && editando && typeof editando.imagen === 'string') imagenUrl = editando.imagen;
+      }
+    }
+
+    const campos = {
+      nombre: datos.nombre,
+      marca: datos.marca,
+      modelo: datos.modelo,
+      tipo: datos.tipo,
+      cilindrada: datos.cilindrada,
+      precio: datos.precio,
+      descripcion: datos.descripcion,
+      imagen_url: imagenUrl,
+      propietario: datos.propietario ?? usuarioActual.username,
     };
+
+    // ── EDITAR ──
+    if (editando) {
+      const { data, error } = await supabase
+        .from('motos_catalogo')
+        .update(campos)
+        .eq('id', editando.id)
+        .select()
+        .maybeSingle();
+      // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+      console.log('[Moto] update → data:', JSON.stringify(data), '| error:', error?.message ?? null);
+      if (error) {
+        avisar('No se pudieron guardar los cambios', error.message);
+        return;
+      }
+      if (!data) {
+        // Sin error y sin fila: la política de seguridad (RLS) no permite actualizar esta moto
+        avisar('No se pudieron guardar los cambios', 'No tienes permiso para editar esta moto o ya no existe.');
+        return;
+      }
+      // Si cambió la foto y la anterior estaba en nuestro bucket, se borra para no acumular archivos
+      if (typeof editando.imagen === 'string' && editando.imagen !== imagenUrl) await borrarFotoMoto(editando.imagen);
+      const actualizada = filaAMoto(data, usuarioActual.id);
+      setCatalogo((prev) => prev.map((m) => (m.id === actualizada.id ? actualizada : m)));
+      formularioSucio.current = false;
+      setMostrarFormulario(false);
+      setMotoEditandoId(null);
+      avisar(
+        'Cambios guardados',
+        fotoFallo ? 'Se actualizó tu moto, pero la foto nueva no se pudo subir.' : 'Tu publicación se actualizó.',
+        fotoFallo ? 'alerta' : 'exito'
+      );
+      return;
+    }
+
+    // ── CREAR ──
+    const { data, error } = await supabase
+      .from('motos_catalogo')
+      .insert({ perfil_id: usuarioActual.id, ...campos })
+      .select()
+      .single();
+
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Moto] insert → data:', JSON.stringify(data));
+    if (error) {
+      console.log(
+        '[Moto] ERROR → code:', error.code,
+        '| message:', error.message,
+        '| details:', error.details,
+        '| hint:', error.hint
+      );
+    }
+
+    if (error || !data) {
+      avisar('No se pudo publicar tu moto', error?.message ?? 'Inténtalo de nuevo.');
+      return; // el formulario se queda abierto con lo que escribiste
+    }
+
+    const nueva = filaAMoto(data, usuarioActual.id);
     setCatalogo((prev) => [nueva, ...prev]);
     setComentarios((prev) => ({ ...prev, [nueva.id]: [] }));
     formularioSucio.current = false;
     setMostrarFormulario(false);
     setMotoId(nueva.id); // te lleva directo al detalle de tu moto
-    Alert.alert('¡Moto publicada!', 'Ya aparece en la lista de motos.');
+    avisar(
+      '¡Moto publicada!',
+      fotoFallo
+        ? 'Ya aparece en la lista, pero la foto no se pudo subir. Puedes agregarla después con "Editar".'
+        : 'Ya aparece en la lista de motos.',
+      fotoFallo ? 'alerta' : 'exito'
+    );
+  };
+
+  // Elimina una moto del usuario (y su foto), previa confirmación
+  const eliminarMoto = async (moto: Moto) => {
+    const confirmado = await preguntar<boolean>({
+      icono: 'trash-outline',
+      tono: 'error',
+      titulo: '¿Eliminar tu moto?',
+      mensaje: 'Se borrará tu publicación y su foto. Las reseñas dejarán de mostrarse. No se puede deshacer.',
+      moto,
+      opciones: [
+        { texto: 'Sí, eliminar', valor: true, tipo: 'peligro' },
+        { texto: 'Cancelar', valor: false, tipo: 'neutro' },
+      ],
+      valorAlCerrar: false,
+    });
+    if (!confirmado) return;
+
+    const { data, error } = await supabase.from('motos_catalogo').delete().eq('id', moto.id).select();
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Moto] delete → filas:', data?.length, '| error:', error?.message ?? null);
+    if (error) {
+      avisar('No se pudo eliminar', error.message);
+      return;
+    }
+    if (!data || data.length === 0) {
+      // Sin error y sin filas borradas: la política de seguridad (RLS) no lo permite
+      avisar('No se pudo eliminar', 'No tienes permiso para borrar esta moto o ya no existe.');
+      return;
+    }
+    if (typeof moto.imagen === 'string') await borrarFotoMoto(moto.imagen);
+    setCatalogo((prev) => prev.filter((m) => m.id !== moto.id));
+    setMotoId(null); // regresa a la lista
+    avisar('Moto eliminada', 'Tu publicación ya no aparece en el catálogo.', 'exito');
+  };
+
+  const iniciarEdicion = (moto: Moto) => {
+    setMotoEditandoId(moto.id);
+    setMostrarFormulario(true);
   };
 
   return (
@@ -2332,6 +2597,8 @@ export default function ResenasScreen({ navigation }: any) {
             moto={motoActual}
             onBack={() => setMotoId(null)}
             onPublicar={(c) => publicarResena(motoActual.id, c)}
+            onEditar={motoActual.esPropia ? () => iniciarEdicion(motoActual) : undefined}
+            onEliminar={motoActual.esPropia ? () => eliminarMoto(motoActual) : undefined}
           />
         </View>
       )}
@@ -2339,13 +2606,119 @@ export default function ResenasScreen({ navigation }: any) {
       {mostrarFormulario && (
         <View style={StyleSheet.absoluteFill}>
           <FormularioMoto
+            key={motoEditandoId ?? 'nueva'}
             marcas={marcasExistentes}
+            inicial={catalogo.find((m) => m.id === motoEditandoId)}
             onBack={cerrarFormulario}
-            onPublicar={publicarMoto}
+            onPublicar={guardarMoto}
             sucioRef={formularioSucio}
           />
         </View>
       )}
+
+      {/* Notificación flotante: avisos y confirmaciones dentro de la app */}
+      <AvisoFlotante aviso={aviso} onCerrar={() => setAviso(null)} />
+    </View>
+  );
+}
+
+// ─── COMPONENTE: AVISO FLOTANTE ──────────────────────────────────────────────
+
+function AvisoFlotante({ aviso, onCerrar }: { aviso: AvisoData | null; onCerrar: () => void }) {
+  const { C, styles } = useResenasTheme();
+  const anim = useRef(new Animated.Value(0)).current;
+  const conBotones = !!aviso?.acciones?.length;
+
+  useEffect(() => {
+    if (!aviso) return;
+    anim.setValue(0);
+    Animated.timing(anim, { toValue: 1, duration: 220, useNativeDriver: Platform.OS !== 'web' }).start();
+    if (conBotones) return; // los avisos con botones esperan a que la persona decida
+    const t = setTimeout(onCerrar, aviso.tono === 'error' ? 5000 : 3200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aviso]);
+
+  if (!aviso) return null;
+
+  const colores =
+    aviso.tono === 'exito'
+      ? { bg: C.successBg, fg: C.success }
+      : aviso.tono === 'error'
+      ? { bg: C.dangerSoft, fg: C.danger }
+      : aviso.tono === 'alerta'
+      ? { bg: C.accentSoft, fg: C.accent }
+      : { bg: C.surfaceAlt, fg: C.textSec };
+
+  const estiloBoton = (tipo: AccionAviso['tipo']) =>
+    tipo === 'primario'
+      ? { fondo: { backgroundColor: C.accent }, texto: { color: '#FFFFFF' } }
+      : tipo === 'peligro'
+      ? { fondo: { backgroundColor: C.danger }, texto: { color: '#FFFFFF' } }
+      : tipo === 'secundario'
+      ? { fondo: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border }, texto: { color: C.textPri } }
+      : { fondo: { backgroundColor: 'transparent' }, texto: { color: C.textSec } };
+
+  const tarjeta = (
+    <Animated.View
+      style={[
+        styles.avisoCard,
+        { opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [-24, 0] }) }] },
+      ]}
+      accessibilityRole="alert"
+    >
+      <View style={styles.avisoCabecera}>
+        <View style={[styles.avisoIconoWrap, { backgroundColor: colores.bg }]}>
+          <Ionicons name={aviso.icono} size={22} color={colores.fg} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.avisoTitulo}>{aviso.titulo}</Text>
+          <Text style={styles.avisoMensaje}>{aviso.mensaje}</Text>
+        </View>
+      </View>
+
+      {aviso.moto && (
+        <View style={styles.avisoMoto}>
+          <ImagenMoto imagen={aviso.moto.imagen} style={styles.avisoMotoImg} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.avisoMotoNombre} numberOfLines={2}>
+              {aviso.moto.nombre}
+            </Text>
+            <Text style={styles.avisoMotoSub}>
+              {aviso.moto.marca} · {aviso.moto.modelo} · {aviso.moto.cilindrada} cc
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {conBotones && (
+        <View style={styles.avisoAcciones}>
+          {aviso.acciones!.map((a) => {
+            const e = estiloBoton(a.tipo);
+            return (
+              <TouchableOpacity key={a.texto} style={[styles.avisoBtn, e.fondo]} onPress={a.onPress} activeOpacity={0.85}>
+                <Text style={[styles.avisoBtnText, e.texto]}>{a.texto}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+    </Animated.View>
+  );
+
+  // Con botones: tapa la pantalla y espera una decisión. Sin botones: aviso pasajero que no estorba.
+  if (conBotones) {
+    return (
+      <Modal transparent animationType="fade" visible onRequestClose={aviso.alCerrar ?? onCerrar} statusBarTranslucent>
+        <View style={styles.avisoBackdrop}>{tarjeta}</View>
+      </Modal>
+    );
+  }
+  return (
+    <View style={styles.avisoToast} pointerEvents="box-none">
+      <TouchableOpacity activeOpacity={0.95} onPress={onCerrar}>
+        {tarjeta}
+      </TouchableOpacity>
     </View>
   );
 }
@@ -2626,6 +2999,70 @@ const crearEstilos = (C: Paleta) =>
   calificacionTexto: { fontSize: 13, color: C.textSec, fontWeight: '600' },
 
   // Botones
+  // Aviso flotante
+  avisoBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingTop: TOP_PADDING,
+    paddingHorizontal: 16,
+  },
+  avisoToast: {
+    position: 'absolute',
+    top: TOP_PADDING,
+    left: 16,
+    right: 16,
+    zIndex: 999,
+    elevation: 20,
+  },
+  avisoCard: {
+    backgroundColor: C.surface,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: C.border,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  avisoCabecera: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  avisoIconoWrap: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  avisoTitulo: { fontSize: 16, fontWeight: '800', color: C.textPri },
+  avisoMensaje: { fontSize: 13.5, color: C.textSec, marginTop: 3, lineHeight: 19 },
+  avisoMoto: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: C.surfaceAlt,
+  },
+  avisoMotoImg: { width: 56, height: 56, borderRadius: 10 },
+  avisoMotoNombre: { fontSize: 14, fontWeight: '800', color: C.textPri },
+  avisoMotoSub: { fontSize: 12.5, color: C.textSec, marginTop: 2 },
+  avisoAcciones: { marginTop: 14, gap: 8 },
+  avisoBtn: { paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  avisoBtnText: { fontSize: 14.5, fontWeight: '800' },
+
+  // Acciones del dueño de la moto (editar / eliminar)
+  accionesPropias: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  btnAccionPropia: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.surfaceAlt,
+  },
+  btnAccionPeligro: { borderColor: C.danger, backgroundColor: C.dangerSoft },
+  btnAccionPropiaText: { fontSize: 14, fontWeight: '800', color: C.textPri },
+
   btnPrimario: {
     flexDirection: 'row',
     alignItems: 'center',
