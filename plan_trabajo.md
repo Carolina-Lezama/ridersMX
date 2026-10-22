@@ -1,7 +1,6 @@
 nuevas cosas a revisar:
 
 
-politicas para la tabla reseñas, eliminar y actualizar
 
 en el dashboard tenemos un apartado de rachas, al hacer click muestra el modal de pregunta, al completarlo solo muestra "completado hoy" y el numero de racha, ahora me gustaria agregar esto: 
 calendario interactivo para mostrar que dias de racha hemos tenido
