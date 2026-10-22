@@ -1075,3 +1075,38 @@
     "column_default": "timezone('utc'::text, now())"
   }
 ]
+  {
+    "table_name": "historial_checkins",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": "uuid_generate_v4()"
+  },
+  {
+    "table_name": "historial_checkins",
+    "column_name": "perfil_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "historial_checkins",
+    "column_name": "fecha",
+    "data_type": "date",
+    "is_nullable": "NO",
+    "column_default": null
+  },
+  {
+    "table_name": "historial_checkins",
+    "column_name": "tipo",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "column_default": "'quiz'::text"
+  },
+  {
+    "table_name": "historial_checkins",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": "timezone('utc'::text, now())"
+  }

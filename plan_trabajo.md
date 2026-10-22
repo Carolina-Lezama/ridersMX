@@ -1,11 +1,7 @@
 nuevas cosas a revisar:
 
 
-
-en el dashboard tenemos un apartado de rachas, al hacer click muestra el modal de pregunta, al completarlo solo muestra "completado hoy" y el numero de racha, ahora me gustaria agregar esto: 
-calendario interactivo para mostrar que dias de racha hemos tenido
-
-
+revisar lo ultimo de gemini
 
 
 
