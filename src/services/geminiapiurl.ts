@@ -49,7 +49,6 @@ const geminiapi = {
   enviarMensaje: async (mensaje: string): Promise<string> => {
     const apiUrl = getApiUrl();
     let response: Response;
-
     try {
       response = await fetch(`${apiUrl}/api/chat`, {
         method: 'POST',
@@ -85,4 +84,5 @@ const geminiapi = {
     return payload.respuesta;
   },
 };
+
 export default geminiapi;
