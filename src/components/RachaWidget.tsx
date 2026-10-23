@@ -33,7 +33,7 @@ export const RachaWidget: React.FC<RachaWidgetProps> = ({
         rachaSalvada && styles.cardSalvado,
       ]}
       onPress={onPress}
-      disabled={completadoHoy || loading}
+      disabled={loading}
     >
       {loading ? (
         <>
@@ -76,7 +76,7 @@ export const RachaWidget: React.FC<RachaWidgetProps> = ({
           </View>
 
           <Ionicons
-            name={completadoHoy ? 'checkmark-circle' : 'chevron-forward'}
+            name={completadoHoy ? 'calendar-outline' : 'chevron-forward'}
             size={22}
             color={completadoHoy ? '#10b981' : theme.textSecondary}
           />

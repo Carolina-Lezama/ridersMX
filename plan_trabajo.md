@@ -1,7 +1,24 @@
 nuevas cosas a revisar:
 
 
-revisar lo ultimo de gemini
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -31,7 +48,7 @@ es correcto que se traiga todo en motocicletas y eventos, el error ocurre que au
 
 hay elementos visuales del apartado agenda que no tienen modo oscuro
 
-en el modal denuevo evento(rodada) en el apartado moto asociada, debe mostrar las motos del usuario y un apartado especial que diga otro si solo fue con alguien mas(esta moto no debe repecutir en la bd(manejo de errores))
+
 
 ![alt text](image-1.png)
 el chatbot esta muy desconfigurado

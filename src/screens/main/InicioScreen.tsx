@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import { RachaWidget } from '../../components/RachaWidget'; 
+import { RachaCalendarModal } from '../../components/RachaCalendarModal';
 import { QuizModal, type PreguntaQuiz } from '../../components/QuizModal';
 import PostRideReviewModal from '../../components/PostRideReviewModal';
 import DashboardEmptyState from '../../components/DashboardEmptyState';
@@ -48,6 +49,7 @@ export default function InicioScreen({ navigation }: any) {
   const [eventoPendiente, setEventoPendiente] = useState<any>(null);
   const [kilometrosTotales, setKilometrosTotales] = useState(0);
   const [preguntaDiaria, setPreguntaDiaria] = useState<PreguntaQuiz | undefined>();
+  const [calendarioRachaVisible, setCalendarioRachaVisible] = useState(false);
 
   const cargarEventoPendiente = useCallback(async (uid?: string) => {
     if (!uid) {
@@ -145,8 +147,12 @@ export default function InicioScreen({ navigation }: any) {
     setPreguntaDiaria(pregunta);
   }, []);
 
-  const handleOpenQuiz = () => {
-    setQuizVisible(true);
+  const handleRachaPress = () => {
+    if (completadoHoy) {
+      setCalendarioRachaVisible(true);
+    } else {
+      setQuizVisible(true);
+    }
   };
 
   const handleReviewSuccess = async () => {
@@ -187,7 +193,7 @@ export default function InicioScreen({ navigation }: any) {
         comodines={comodines}
         completadoHoy={completadoHoy}
         rachaSalvada={rachaSalvadaRecientemente}
-        onPress={handleOpenQuiz} 
+        onPress={handleRachaPress}
       />
 
       {/* 3. SECCIÓN: RESUMEN DE TU MOTO / GARAJE */}
@@ -328,9 +334,22 @@ export default function InicioScreen({ navigation }: any) {
       onClose={() => setQuizVisible(false)}
       onCompletarCheckIn={(esCorrecta) => {
         if (esCorrecta) {
-          realizarCheckIn();
+          void realizarCheckIn().catch((error) => {
+            Alert.alert(
+              'No se pudo sincronizar tu racha',
+              error instanceof Error
+                ? error.message
+                : 'Inténtalo de nuevo para guardar el check-in.',
+            );
+          });
         }
       }}
+    />
+
+    <RachaCalendarModal
+      visible={calendarioRachaVisible}
+      userId={userId}
+      onClose={() => setCalendarioRachaVisible(false)}
     />
 
     <PostRideReviewModal

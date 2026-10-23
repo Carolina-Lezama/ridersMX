@@ -78,13 +78,18 @@ export const useStreak = (userId: string | undefined) => {
     if (!userId || completadoHoy || procesando) return;
 
     setProcesando(true);
+    const estadoAnterior = streakState;
     try {
       const estadoOptimista = registrarCheckInExitoso(streakState);
       setStreakState(estadoOptimista);
-      await sincronizarNotificacionesRacha(true, userId);
 
       const estadoConfirmado = await ejecutarCheckInDB(userId, estadoOptimista);
       setStreakState(estadoConfirmado);
+      await sincronizarNotificacionesRacha(true, userId);
+    } catch (error) {
+      setStreakState(estadoAnterior);
+      await sincronizarNotificacionesRacha(completadoHoy, userId);
+      throw error;
     } finally {
       setProcesando(false);
     }
