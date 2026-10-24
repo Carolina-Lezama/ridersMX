@@ -238,7 +238,7 @@ export default function AccountSwitcherModal({
 }
 
 const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'flex-end' },
   modalContainer: {
     backgroundColor: theme.card,
     borderTopLeftRadius: 28,

@@ -676,7 +676,7 @@ function SliderPrecio({
           backgroundColor: C.surface,
           borderWidth: 3,
           borderColor: C.accent,
-          shadowColor: '#000',
+          shadowColor: C.shadow,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.2,
           shadowRadius: 4,
@@ -844,12 +844,12 @@ function BarraFiltros({
               onPress={() => setAbierto(estaAbierto ? null : f.key)}
               style={[styles.chip, estaAbierto && styles.chipAbierto, activo && styles.chipActivo]}
             >
-              <Ionicons name={f.icon} size={15} color={activo ? '#FFFFFF' : C.textSec} />
+              <Ionicons name={f.icon} size={15} color={activo ? C.onPrimary : C.textSec} />
               <Text style={[styles.chipText, activo && styles.chipTextActivo]}>{etiqueta}</Text>
               <Ionicons
                 name={estaAbierto ? 'chevron-up' : 'chevron-down'}
                 size={14}
-                color={activo ? '#FFFFFF' : C.textMuted}
+                color={activo ? C.onPrimary : C.textMuted}
               />
             </TouchableOpacity>
           );
@@ -1250,7 +1250,7 @@ function DetalleResena({
               onPress={() => setMostrarFormulario(true)}
               activeOpacity={0.85}
             >
-              <Ionicons name="create-outline" size={18} color="#FFFFFF" />
+              <Ionicons name="create-outline" size={18} color={C.onPrimary} />
               <Text style={styles.btnPrimarioText}>Escribir una reseña</Text>
             </TouchableOpacity>
           )}
@@ -1549,7 +1549,7 @@ function FormularioMoto({
             <>
               <Image source={{ uri: foto }} style={styles.fotoPreview} resizeMode="cover" />
               <TouchableOpacity style={styles.fotoQuitar} onPress={() => setFoto(null)} accessibilityLabel="Quitar foto">
-                <Ionicons name="close" size={18} color="#FFFFFF" />
+                <Ionicons name="close" size={18} color={C.onPrimary} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.fotoCambiar} onPress={elegirFoto} activeOpacity={0.85}>
                 <Ionicons name="camera-outline" size={16} color={C.textPri} />
@@ -1705,7 +1705,7 @@ function FormularioMoto({
           disabled={publicando}
           activeOpacity={0.85}
         >
-          <Ionicons name={inicial ? 'save-outline' : 'cloud-upload-outline'} size={18} color="#FFFFFF" />
+          <Ionicons name={inicial ? 'save-outline' : 'cloud-upload-outline'} size={18} color={C.onPrimary} />
           <Text style={styles.btnPrimarioText}>
             {publicando ? (inicial ? 'Guardando…' : 'Publicando…') : inicial ? 'Guardar cambios' : 'Publicar moto'}
           </Text>
@@ -1855,7 +1855,7 @@ function ModalProblema({
                 disabled={enviando}
               >
                 {enviando ? (
-                  <ActivityIndicator color="#FFFFFF" />
+                  <ActivityIndicator color={C.onPrimary} />
                 ) : (
                   <Text style={styles.btnEnviarText}>Enviar reporte</Text>
                 )}
@@ -2149,7 +2149,7 @@ function ListaResenas({
           activeOpacity={0.9}
           accessibilityLabel="Publicar mi moto"
         >
-          <Ionicons name="add" size={22} color="#FFFFFF" />
+          <Ionicons name="add" size={22} color={C.onPrimary} />
           <Text style={styles.fabText}>Publicar mi moto</Text>
         </TouchableOpacity>
       )}
@@ -2652,9 +2652,9 @@ function AvisoFlotante({ aviso, onCerrar }: { aviso: AvisoData | null; onCerrar:
 
   const estiloBoton = (tipo: AccionAviso['tipo']) =>
     tipo === 'primario'
-      ? { fondo: { backgroundColor: C.accent }, texto: { color: '#FFFFFF' } }
+      ? { fondo: { backgroundColor: C.accent }, texto: { color: C.onPrimary } }
       : tipo === 'peligro'
-      ? { fondo: { backgroundColor: C.danger }, texto: { color: '#FFFFFF' } }
+      ? { fondo: { backgroundColor: C.danger }, texto: { color: C.onPrimary } }
       : tipo === 'secundario'
       ? { fondo: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border }, texto: { color: C.textPri } }
       : { fondo: { backgroundColor: 'transparent' }, texto: { color: C.textSec } };
@@ -2725,44 +2725,27 @@ function AvisoFlotante({ aviso, onCerrar }: { aviso: AvisoData | null; onCerrar:
 
 // ─── PALETA Y ESTILOS ─────────────────────────────────────────────────────────
 
-// Modo claro: conserva exactamente los colores originales de la pantalla.
-// Modo oscuro: toma los colores base de theme.ts y ajusta los propios de Reseñas.
-function crearPaleta(theme: Theme, isDarkMode: boolean) {
-  if (!isDarkMode) {
-    return {
-      bg: '#FFFFFF',
-      surface: '#FFFFFF',
-      surfaceAlt: '#F4F5F7',
-      border: '#E5E7EB',
-      textPri: '#1F2430',
-      textSec: '#5B6472',
-      textMuted: '#9AA1AD',
-      accent: '#E4472B',
-      accentSoft: '#FDEEEA',
-      star: '#F5A524',
-      success: '#16A34A',
-      danger: '#DC2626',
-      dangerSoft: '#FEF2F2',
-      successBg: '#ECFDF3',
-      ink: '#1F2430',
-    };
-  }
+// Both color modes use semantic tokens from theme.ts.
+function crearPaleta(theme: Theme) {
   return {
     bg: theme.background,
     surface: theme.card,
-    surfaceAlt: '#273449',
+    surfaceAlt: theme.cardHeader,
     border: theme.border,
     textPri: theme.textPrimary,
     textSec: theme.textSecondary,
     textMuted: theme.iconSecondary,
-    accent: '#F0583C',
-    accentSoft: '#3B1D17',
-    star: '#F5A524',
-    success: '#4ADE80',
+    accent: theme.accent,
+    accentSoft: theme.accentBg,
+    star: theme.star,
+    onPrimary: theme.onPrimary,
+    overlay: theme.overlay,
+    shadow: theme.shadow,
+    success: theme.successText,
     danger: theme.dangerText,
     dangerSoft: theme.dangerBg,
-    successBg: '#052E16',
-    ink: '#475569',
+    successBg: theme.successBg,
+    ink: theme.textPrimary,
   };
 }
 
@@ -2772,7 +2755,7 @@ type Paleta = ReturnType<typeof crearPaleta>;
 function useResenasTheme() {
   const { theme, isDarkMode, toggleTheme } = useTheme();
   return useMemo(() => {
-    const C = crearPaleta(theme, isDarkMode);
+    const C = crearPaleta(theme);
     return { C, styles: crearEstilos(C), isDarkMode, toggleTheme };
   }, [theme, isDarkMode]);
 }
@@ -2859,7 +2842,7 @@ const crearEstilos = (C: Paleta) =>
   chipAbierto: { borderColor: C.textPri },
   chipActivo: { backgroundColor: C.ink, borderColor: C.ink },
   chipText: { fontSize: 13, fontWeight: '600', color: C.textPri },
-  chipTextActivo: { color: '#FFFFFF' },
+  chipTextActivo: { color: C.onPrimary },
   chipLimpiar: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, height: 38 },
   chipLimpiarText: { fontSize: 13, fontWeight: '700', color: C.accent },
   panel: {
@@ -2885,7 +2868,7 @@ const crearEstilos = (C: Paleta) =>
   pillActiva: { backgroundColor: C.accent, borderColor: C.accent },
   pillDeshabilitada: { opacity: 0.35 },
   pillText: { fontSize: 13, fontWeight: '600', color: C.textPri },
-  pillTextActiva: { color: '#FFFFFF' },
+  pillTextActiva: { color: C.onPrimary },
   pillCantidad: { fontSize: 12, fontWeight: '600', color: C.textMuted },
 
   // Lista
@@ -2900,7 +2883,7 @@ const crearEstilos = (C: Paleta) =>
     borderRadius: 18,
     borderWidth: 1,
     borderColor: C.border,
-    shadowColor: '#1F2430',
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.06,
     shadowRadius: 14,
@@ -3002,7 +2985,7 @@ const crearEstilos = (C: Paleta) =>
   // Aviso flotante
   avisoBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: C.overlay,
     paddingTop: TOP_PADDING,
     paddingHorizontal: 16,
   },
@@ -3021,7 +3004,7 @@ const crearEstilos = (C: Paleta) =>
     borderWidth: 1,
     borderColor: C.border,
     elevation: 10,
-    shadowColor: '#000',
+    shadowColor: C.shadow,
     shadowOpacity: 0.2,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
@@ -3073,7 +3056,7 @@ const crearEstilos = (C: Paleta) =>
     paddingVertical: 14,
     marginTop: 18,
   },
-  btnPrimarioText: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
+  btnPrimarioText: { color: C.onPrimary, fontWeight: '800', fontSize: 15 },
   btnSecundario: {
     marginTop: 16,
     paddingVertical: 11,
@@ -3093,7 +3076,7 @@ const crearEstilos = (C: Paleta) =>
   },
   btnCancelarText: { fontSize: 14, fontWeight: '700', color: C.textSec },
   btnEnviar: { flex: 2, paddingVertical: 13, borderRadius: 12, backgroundColor: C.accent, alignItems: 'center' },
-  btnEnviarText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
+  btnEnviarText: { fontSize: 14, fontWeight: '800', color: C.onPrimary },
   yaReseneBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3137,7 +3120,7 @@ const crearEstilos = (C: Paleta) =>
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(31,36,48,0.7)',
+    backgroundColor: C.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -3194,7 +3177,7 @@ const crearEstilos = (C: Paleta) =>
     shadowRadius: 14,
     elevation: 6,
   },
-  fabText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF' },
+  fabText: { fontSize: 15, fontWeight: '800', color: C.onPrimary },
   tagPropia: { backgroundColor: C.accentSoft },
   tagPropiaText: { color: C.accent },
   detallePropietario: { fontSize: 13, color: C.textSec, marginTop: 4 },
@@ -3208,7 +3191,7 @@ const crearEstilos = (C: Paleta) =>
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(17,24,39,0.45)',
+    backgroundColor: C.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 999,
@@ -3219,7 +3202,7 @@ const crearEstilos = (C: Paleta) =>
     borderRadius: 22,
     padding: 20,
     width: '100%',
-    shadowColor: '#000',
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
     shadowRadius: 24,
@@ -3240,7 +3223,7 @@ const crearEstilos = (C: Paleta) =>
   ayudaItemDesc: { fontSize: 13, color: C.textSec, lineHeight: 18 },
 
   selectorMarca: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,24,39,0.55)' },
+  sheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: C.overlay },
   sheet: {
     backgroundColor: C.bg,
     borderTopLeftRadius: 24,
@@ -3298,14 +3281,14 @@ const crearEstilos = (C: Paleta) =>
     padding: 14,
     borderRadius: 14,
     borderWidth: 1,
-    shadowColor: '#000',
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
   },
   toastTexto: { flex: 1, fontSize: 14, fontWeight: '700', lineHeight: 19 },
-  problemaOverlay: { flex: 1, backgroundColor: 'rgba(17,24,39,0.55)' },
+  problemaOverlay: { flex: 1, backgroundColor: C.overlay },
   problemaScroll: { flex: 1 },
   problemaScrollContent: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 24 },
   problemaCard: {
@@ -3314,7 +3297,7 @@ const crearEstilos = (C: Paleta) =>
     padding: 20,
     borderWidth: 1,
     borderColor: C.border,
-    shadowColor: '#000',
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 24,

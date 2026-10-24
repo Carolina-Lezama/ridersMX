@@ -4,6 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import Skeleton from '../../components/Skeleton';
+import {
+  clearSelectedMotorcycleId,
+  getSelectedMotorcycleId,
+  setSelectedMotorcycleId,
+} from '../../services/motorcycleSelectionService';
 
 export default function MisMotosScreen({ navigation }: any) {
   const { theme } = useTheme();
@@ -11,6 +16,7 @@ export default function MisMotosScreen({ navigation }: any) {
 
   const [motos, setMotos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [motoPrincipalId, setMotoPrincipalId] = useState<string | null>(null);
 
   // useEffect que se recarga cada vez que la pantalla gana el foco (por si agregas una moto nueva y regresas)
   useEffect(() => {
@@ -26,14 +32,29 @@ export default function MisMotosScreen({ navigation }: any) {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session?.user) {
+        const userId = session.user.id;
         const { data, error } = await supabase
           .from('motocicletas')
           .select('*')
-          .eq('perfil_id', session.user.id)
-          .order('created_at', { ascending: false });
+          .eq('perfil_id', userId)
+          .order('created_at', { ascending: true });
 
         if (error) throw error;
-        setMotos(data || []);
+        const motosData = data || [];
+        const storedMotorcycleId = await getSelectedMotorcycleId(userId);
+        const selectedMotorcycleId = motosData.some((moto) => moto.id === storedMotorcycleId)
+          ? storedMotorcycleId
+          : motosData[0]?.id ?? null;
+        setMotos(motosData);
+        setMotoPrincipalId(selectedMotorcycleId);
+        if (selectedMotorcycleId && selectedMotorcycleId !== storedMotorcycleId) {
+          await setSelectedMotorcycleId(userId, selectedMotorcycleId);
+        } else if (!selectedMotorcycleId && storedMotorcycleId) {
+          await clearSelectedMotorcycleId(userId);
+        }
+      } else {
+        setMotos([]);
+        setMotoPrincipalId(null);
       }
     } catch (error: any) {
       Alert.alert('Error al cargar garaje', error.message);
@@ -44,26 +65,70 @@ export default function MisMotosScreen({ navigation }: any) {
 
   // Componente visual para cada motocicleta en la lista
 // Componente visual para cada motocicleta en la lista
-  const renderMoto = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      style={styles.motoCard}
-      // MAGIA 2: Navegamos pasándole el ID exacto de la moto que el usuario tocó
-      onPress={() => navigation.navigate('MotoForm', { motoId: item.id })}
-    >
-      <View style={styles.motoIconContainer}>
-        <Ionicons name="bicycle" size={32} color={theme.primary} />
+  const seleccionarMotoPrincipal = async (motoId: string) => {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    if (!session?.user) throw new Error('Inicia sesión para elegir tu moto principal.');
+
+    await setSelectedMotorcycleId(session.user.id, motoId);
+    setMotoPrincipalId(motoId);
+  };
+
+  const renderMoto = ({ item }: { item: any }) => {
+    const isPrincipal = item.id === motoPrincipalId;
+    return (
+      <View style={styles.motoCard}>
+        <TouchableOpacity
+          style={styles.motoCardContent}
+          onPress={() => navigation.navigate('MotoForm', { motoId: item.id })}
+          accessibilityRole="button"
+          accessibilityLabel={`Editar ${item.alias || `${item.marca} ${item.modelo}`}`}
+        >
+          <View style={styles.motoIconContainer}>
+            <Ionicons name="bicycle" size={32} color={theme.primary} />
+          </View>
+          <View style={styles.motoInfo}>
+            <Text style={styles.motoTitulo}>
+              {item.alias || `${item.marca} ${item.modelo}`}
+            </Text>
+            <Text style={styles.motoSubtitulo}>
+              {item.anio ? `${item.anio} • ` : ''}Placas: {item.placas || 'N/A'}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              <Ionicons name="speedometer-outline" size={12} color={theme.primary} />
+              <Text style={[styles.motoSubtitulo, { color: theme.primary, fontWeight: '600', marginLeft: 4 }]}>
+                {(item.kilometraje_actual || 0).toLocaleString('es-MX')} km
+              </Text>
+            </View>
+            {isPrincipal && (
+              <View style={styles.principalLabel}>
+                <Ionicons name="checkmark-circle" size={14} color={theme.primary} />
+                <Text style={styles.principalLabelText}>Moto principal</Text>
+              </View>
+            )}
+          </View>
+          <Ionicons name="chevron-forward" size={24} color={theme.iconSecondary} />
+        </TouchableOpacity>
+        {!isPrincipal && (
+          <TouchableOpacity
+            style={styles.setPrincipalButton}
+            onPress={() => {
+              void seleccionarMotoPrincipal(item.id).catch((error) => {
+                Alert.alert(
+                  'No se pudo guardar la moto principal',
+                  error instanceof Error ? error.message : 'Inténtalo de nuevo.',
+                );
+              });
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`Elegir ${item.alias || `${item.marca} ${item.modelo}`} como moto principal`}
+          >
+            <Text style={styles.setPrincipalText}>Hacer principal</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      <View style={styles.motoInfo}>
-        <Text style={styles.motoTitulo}>
-          {item.marca} {item.modelo}
-        </Text>
-        <Text style={styles.motoSubtitulo}>
-          {item.anio} • Placas: {item.placas || 'N/A'}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={24} color={theme.iconSecondary} />
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -137,10 +202,13 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   
   listContainer: { padding: 20, paddingBottom: 100 }, // Padding bottom extra para que no estorbe el FAB
   motoCard: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card,
-    padding: 15, borderRadius: 16, marginBottom: 15,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3
+    backgroundColor: theme.card,
+    padding: 15,
+    borderRadius: 16,
+    marginBottom: 15,
+    shadowColor: theme.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3
   },
+  motoCardContent: { flexDirection: 'row', alignItems: 'center' },
   motoIconContainer: {
     backgroundColor: theme.background, width: 60, height: 60, borderRadius: 15,
     justifyContent: 'center', alignItems: 'center', marginRight: 15
@@ -148,12 +216,16 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   motoInfo: { flex: 1 },
   motoTitulo: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 4 },
   motoSubtitulo: { fontSize: 14, color: theme.textSecondary },
+  principalLabel: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+  principalLabelText: { fontSize: 12, fontWeight: '700', color: theme.primary },
+  setPrincipalButton: { alignSelf: 'flex-end', paddingHorizontal: 12, paddingVertical: 7, marginTop: 10 },
+  setPrincipalText: { color: theme.primary, fontSize: 13, fontWeight: '700' },
 
   // Estilo del botón flotante (FAB)
   fab: {
     position: 'absolute', bottom: 30, right: 20,
     backgroundColor: theme.primary, width: 60, height: 60, borderRadius: 30,
     justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#007bff', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6
+    shadowColor: theme.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6
   }
 });

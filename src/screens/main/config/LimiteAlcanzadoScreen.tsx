@@ -76,9 +76,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      ios: { shadowColor: theme.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 12 },
       android: { elevation: 8 },
-      web: { boxShadow: '0px 10px 25px rgba(0,0,0,0.1)' }
+      web: { boxShadow: `0px 10px 25px ${theme.shadow}1a` }
     }),
   },
   iconCircle: {
@@ -128,7 +128,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   primaryBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 16,
     fontWeight: 'bold',
   },

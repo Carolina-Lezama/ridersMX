@@ -254,7 +254,7 @@ export default function PostRideReviewModal({
                       <Ionicons 
                         name="bicycle-outline" 
                         size={16} 
-                        color={isSelected ? '#fff' : theme.textPrimary} 
+                        color={isSelected ? theme.onPrimary : theme.textPrimary}
                       />
                       <Text style={[styles.motoChipText, isSelected && styles.motoChipTextSelected]}>
                         {moto.alias || `${moto.marca} ${moto.modelo}`}
@@ -330,7 +330,7 @@ export default function PostRideReviewModal({
             disabled={guardando}
             activeOpacity={0.9}
           >
-            {guardando ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Guardar en mi bitácora</Text>}
+            {guardando ? <ActivityIndicator color={theme.onPrimary} /> : <Text style={styles.saveBtnText}>Guardar en mi bitácora</Text>}
           </TouchableOpacity>
 
           {guardando ? (
@@ -342,8 +342,8 @@ export default function PostRideReviewModal({
                 <Text style={styles.secondaryBtnText}>Recordarme mañana</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.secondaryBtn} onPress={handleIgnorar} activeOpacity={0.8}>
-                <Ionicons name="close-circle-outline" size={18} color={theme.dangerText || '#ef4444'} />
-                <Text style={[styles.secondaryBtnText, { color: theme.dangerText || '#ef4444' }]}>
+                <Ionicons name="close-circle-outline" size={18} color={theme.dangerText} />
+                <Text style={[styles.secondaryBtnText, { color: theme.dangerText }]}>
                   No me interesa
                 </Text>
               </TouchableOpacity>
@@ -374,7 +374,7 @@ const formatearHora = (hora: string, fecha: Date | null) => {
 const createStyles = (theme: any) =>
   StyleSheet.create({
     // ... (Mantén todos tus estilos anteriores iguales, y añade estos nuevos al final:)
-    modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(15, 23, 42, 0.55)' },
+    modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: theme.overlay },
     modalContent: { backgroundColor: theme.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 22, paddingBottom: 28, borderWidth: 1, borderColor: theme.border },
     titulo: { color: theme.textPrimary, fontSize: 23, fontWeight: '800', textAlign: 'center' },
     eventoInfoContainer: { backgroundColor: theme.background, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14, borderWidth: 1, borderColor: theme.border },
@@ -389,7 +389,7 @@ const createStyles = (theme: any) =>
     motoChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, gap: 6 },
     motoChipSelected: { backgroundColor: theme.primary, borderColor: theme.primary },
     motoChipText: { color: theme.textPrimary, fontSize: 14, fontWeight: '600' },
-    motoChipTextSelected: { color: '#fff' },
+    motoChipTextSelected: { color: theme.onPrimary },
     
     subtitulo: { color: theme.textSecondary, fontSize: 15, textAlign: 'center', marginTop: 16, marginBottom: 16 },
     starsContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 20, gap: 6 },
@@ -402,7 +402,7 @@ const createStyles = (theme: any) =>
     photoButtonText: { color: theme.primary, fontSize: 15, fontWeight: '700', marginLeft: 8 },
     previewImage: { width: '100%', height: 170, borderRadius: 14, marginBottom: 14, resizeMode: 'cover' },
     saveBtn: { backgroundColor: theme.primary, borderRadius: 12, paddingVertical: 15, alignItems: 'center', marginBottom: 12 },
-    saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    saveBtnText: { color: theme.onPrimary, fontSize: 16, fontWeight: '700' },
     secondaryActionsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
     secondaryBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 42, paddingHorizontal: 8, backgroundColor: theme.background, borderRadius: 12, borderWidth: 1, borderColor: theme.border },
     secondaryBtnText: { color: theme.textSecondary, fontWeight: '700', fontSize: 14, textAlign: 'center' },

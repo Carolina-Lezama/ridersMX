@@ -280,7 +280,7 @@ const createStyles = (
 
     userBubble: {
       alignSelf: 'flex-end',
-      backgroundColor: '#2563eb',
+      backgroundColor: theme.primary,
     },
 
     aiBubble: {
@@ -291,7 +291,7 @@ const createStyles = (
     },
 
     userText: {
-      color: '#ffffff',
+      color: theme.onPrimary,
     },
 
     aiText: {

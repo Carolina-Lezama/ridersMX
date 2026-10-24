@@ -70,17 +70,17 @@ export default function CalendarioScreen({ navigation }: any) {
       if (!marcas[evento.fecha]) marcas[evento.fecha] = { dots: [] };
       marcas[evento.fecha].dots.push({
         key: evento.id,
-        color: evento.tipo === 'mantenimiento' ? '#ef4444' : '#007bff'
+        color: evento.tipo === 'mantenimiento' ? theme.dangerText : theme.primary
       });
     });
 
     marcas[fechaSeleccionada] = { 
       ...marcas[fechaSeleccionada], 
       selected: true, 
-      selectedColor: theme.textPrimary 
+      selectedColor: theme.primary
     };
     return marcas;
-  }, [eventos, fechaSeleccionada, theme.textPrimary]);
+  }, [eventos, fechaSeleccionada, theme.dangerText, theme.primary]);
 
   // Filtrar eventos a mostrar según la pestaña activa
   const eventosAMostrar = useMemo(() => {
@@ -112,7 +112,8 @@ export default function CalendarioScreen({ navigation }: any) {
           markingType={'multi-dot'}
           markedDates={markedDates}
           theme={{
-            selectedDayBackgroundColor: theme.textPrimary,
+            selectedDayBackgroundColor: theme.primary,
+            selectedDayTextColor: theme.onPrimary,
             todayTextColor: theme.primary,
             dotColor: theme.primary,
             arrowColor: theme.iconPrimary,
@@ -170,7 +171,7 @@ export default function CalendarioScreen({ navigation }: any) {
           </View>
         ) : eventosAMostrar.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="calendar-clear-outline" size={50} color="#cbd5e1" />
+            <Ionicons name="calendar-clear-outline" size={50} color={theme.iconSecondary} />
             <Text style={styles.emptyTitle}>
               {filtroVista === 'dia' ? 'Sin actividades este día' : 'Sin eventos programados'}
             </Text>
@@ -243,7 +244,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   },
   tabButtonActive: {
     backgroundColor: theme.card,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -275,7 +276,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     borderRadius: 30, 
     justifyContent: 'center', 
     alignItems: 'center', 
-    shadowColor: '#007bff', 
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 6 }, 
     shadowOpacity: 0.4, 
     shadowRadius: 10, 

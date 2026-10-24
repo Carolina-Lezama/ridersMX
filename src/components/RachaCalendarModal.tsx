@@ -153,7 +153,7 @@ export const RachaCalendarModal: React.FC<RachaCalendarModalProps> = ({
 const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: theme.overlay,
     justifyContent: 'center',
     padding: 20,
   },
@@ -168,7 +168,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   subtitulo: { fontSize: 14, color: theme.textSecondary, marginTop: 5, marginBottom: 20 },
   loader: { marginVertical: 30 },
-  errorCarga: { color: '#ef4444', marginVertical: 20, textAlign: 'center' },
+  errorCarga: { color: theme.dangerText, marginVertical: 20, textAlign: 'center' },
   calendarioGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -189,8 +189,8 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     justifyContent: 'center',
     alignItems: 'center',
   },
-  circuloCompletado: { backgroundColor: '#ff572215', borderColor: '#ff572240' },
-  circuloComodin: { backgroundColor: '#3b82f618', borderColor: '#3b82f660' },
+  circuloCompletado: { backgroundColor: `${theme.accent}15`, borderColor: `${theme.accent}40` },
+  circuloComodin: { backgroundColor: `${theme.primary}18`, borderColor: `${theme.primary}60` },
   iconoRacha: { fontSize: 18 },
   leyenda: { flexDirection: 'row', justifyContent: 'center', gap: 18, marginBottom: 20 },
   leyendaTexto: { color: theme.textSecondary, fontSize: 12 },
@@ -200,5 +200,5 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     borderRadius: 14,
     alignItems: 'center',
   },
-  btnTexto: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  btnTexto: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 });

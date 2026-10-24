@@ -392,7 +392,7 @@ const createStyles = (theme: Theme) =>
       marginTop: -8,
       marginBottom: 15,
       elevation: 5,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.1,
       shadowRadius: 8,
@@ -419,7 +419,7 @@ const createStyles = (theme: Theme) =>
     },
     chipSelected: { backgroundColor: theme.primary, borderColor: theme.primary },
     chipText: { fontSize: 14, fontWeight: '600', color: theme.textSecondary },
-    chipTextSelected: { color: '#ffffff' },
+    chipTextSelected: { color: theme.onPrimary },
 
     row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
     selectCard: {
@@ -438,7 +438,7 @@ const createStyles = (theme: Theme) =>
       marginTop: 20,
     },
 
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'flex-end' },
+    modalOverlay: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'flex-end' },
     modalContent: {
       backgroundColor: theme.card,
       borderTopLeftRadius: 24,

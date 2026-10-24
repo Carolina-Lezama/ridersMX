@@ -46,7 +46,7 @@ export const AvisoTiempoModal = ({ visible, minutos, onClose }: Props) => {
 const createStyles = (theme: any) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: theme.overlay,
     justifyContent: 'flex-start',
     alignItems: 'center',
     paddingTop: Platform.OS === 'web' ? 40 : 60,
@@ -94,7 +94,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   btnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontWeight: 'bold',
     fontSize: 14,
   },

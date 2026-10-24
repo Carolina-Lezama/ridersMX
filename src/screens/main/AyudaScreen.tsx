@@ -196,7 +196,7 @@ export default function AyudaScreen({ navigation }: any) {
             onPress={() => setContactVisible(true)}
             style={styles.primaryButton}
           >
-            <Ionicons name="chatbubble-ellipses-outline" size={20} color="#ffffff" />
+            <Ionicons name="chatbubble-ellipses-outline" size={20} color={theme.onPrimary} />
             <Text style={styles.primaryButtonText}>Contactar soporte</Text>
           </TouchableOpacity>
         </View>
@@ -259,10 +259,10 @@ export default function AyudaScreen({ navigation }: any) {
                 style={[styles.primaryButton, enviando && styles.disabledButton]}
               >
                 {enviando ? (
-                  <ActivityIndicator color="#ffffff" />
+                  <ActivityIndicator color={theme.onPrimary} />
                 ) : (
                   <>
-                    <Ionicons name="send-outline" size={18} color="#ffffff" />
+                    <Ionicons name="send-outline" size={18} color={theme.onPrimary} />
                     <Text style={styles.primaryButtonText}>Enviar mensaje</Text>
                   </>
                 )}
@@ -358,7 +358,7 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  primaryButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
+  primaryButtonText: { color: theme.onPrimary, fontSize: 16, fontWeight: 'bold' },
   disabledButton: { opacity: 0.7 },
   legalContainer: { marginTop: 32, alignItems: 'center' },
   legalLink: { paddingVertical: 8 },
@@ -368,7 +368,7 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    backgroundColor: theme.overlay,
   },
   modalContent: {
     backgroundColor: theme.card,

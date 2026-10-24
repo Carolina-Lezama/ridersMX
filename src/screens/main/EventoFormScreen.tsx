@@ -272,12 +272,12 @@ export default function EventoFormScreen({ navigation, route }: any) {
           <Text style={styles.label}>¿Qué tipo de evento es?</Text>
           <View style={styles.chipsContainer}>
             <TouchableOpacity style={[styles.chipBase, tipo === 'rodada' && styles.chipActive]} onPress={() => setTipo('rodada')}>
-              <Ionicons name="map-outline" size={16} color={tipo === 'rodada' ? '#fff' : theme.textSecondary} />
+              <Ionicons name="map-outline" size={16} color={tipo === 'rodada' ? theme.onPrimary : theme.textSecondary} />
               <Text style={[styles.chipTextBase, tipo === 'rodada' && styles.chipTextActive]}> Rodada</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={[styles.chipBase, tipo === 'mantenimiento' && styles.chipMantenimientoActivo]} onPress={() => setTipo('mantenimiento')}>
-              <Ionicons name="build-outline" size={16} color={tipo === 'mantenimiento' ? '#fff' : theme.textSecondary} />
+              <Ionicons name="build-outline" size={16} color={tipo === 'mantenimiento' ? theme.onPrimary : theme.textSecondary} />
               <Text style={[styles.chipTextBase, tipo === 'mantenimiento' && styles.chipTextActive]}> Taller / Mantenimiento</Text>
             </TouchableOpacity>
           </View>
@@ -390,7 +390,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
                   <Ionicons
                     name="bicycle-outline"
                     size={16}
-                    color={seleccionada ? '#fff' : theme.textSecondary}
+                    color={seleccionada ? theme.onPrimary : theme.textSecondary}
                   />
                   <Text style={[styles.chipTextBase, seleccionada && styles.chipTextActive]}>
                     {' '}{nombreMoto}
@@ -403,7 +403,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
               motoAsociada !== OTRO_ACOMPANANTE &&
               !motos.some((moto) => (moto.alias || `${moto.marca} ${moto.modelo}`) === motoAsociada) && (
                 <TouchableOpacity style={[styles.chipBase, styles.chipActive]} onPress={() => setMotoAsociada('')}>
-                  <Ionicons name="bicycle-outline" size={16} color="#fff" />
+                  <Ionicons name="bicycle-outline" size={16} color={theme.onPrimary} />
                   <Text style={[styles.chipTextBase, styles.chipTextActive]}> {motoAsociada}</Text>
                 </TouchableOpacity>
               )}
@@ -419,7 +419,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
               <Ionicons
                 name="people-outline"
                 size={16}
-                color={motoAsociada === OTRO_ACOMPANANTE ? '#fff' : theme.textSecondary}
+                color={motoAsociada === OTRO_ACOMPANANTE ? theme.onPrimary : theme.textSecondary}
               />
               <Text
                 style={[
@@ -464,7 +464,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
 
         {esEdicion && !saving && (
           <TouchableOpacity style={styles.btnEliminar} onPress={handleEliminar}>
-            <Ionicons name="trash-outline" size={20} color="#ef4444" />
+            <Ionicons name="trash-outline" size={20} color={theme.dangerText} />
             <Text style={styles.textEliminar}>Borrar de la Agenda</Text>
           </TouchableOpacity>
         )}
@@ -536,9 +536,9 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     borderRadius: 20,
   },
   chipActive: { backgroundColor: theme.primary, borderColor: theme.primary },
-  chipMantenimientoActivo: { backgroundColor: '#ef4444', borderColor: '#ef4444' },
+  chipMantenimientoActivo: { backgroundColor: theme.dangerText, borderColor: theme.dangerText },
   chipTextBase: { color: theme.textSecondary, fontSize: 14, fontWeight: '600' },
-  chipTextActive: { color: '#fff', fontWeight: 'bold' },
+  chipTextActive: { color: theme.onPrimary, fontWeight: 'bold' },
   estadoChipActive: { backgroundColor: theme.textPrimary, borderColor: theme.textPrimary },
   chipClear: { justifyContent: 'center', paddingHorizontal: 6 },
   motosVacias: { color: theme.textSecondary, fontSize: 13, marginTop: 8 },

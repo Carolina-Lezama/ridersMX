@@ -78,7 +78,7 @@ export const RachaWidget: React.FC<RachaWidgetProps> = ({
           <Ionicons
             name={completadoHoy ? 'calendar-outline' : 'chevron-forward'}
             size={22}
-            color={completadoHoy ? '#10b981' : theme.textSecondary}
+            color={completadoHoy ? theme.successText : theme.textSecondary}
           />
         </>
       )}
@@ -101,12 +101,12 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       marginVertical: 10,
     },
     cardCompletado: {
-      borderColor: '#10b98140',
-      backgroundColor: '#10b9810a',
+      borderColor: `${theme.successText}40`,
+      backgroundColor: `${theme.successText}0a`,
     },
     cardSalvado: {
-      borderColor: '#3b82f660',
-      backgroundColor: '#3b82f60d',
+      borderColor: `${theme.primary}60`,
+      backgroundColor: `${theme.primary}0d`,
     },
     contentLeft: {
       flexDirection: 'row',
@@ -118,12 +118,12 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       width: 46,
       height: 46,
       borderRadius: 14,
-      backgroundColor: '#ff572218',
+      backgroundColor: `${theme.accent}18`,
       alignItems: 'center',
       justifyContent: 'center',
     },
     iconCompletado: {
-      backgroundColor: '#10b98118',
+      backgroundColor: `${theme.successText}18`,
     },
     llamaIcon: {
       fontSize: 24,
@@ -144,17 +144,17 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       color: theme.textPrimary,
     },
     badgeComodines: {
-      backgroundColor: '#3b82f618',
+      backgroundColor: `${theme.primary}18`,
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: '#3b82f630',
+      borderColor: `${theme.primary}30`,
     },
     comodinesTexto: {
       fontSize: 11,
       fontWeight: '700',
-      color: '#2563eb',
+      color: theme.primary,
     },
     subtextoPendiente: {
       fontSize: 12,
@@ -163,11 +163,11 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
     subtextoCompletado: {
       fontSize: 12,
       fontWeight: '600',
-      color: '#10b981',
+      color: theme.successText,
     },
     subtextoSalvado: {
       fontSize: 12,
       fontWeight: '600',
-      color: '#2563eb',
+      color: theme.primary,
     },
   });

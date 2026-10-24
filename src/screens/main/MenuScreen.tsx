@@ -10,23 +10,23 @@ export default function MenuScreen({ navigation }: any) {
 
   // SECCIÓN 1: Sobre mí
   const seccionSobreMi = [
-    { id: 'Perfil', icon: 'person-outline', label: 'Mi Perfil', color: '#8b5cf6' },
-    { id: 'MisMotos', icon: 'bicycle-outline', label: 'Mi Garaje', color: '#3b82f6' },
-    { id: 'Calendario', icon: 'calendar-outline', label: 'Mi Agenda', color: '#ef4444' },
+    { id: 'Perfil', icon: 'person-outline', label: 'Mi Perfil', color: theme.violet },
+    { id: 'MisMotos', icon: 'bicycle-outline', label: 'Mi Garaje', color: theme.primary },
+    { id: 'Calendario', icon: 'calendar-outline', label: 'Mi Agenda', color: theme.dangerText },
   ];
 
   // SECCIÓN 2: Comunidad
   const seccionComunidad = [
-    { id: 'Foro', icon: 'chatbubbles-outline', label: 'Foro de Riders', color: '#10b981' },
-    { id: 'Resenas', icon: 'star-outline', label: 'Mis Reseñas', color: '#f59e0b' },
-    { id: 'Mantenimiento', icon: 'build-outline', label: 'Mantenimiento', color: '#ec4899' },
-    { id: 'Diagnostico', icon: 'pulse-outline', label: 'Diagnóstico', color: '#14b8a6' },
+    { id: 'Foro', icon: 'chatbubbles-outline', label: 'Foro de Riders', color: theme.successText },
+    { id: 'Resenas', icon: 'star-outline', label: 'Mis Reseñas', color: theme.star },
+    { id: 'Mantenimiento', icon: 'build-outline', label: 'Mantenimiento', color: theme.pink },
+    { id: 'Diagnostico', icon: 'pulse-outline', label: 'Diagnóstico', color: theme.teal },
   ];
 
   // SECCIÓN 3: Ajustes y ayuda
   const seccionAjustesAyuda = [
-    { id: 'Ayuda', icon: 'help-circle-outline', label: 'Ayuda y Soporte', color: '#06b6d4' },
-    { id: 'Configuracion', icon: 'settings-outline', label: 'Configuración', color: '#64748b' },
+    { id: 'Ayuda', icon: 'help-circle-outline', label: 'Ayuda y Soporte', color: theme.cyan },
+    { id: 'Configuracion', icon: 'settings-outline', label: 'Configuración', color: theme.textSecondary },
   ];
 
   // FUNCIÓN: Cierre de sesión adaptable a Web y Móvil
@@ -124,7 +124,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   header: { marginTop: 60, marginBottom: 20 },
   tituloMenu: { fontSize: 28, fontWeight: 'bold', color: theme.textPrimary },
   seccionTitulo: { fontSize: 14, fontWeight: 'bold', color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, marginTop: 15, marginLeft: 5 },
-  tarjetaSeccion: { backgroundColor: theme.card, borderRadius: 20, paddingHorizontal: 15, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
+  tarjetaSeccion: { backgroundColor: theme.card, borderRadius: 20, paddingHorizontal: 15, marginBottom: 20, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
   opcion: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: theme.divider },
   opcionSinBorde: { borderBottomWidth: 0 },
   iconContainer: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
