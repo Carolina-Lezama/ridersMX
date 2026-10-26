@@ -7,6 +7,8 @@ import {
   FlatList,
   Modal,
   Pressable,
+  Share,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../../assets/theme/ThemeContext'; 
@@ -112,6 +114,19 @@ export default function InsigniasScreen() {
   const cerrarDetalle = () => {
     setModalVisible(false);
     setInsigniaSeleccionada(null);
+  };
+
+  const compartirInsignia = async (insignia: Insignia) => {
+    try {
+      await Share.share({
+        message: `¡Desbloqueé la insignia "${insignia.nombre}" en RidersMX! ${insignia.descripcion}`,
+      });
+    } catch (error) {
+      Alert.alert(
+        'No se pudo compartir',
+        error instanceof Error ? error.message : 'Inténtalo de nuevo más tarde.',
+      );
+    }
   };
 
   const renderInsigniaCard = ({ item }: { item: Insignia }) => {
@@ -301,7 +316,7 @@ export default function InsigniasScreen() {
                       styles.btnPrimary,
                       { backgroundColor: theme.primary },
                     ]}
-                    onPress={() => console.log('Compartir logro')}
+                    onPress={() => void compartirInsignia(insigniaSeleccionada)}
                   >
                     <Ionicons name="share-social-outline" size={18} color={theme.onPrimary} />
                     <Text style={styles.btnPrimaryText}>Compartir Logro</Text>

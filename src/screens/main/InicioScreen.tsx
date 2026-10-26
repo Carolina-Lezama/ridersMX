@@ -369,6 +369,26 @@ export default function InicioScreen({ navigation }: any) {
         />
       )}
 
+{/* En InicioScreen.tsx */}
+<View style={styles.sectionHeader}>
+  <Text style={styles.sectionTitle}>Estado de tu Moto</Text>
+  <View style={{ flexDirection: 'row', gap: 12 }}>
+    <TouchableOpacity onPress={() => navigation.navigate('Estadisticas')}>
+      <Text style={[styles.sectionLink, { color: theme.primary }]}>Ver Gráficas</Text>
+    </TouchableOpacity>
+    <TouchableOpacity onPress={() => navigation.navigate('MisMotos')}>
+      <Text style={styles.sectionLink}>Ver Garaje</Text>
+    </TouchableOpacity>
+  </View>
+</View>
+
+<View style={styles.sectionHeader}>
+  <Text style={styles.sectionTitle}>Insignias</Text>
+  <TouchableOpacity onPress={() => navigation.navigate('Insignias')}>
+    <Text style={[styles.sectionLink, { color: theme.primary }]}>Ver insignias</Text>
+  </TouchableOpacity>
+</View>
+
       {/* Espaciado inferior para la barra de navegación */}
       <View style={{ height: 40 }} />
     </ScrollView>

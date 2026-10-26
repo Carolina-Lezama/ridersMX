@@ -35,7 +35,8 @@ import MotoFormScreen from '../screens/main/MotoFormScreen';
 import CalendarioScreen from '../screens/main/CalendarioScreen';
 import EventoFormScreen from '../screens/main/EventoFormScreen';
 
-
+import EstadisticasScreen from '../screens/main/dashboard/EstadisticasScreen';
+import InsigniasScreen from '../screens/main/dashboard/InsigniasScreen';
 
 // ============================================================================
 // ZONA DE IMPORTACIONES: JOSHUA
@@ -232,7 +233,8 @@ export default function RootNavigator({ isFirstLaunch, hasSession }: { isFirstLa
           <Stack.Screen name="Calendario" component={CalendarioScreen} />
           <Stack.Screen name="EventoForm" component={EventoFormScreen} />
 
-
+          <Stack.Screen name="Estadisticas" component={EstadisticasScreen} />
+          <Stack.Screen name="Insignias" component={InsigniasScreen} />
 
           {/* ============================================================================ */}
           {/* ZONA DE PANTALLAS: JOSHUA       */}
