@@ -63,15 +63,21 @@ export const obtenerKilometrosPorMes = async (perfilId: string, motoId?: string 
 // 2. Obtener comparativa de gastos: Gastos en Ruta vs Mantenimientos
 export const obtenerDesgloseGastos = async (perfilId: string, motoId?: string | null): Promise<GastosDesgloseData> => {
   let queryRutas = supabase.from('bitacoras_rodadas').select('gastos_ruta').eq('perfil_id', perfilId);
-  let queryMant = supabase.from('mantenimientos').select('costo').eq('perfil_id', perfilId);
+  let queryMotos = supabase.from('motocicletas').select('id').eq('perfil_id', perfilId);
 
   if (motoId) {
     queryRutas = queryRutas.eq('motocicleta_id', motoId);
-    queryMant = queryMant.eq('motocicleta_id', motoId);
+    queryMotos = queryMotos.eq('id', motoId);
   }
 
-  const [resRutas, resMant] = await Promise.all([queryRutas, queryMant]);
+  const [resRutas, resMotos] = await Promise.all([queryRutas, queryMotos]);
   if (resRutas.error) throw resRutas.error;
+  if (resMotos.error) throw resMotos.error;
+
+  const motocicletaIds = (resMotos.data || []).map((moto) => moto.id);
+  const resMant = motocicletaIds.length > 0
+    ? await supabase.from('mantenimientos').select('costo').in('motocicleta_id', motocicletaIds)
+    : { data: [], error: null };
   if (resMant.error) throw resMant.error;
 
   const totalRutas = (resRutas.data || []).reduce((acc, row) => acc + Number(row.gastos_ruta || 0), 0);

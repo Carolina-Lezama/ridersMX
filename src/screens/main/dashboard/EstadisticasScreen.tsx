@@ -90,6 +90,7 @@ export default function EstadisticasScreen({ navigation }: any) {
       ) : null
     ),
   }));
+  const hayKilometros = barData.some((item) => item.value > 0);
 
   // Formato de datos para PieChart (Gastos)
   const pieData = [
@@ -140,7 +141,12 @@ export default function EstadisticasScreen({ navigation }: any) {
         {loading ? (
           <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 50 }} />
         ) : errorCarga ? (
-          <Text style={styles.errorText}>{errorCarga}</Text>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{errorCarga}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={cargarEstadisticas}>
+              <Text style={styles.retryButtonText}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <>
             {/* GRÁFICA 1: KILÓMETROS POR MES */}
@@ -150,20 +156,26 @@ export default function EstadisticasScreen({ navigation }: any) {
                 <Text style={styles.cardTitle}>Distancia Recorrida (Km/Mes)</Text>
               </View>
               <View style={styles.chartContainer}>
-                <BarChart
-                  data={barData}
-                  barWidth={28}
-                  initialSpacing={10}
-                  spacing={14}
-                  barBorderRadius={6}
-                  yAxisThickness={0}
-                  xAxisThickness={1}
-                  xAxisColor={theme.border}
-                  yAxisTextStyle={{ color: theme.textSecondary, fontSize: 10 }}
-                  xAxisLabelTextStyle={{ color: theme.textSecondary, fontSize: 11 }}
-                  noOfSections={4}
-                  isAnimated
-                />
+                {hayKilometros ? (
+                  <BarChart
+                    data={barData}
+                    barWidth={28}
+                    initialSpacing={10}
+                    spacing={14}
+                    barBorderRadius={6}
+                    yAxisThickness={0}
+                    xAxisThickness={1}
+                    xAxisColor={theme.border}
+                    yAxisTextStyle={{ color: theme.textSecondary, fontSize: 10 }}
+                    xAxisLabelTextStyle={{ color: theme.textSecondary, fontSize: 11 }}
+                    noOfSections={4}
+                    isAnimated
+                  />
+                ) : (
+                  <Text style={styles.emptyText}>
+                    Aún no tienes kilómetros registrados. Registra una rodada para ver tu progreso.
+                  </Text>
+                )}
               </View>
             </View>
 
@@ -281,6 +293,14 @@ const createStyles = (theme: any) =>
     chartContainer: { alignItems: 'center', paddingVertical: 10 },
     emptyText: { color: theme.textSecondary, fontSize: 13, textAlign: 'center', marginVertical: 12 },
     errorText: { color: theme.dangerText, fontSize: 13, textAlign: 'center', marginVertical: 12 },
+    errorContainer: { alignItems: 'center', marginTop: 24 },
+    retryButton: {
+      backgroundColor: theme.primary,
+      borderRadius: 18,
+      paddingHorizontal: 18,
+      paddingVertical: 9,
+    },
+    retryButtonText: { color: '#ffffff', fontSize: 13, fontWeight: '700' },
     pieRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingVertical: 8 },
     legendContainer: { gap: 10 },
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },

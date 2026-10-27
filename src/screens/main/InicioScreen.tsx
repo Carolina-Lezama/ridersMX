@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../assets/theme/ThemeContext';
@@ -586,11 +586,16 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     padding: 18,
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: theme.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
+    ...Platform.select({
+      web: { boxShadow: `0px 4px 8px ${theme.shadow}08` },
+      default: {
+        shadowColor: theme.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.03,
+        shadowRadius: 8,
+        elevation: 2,
+      },
+    }),
   },
   cardHeaderRow: {
     flexDirection: 'row',

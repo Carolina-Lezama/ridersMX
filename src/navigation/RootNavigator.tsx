@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated } from 'react-native';
+import { Animated, Platform } from 'react-native';
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -122,13 +122,13 @@ function AnimatedTabIcon({
     Animated.sequence([
       Animated.spring(scale, {
         toValue: 1.2,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
         speed: 30,
         bounciness: 8,
       }),
       Animated.spring(scale, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
         speed: 20,
         bounciness: 4,
       }),

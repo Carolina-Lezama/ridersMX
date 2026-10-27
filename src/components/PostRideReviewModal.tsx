@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../assets/theme/ThemeContext';
 import {
+  guardarResenaMantenimiento,
   guardarResenaRodada,
   ignorarEventoPendiente,
   parseEventoDateTime,
@@ -61,6 +62,9 @@ export default function PostRideReviewModal({
   const [duracion, setDuracion] = useState('');
   const [notas, setNotas] = useState('');
   const [fotoUri, setFotoUri] = useState<string | null>(null);
+  const [kilometraje, setKilometraje] = useState('');
+  const [taller, setTaller] = useState('');
+  const [costo, setCosto] = useState('');
   
   // Nuevos estados para las motos
   const [motos, setMotos] = useState<Moto[]>([]);
@@ -69,6 +73,7 @@ export default function PostRideReviewModal({
   const [guardando, setGuardando] = useState(false);
 
   const fechaEvento = parseEventoDateTime(evento?.fecha, evento?.hora);
+  const esMantenimiento = evento?.tipo === 'mantenimiento';
   const fechaFormateada = fechaEvento?.toLocaleDateString('es-MX', {
     day: 'numeric',
     month: 'long',
@@ -86,6 +91,9 @@ export default function PostRideReviewModal({
       setDuracion('');
       setNotas('');
       setFotoUri(null);
+      setKilometraje('');
+      setTaller('');
+      setCosto('');
       setMotocicletaSeleccionada(null);
       setGuardando(false);
     }
@@ -144,14 +152,29 @@ export default function PostRideReviewModal({
   const handleGuardar = async () => {
     if (!evento?.id) return;
     
-    // Validación de moto
     if (!motocicletaSeleccionada && motos.length > 0) {
-      Alert.alert('Falta información', 'Por favor selecciona la motocicleta que usaste en esta rodada.');
+      Alert.alert('Falta información', 'Selecciona la motocicleta asociada a este evento.');
       return;
     }
 
     if (rating === 0) {
-      Alert.alert('Falta tu calificación', 'Califica la ruta con 1 a 5 estrellas para continuar.');
+      Alert.alert(
+        'Falta tu calificación',
+        esMantenimiento
+          ? 'Califica el servicio con 1 a 5 estrellas para continuar.'
+          : 'Califica la ruta con 1 a 5 estrellas para continuar.',
+      );
+      return;
+    }
+
+    const kilometrajeNumero = kilometraje.trim() ? Number(kilometraje.replace(',', '.')) : null;
+    const costoNumero = costo.trim() ? Number(costo.replace(',', '.')) : null;
+    if (
+      esMantenimiento
+      && ((kilometrajeNumero !== null && (!Number.isInteger(kilometrajeNumero) || kilometrajeNumero < 0))
+        || (costoNumero !== null && (!Number.isFinite(costoNumero) || costoNumero < 0)))
+    ) {
+      Alert.alert('Datos no válidos', 'El kilometraje y el costo deben ser valores válidos y no negativos.');
       return;
     }
 
@@ -160,21 +183,31 @@ export default function PostRideReviewModal({
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
 
-      const distanciaKm = distancia ? Number(distancia.replace(',', '.')) : 0;
-      const duracionMinutos = duracion ? Number(duracion.replace(',', '.')) : 0;
-
-      // ATENCIÓN: Asegúrate de actualizar tu función `guardarResenaRodada`
-      // en `reviewService.ts` para que acepte el parámetro `motocicletaId`
-      await guardarResenaRodada({
-        userId: session.user.id,
-        eventoId: evento.id,
-        motocicletaId: motocicletaSeleccionada, // <-- Nuevo parámetro enviado
-        calificacion: rating,
-        distanciaKm: Number.isFinite(distanciaKm) ? distanciaKm : 0,
-        duracionMinutos: Number.isFinite(duracionMinutos) ? duracionMinutos : 0,
-        comentarios: notas.trim(),
-        fotoUri,
-      });
+      if (esMantenimiento) {
+        await guardarResenaMantenimiento({
+          userId: session.user.id,
+          eventoId: evento.id,
+          motocicletaId: motocicletaSeleccionada,
+          calificacion: rating,
+          kilometraje: kilometrajeNumero,
+          taller,
+          costo: costoNumero,
+          comentarios: notas,
+        });
+      } else {
+        const distanciaKm = distancia ? Number(distancia.replace(',', '.')) : 0;
+        const duracionMinutos = duracion ? Number(duracion.replace(',', '.')) : 0;
+        await guardarResenaRodada({
+          userId: session.user.id,
+          eventoId: evento.id,
+          motocicletaId: motocicletaSeleccionada,
+          calificacion: rating,
+          distanciaKm: Number.isFinite(distanciaKm) ? distanciaKm : 0,
+          duracionMinutos: Number.isFinite(duracionMinutos) ? duracionMinutos : 0,
+          comentarios: notas,
+          fotoUri,
+        });
+      }
 
       onSuccess();
       onClose();
@@ -211,7 +244,7 @@ export default function PostRideReviewModal({
        await ignorarEventoPendiente(session.user.id, evento.id);
        onClose();
      } catch (error) {
-       Alert.alert('Error', 'No se pudo ignorar esta rodada.');
+       Alert.alert('Error', 'No se pudo ignorar este evento.');
      } finally {
        setGuardando(false);
      }
@@ -223,10 +256,15 @@ export default function PostRideReviewModal({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.titulo}>¡Parece que ya pasó una rodada!</Text>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <Text style={styles.titulo}>
+            {esMantenimiento ? '¿Cómo fue el mantenimiento?' : '¡Parece que ya pasó una rodada!'}
+          </Text>
           
           <View style={styles.eventoInfoContainer}>
-            <Text style={styles.eventoTitulo}>{evento.titulo || 'Rodada sin título'}</Text>
+            <Text style={styles.eventoTitulo}>
+              {evento.titulo || (esMantenimiento ? 'Mantenimiento sin título' : 'Rodada sin título')}
+            </Text>
             {(fechaFormateada || horaFormateada) ? (
               <View style={styles.eventoFechaContainer}>
                 <Ionicons name="calendar-outline" size={16} color={theme.textSecondary} />
@@ -237,10 +275,11 @@ export default function PostRideReviewModal({
             ) : null}
           </View>
 
-          {/* SECCIÓN NUEVA: Selección de Motocicleta */}
           {motos.length > 0 && (
             <View style={styles.motoSection}>
-              <Text style={styles.motoLabel}>¿Qué moto usaste?</Text>
+              <Text style={styles.motoLabel}>
+                {esMantenimiento ? '¿A qué moto se le hizo el servicio?' : '¿Qué moto usaste?'}
+              </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.motoList}>
                 {motos.map((moto) => {
                   const isSelected = motocicletaSeleccionada === moto.id;
@@ -267,7 +306,9 @@ export default function PostRideReviewModal({
           )}
           {cargandoMotos && <ActivityIndicator size="small" color={theme.primary} style={{ marginTop: 10 }} />}
 
-          <Text style={styles.subtitulo}>¿Qué tal estuvo el viaje?</Text>
+          <Text style={styles.subtitulo}>
+            {esMantenimiento ? 'Califica el servicio recibido' : '¿Qué tal estuvo el viaje?'}
+          </Text>
 
           <View style={styles.starsContainer}>
             {[1, 2, 3, 4, 5].map((star) => (
@@ -281,35 +322,75 @@ export default function PostRideReviewModal({
             ))}
           </View>
 
-          <View style={styles.rowInputs}>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="speedometer-outline" size={18} color={theme.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                keyboardType="decimal-pad"
-                placeholder="Km aprox."
-                placeholderTextColor={theme.textSecondary}
-                value={distancia}
-                onChangeText={setDistancia}
-              />
+          {esMantenimiento ? (
+            <>
+              <View style={styles.rowInputs}>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="speedometer-outline" size={18} color={theme.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    placeholder="Km al servicio"
+                    placeholderTextColor={theme.textSecondary}
+                    value={kilometraje}
+                    onChangeText={setKilometraje}
+                  />
+                </View>
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.inputIcon}>$</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="decimal-pad"
+                    placeholder="Costo (opcional)"
+                    placeholderTextColor={theme.textSecondary}
+                    value={costo}
+                    onChangeText={setCosto}
+                  />
+                </View>
+              </View>
+              <View style={[styles.inputWrapper, { marginBottom: 14 }]}>
+                <Ionicons name="business-outline" size={18} color={theme.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Taller o mecánico (opcional)"
+                  placeholderTextColor={theme.textSecondary}
+                  value={taller}
+                  onChangeText={setTaller}
+                />
+              </View>
+            </>
+          ) : (
+            <View style={styles.rowInputs}>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="speedometer-outline" size={18} color={theme.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  keyboardType="decimal-pad"
+                  placeholder="Km aprox."
+                  placeholderTextColor={theme.textSecondary}
+                  value={distancia}
+                  onChangeText={setDistancia}
+                />
+              </View>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="time-outline" size={18} color={theme.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  placeholder="Min."
+                  placeholderTextColor={theme.textSecondary}
+                  value={duracion}
+                  onChangeText={setDuracion}
+                />
+              </View>
             </View>
-
-            <View style={styles.inputWrapper}>
-              <Ionicons name="time-outline" size={18} color={theme.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                placeholder="Min."
-                placeholderTextColor={theme.textSecondary}
-                value={duracion}
-                onChangeText={setDuracion}
-              />
-            </View>
-          </View>
+          )}
 
           <TextInput
             style={styles.textArea}
-            placeholder="¿Qué tal fue la ruta? Comparte una nota o anécdota"
+            placeholder={esMantenimiento
+              ? 'Comparte detalles del servicio o del trabajo realizado'
+              : '¿Qué tal fue la ruta? Comparte una nota o anécdota'}
             placeholderTextColor={theme.textSecondary}
             multiline
             numberOfLines={4}
@@ -317,12 +398,15 @@ export default function PostRideReviewModal({
             onChangeText={setNotas}
           />
 
-          <TouchableOpacity style={styles.photoButton} onPress={seleccionarFoto} activeOpacity={0.85}>
-            <Ionicons name={fotoUri ? 'image' : 'camera-outline'} size={22} color={theme.primary} />
-            <Text style={styles.photoButtonText}>{fotoUri ? 'Cambiar foto' : 'Añadir foto del día (opcional)'}</Text>
-          </TouchableOpacity>
-
-          {fotoUri ? <Image source={{ uri: fotoUri }} style={styles.previewImage} /> : null}
+          {!esMantenimiento && (
+            <>
+              <TouchableOpacity style={styles.photoButton} onPress={seleccionarFoto} activeOpacity={0.85}>
+                <Ionicons name={fotoUri ? 'image' : 'camera-outline'} size={22} color={theme.primary} />
+                <Text style={styles.photoButtonText}>{fotoUri ? 'Cambiar foto' : 'Añadir foto del día (opcional)'}</Text>
+              </TouchableOpacity>
+              {fotoUri ? <Image source={{ uri: fotoUri }} style={styles.previewImage} /> : null}
+            </>
+          )}
 
           <TouchableOpacity
             style={[styles.saveBtn, guardando && { opacity: 0.7 }]}
@@ -330,7 +414,11 @@ export default function PostRideReviewModal({
             disabled={guardando}
             activeOpacity={0.9}
           >
-            {guardando ? <ActivityIndicator color={theme.onPrimary} /> : <Text style={styles.saveBtnText}>Guardar en mi bitácora</Text>}
+            {guardando
+              ? <ActivityIndicator color={theme.onPrimary} />
+              : <Text style={styles.saveBtnText}>
+                {esMantenimiento ? 'Guardar reseña del servicio' : 'Guardar en mi bitácora'}
+              </Text>}
           </TouchableOpacity>
 
           {guardando ? (
@@ -349,6 +437,7 @@ export default function PostRideReviewModal({
               </TouchableOpacity>
             </View>
           )}
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -375,7 +464,7 @@ const createStyles = (theme: any) =>
   StyleSheet.create({
     // ... (Mantén todos tus estilos anteriores iguales, y añade estos nuevos al final:)
     modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: theme.overlay },
-    modalContent: { backgroundColor: theme.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 22, paddingBottom: 28, borderWidth: 1, borderColor: theme.border },
+    modalContent: { backgroundColor: theme.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 22, paddingBottom: 28, borderWidth: 1, borderColor: theme.border, maxHeight: '90%' },
     titulo: { color: theme.textPrimary, fontSize: 23, fontWeight: '800', textAlign: 'center' },
     eventoInfoContainer: { backgroundColor: theme.background, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14, borderWidth: 1, borderColor: theme.border },
     eventoTitulo: { color: theme.textPrimary, fontSize: 16, fontWeight: '700', textAlign: 'center' },

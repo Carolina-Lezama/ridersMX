@@ -1883,9 +1883,9 @@ function AvisoToast({
   useEffect(() => {
     if (!aviso) return;
     opacidad.setValue(0);
-    Animated.timing(opacidad, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+    Animated.timing(opacidad, { toValue: 1, duration: 220, useNativeDriver: Platform.OS !== 'web' }).start();
     const t = setTimeout(() => {
-      Animated.timing(opacidad, { toValue: 0, duration: 220, useNativeDriver: true }).start(onHide);
+      Animated.timing(opacidad, { toValue: 0, duration: 220, useNativeDriver: Platform.OS !== 'web' }).start(onHide);
     }, 4000);
     return () => clearTimeout(t);
   }, [aviso]);
@@ -1894,10 +1894,9 @@ function AvisoToast({
   const ok = aviso.tipo === 'ok';
   return (
     <Animated.View
-      pointerEvents="none"
       style={[
         styles.toast,
-        { opacity: opacidad, backgroundColor: ok ? C.successBg : C.dangerSoft, borderColor: ok ? C.success : C.danger },
+        { pointerEvents: 'none', opacity: opacidad, backgroundColor: ok ? C.successBg : C.dangerSoft, borderColor: ok ? C.success : C.danger },
       ]}
     >
       <Ionicons name={ok ? 'checkmark-circle' : 'close-circle'} size={22} color={ok ? C.success : C.danger} />
@@ -2715,7 +2714,7 @@ function AvisoFlotante({ aviso, onCerrar }: { aviso: AvisoData | null; onCerrar:
     );
   }
   return (
-    <View style={styles.avisoToast} pointerEvents="box-none">
+    <View style={[styles.avisoToast, { pointerEvents: 'box-none' }]}>
       <TouchableOpacity activeOpacity={0.95} onPress={onCerrar}>
         {tarjeta}
       </TouchableOpacity>

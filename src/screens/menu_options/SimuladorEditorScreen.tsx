@@ -243,7 +243,7 @@ const CapaBase = React.memo(function CapaBase(p: BaseProps) {
         <Image source={fuenteImg} style={[imgStyle, { tintColor: p.colorPrincipal, opacity: INTENSIDAD_TINTE }]} resizeMode="contain" />
       )}
       {(p.trazos.length > 0 || p.vivo) && (
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
           <Svg width={p.width} height={p.height} viewBox="0 0 400 240">
             {p.trazos.map((t) => (
               <Path key={t.id} d={t.d} stroke={t.color} strokeWidth={t.ancho} strokeOpacity={t.opacidad} fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -294,11 +294,11 @@ export function LienzoEstatico({ diseno, width }: { diseno: Diseno; width: numbe
       {diseno.elementos.map((el) => (
         <View
           key={el.id}
-          pointerEvents="none"
           style={{
             position: 'absolute',
             left: el.x * W,
             top: el.y * H,
+            pointerEvents: 'none',
             transform: [{ rotate: `${el.rotation}deg` }, { scale: el.scale }],
           }}
         >

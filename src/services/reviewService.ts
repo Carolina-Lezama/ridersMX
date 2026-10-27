@@ -25,15 +25,15 @@ export const parseEventoDateTime = (fecha?: string, hora?: string) => {
     if (!hora) return base;
 
     const limpio = hora.trim();
-    const match = limpio.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    const match = limpio.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM|A\.?\s*M\.?|P\.?\s*M\.?)?$/i);
 
     if (!match) {
-      return base;
+      return null;
     }
 
     let horas = Number(match[1]);
     const minutos = Number(match[2]);
-    const periodo = (match[3] || '').toUpperCase();
+    const periodo = (match[3] || '').replace(/[^a-z]/gi, '').toUpperCase();
     if (
       minutos > 59
       || (periodo && (horas < 1 || horas > 12))
@@ -42,8 +42,8 @@ export const parseEventoDateTime = (fecha?: string, hora?: string) => {
       return null;
     }
 
-    if (periodo === 'PM' && horas < 12) horas += 12;
-    if (periodo === 'AM' && horas === 12) horas = 0;
+    if (periodo.startsWith('P') && horas < 12) horas += 12;
+    if (periodo.startsWith('A') && horas === 12) horas = 0;
 
     const fechaConHora = new Date(base);
     fechaConHora.setHours(horas, minutos, 0, 0);
@@ -58,10 +58,11 @@ export const obtenerEventoPendiente = async (userId: string): Promise<ReviewEven
   if (!userId) return null;
 
   const ahora = new Date();
+  const fechaMinimaResena = new Date(ahora.getTime() - 2 * 60 * 60 * 1000);
   const fechaLocal = [
-    ahora.getFullYear(),
-    String(ahora.getMonth() + 1).padStart(2, '0'),
-    String(ahora.getDate()).padStart(2, '0'),
+    fechaMinimaResena.getFullYear(),
+    String(fechaMinimaResena.getMonth() + 1).padStart(2, '0'),
+    String(fechaMinimaResena.getDate()).padStart(2, '0'),
   ].join('-');
 
   const { data, error } = await supabase
@@ -79,7 +80,7 @@ export const obtenerEventoPendiente = async (userId: string): Promise<ReviewEven
 
   const evento = (data ?? []).find((item) => {
     const fechaHora = parseEventoDateTime(item.fecha, item.hora);
-    return !!fechaHora && fechaHora.getTime() <= ahora.getTime();
+    return !!fechaHora && fechaHora.getTime() <= fechaMinimaResena.getTime();
   });
 
   return evento ?? null;
@@ -205,11 +206,58 @@ export const guardarResenaRodada = async ({
       estado_review: 'completado',
       completado: true,
     })
-    .eq('id', eventoId);
+    .eq('id', eventoId)
+    .eq('perfil_id', userId);
 
   if (updateError) {
     throw updateError;
   }
 
   return bitacoraData?.[0] ?? null;
+};
+
+export const guardarResenaMantenimiento = async ({
+  userId,
+  eventoId,
+  motocicletaId,
+  calificacion,
+  kilometraje,
+  taller,
+  costo,
+  comentarios,
+}: {
+  userId: string;
+  eventoId: string;
+  motocicletaId: string | null;
+  calificacion: number;
+  kilometraje: number | null;
+  taller: string;
+  costo: number | null;
+  comentarios: string;
+}) => {
+  const { error: insertError } = await supabase
+    .from('resenas_mantenimiento')
+    .insert({
+      evento_id: eventoId,
+      perfil_id: userId,
+      motocicleta_id: motocicletaId,
+      calificacion: Number(calificacion),
+      kilometraje,
+      taller: taller.trim() || null,
+      costo,
+      comentarios: comentarios.trim(),
+    });
+
+  if (insertError && insertError.code !== '23505') throw insertError;
+
+  const { error: updateError } = await supabase
+    .from('eventos')
+    .update({
+      estado_review: 'completado',
+      completado: true,
+    })
+    .eq('id', eventoId)
+    .eq('perfil_id', userId);
+
+  if (updateError) throw updateError;
 };
