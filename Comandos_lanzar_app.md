@@ -24,38 +24,16 @@ git add .
 git commit -m "onboarding"
 git push origin carolina
 
-
 # Revisar vulnerabilidades (sin cambiar versiones)
+
 npm audit fix
+
 # No uses `npm audit fix --force`: puede bajar Expo/React Native a versiones incompatibles.
 
-# Comandos para Reconstruir la App:
-### Android
-En Windows, configura Java y Android SDK en PowerShell (ajusta `JAVA_HOME` si
-Android Studio esta instalado en otra ruta). Instala tambien el NDK requerido:
+# Generar archivo aab:
 
-```powershell
-$env:JAVA_HOME = "$env:ProgramFiles\Android\Android Studio\jbr"
-$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
-$env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
-$env:Path = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:Path"
-& "$env:ANDROID_HOME\cmdline-tools\latest\bin\sdkmanager.bat" --install "ndk;27.1.12297006"
-```
-
-Abre una terminal nueva si guardaste estas variables de forma permanente en
-Windows.
-
-npm run android
-
-### iOS (se necesita mac con Xcode)
-npm run ios
-
-# Remoto con EAS:
-eas build --profile development --platform android
-
-# o para iOS
-eas build --profile development --platform ios
-
-
-# Pruebas aab:
 npx eas-cli@latest build --platform android --profile production
+
+# Generar archivo apk:
+
+npx eas-cli@latest build --platform android --profile preview
