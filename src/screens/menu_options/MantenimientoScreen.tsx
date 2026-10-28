@@ -79,7 +79,7 @@ export default function MantenimientoScreen({ navigation }: any) {
             <View
               style={[
                 styles.circle,
-                { borderColor: '#ef4444' },
+                { borderColor: theme.dangerText },
                 d.fuente !== 'foto' && { backgroundColor: d.colorPrincipal },
               ]}
             >
@@ -88,13 +88,13 @@ export default function MantenimientoScreen({ navigation }: any) {
             <Text style={styles.progressLabel}>Color Base</Text>
           </View>
           <View style={styles.progressItem}>
-            <View style={[styles.circle, { borderColor: '#10b981' }]}>
+            <View style={[styles.circle, { borderColor: theme.successText }]}>
               <Text style={styles.circleText}>{totalStickers}</Text>
             </View>
             <Text style={styles.progressLabel}>Stickers y rines</Text>
           </View>
           <View style={styles.progressItem}>
-            <View style={[styles.circle, { borderColor: '#f59e0b' }]}>
+            <View style={[styles.circle, { borderColor: theme.warningText }]}>
               <Text style={styles.circleText}>{totalTrazos}</Text>
             </View>
             <Text style={styles.progressLabel}>Trazos de brocha</Text>
@@ -112,7 +112,7 @@ export default function MantenimientoScreen({ navigation }: any) {
             style={styles.gridItem}
             onPress={() => navigation.navigate('SimuladorLibreria', { tab: 'stickers' })}
           >
-            <Ionicons name="pricetag-outline" size={28} color="#10b981" />
+            <Ionicons name="pricetag-outline" size={28} color={theme.successText} />
             <Text style={styles.gridText}>Añadir Sticker</Text>
           </TouchableOpacity>
 
@@ -120,7 +120,7 @@ export default function MantenimientoScreen({ navigation }: any) {
             style={styles.gridItem}
             onPress={() => navigation.navigate('SimuladorEditor', { tab: 'pintura' })}
           >
-            <Ionicons name="color-palette-outline" size={28} color="#3b82f6" />
+            <Ionicons name="color-palette-outline" size={28} color={theme.primary} />
             <Text style={styles.gridText}>Crear Paleta{d.paleta.length > 0 ? ` (${d.paleta.length})` : ''}</Text>
           </TouchableOpacity>
 
@@ -128,7 +128,7 @@ export default function MantenimientoScreen({ navigation }: any) {
             style={styles.gridItem}
             onPress={() => navigation.navigate('SimuladorLibreria', { tab: 'garaje' })}
           >
-            <Ionicons name="images-outline" size={28} color="#8b5cf6" />
+            <Ionicons name="images-outline" size={28} color={theme.violet} />
             <Text style={styles.gridText}>Mis Diseños ({d.garaje.length})</Text>
           </TouchableOpacity>
 
@@ -136,7 +136,7 @@ export default function MantenimientoScreen({ navigation }: any) {
             style={styles.gridItem}
             onPress={() => navigation.navigate('SimuladorEditor', { accion: 'compartir' })}
           >
-            <Ionicons name="share-social-outline" size={28} color="#64748b" />
+            <Ionicons name="share-social-outline" size={28} color={theme.textSecondary} />
             <Text style={styles.gridText}>Compartir</Text>
           </TouchableOpacity>
         </View>
@@ -151,7 +151,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   backButton: { padding: 5 },
   titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   content: { padding: 20, paddingBottom: 40 },
-  mainButton: { backgroundColor: theme.card, height: 160, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 25, borderWidth: 1, borderColor: theme.border, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3 },
+  mainButton: { backgroundColor: theme.card, height: 160, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 25, borderWidth: 1, borderColor: theme.border, elevation: 2, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3 },
   mainButtonText: { color: theme.textPrimary, fontSize: 18, fontWeight: 'bold', marginTop: 10 },
   subButtonText: { color: theme.textSecondary, fontSize: 14, marginTop: 5 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 15 },

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
 import {
   StreakState,
   ESTADO_INICIAL_RACHA,
@@ -24,6 +25,8 @@ export const useStreak = (userId: string | undefined) => {
     completadoHoy: boolean,
     currentUserId: string,
   ) => {
+    if (Platform.OS === 'web') return;
+
     try {
       const config = await obtenerConfigNotificaciones(currentUserId);
       if (config.checkInEnabled) {
@@ -78,13 +81,18 @@ export const useStreak = (userId: string | undefined) => {
     if (!userId || completadoHoy || procesando) return;
 
     setProcesando(true);
+    const estadoAnterior = streakState;
     try {
       const estadoOptimista = registrarCheckInExitoso(streakState);
       setStreakState(estadoOptimista);
-      await sincronizarNotificacionesRacha(true, userId);
 
       const estadoConfirmado = await ejecutarCheckInDB(userId, estadoOptimista);
       setStreakState(estadoConfirmado);
+      await sincronizarNotificacionesRacha(true, userId);
+    } catch (error) {
+      setStreakState(estadoAnterior);
+      await sincronizarNotificacionesRacha(completadoHoy, userId);
+      throw error;
     } finally {
       setProcesando(false);
     }

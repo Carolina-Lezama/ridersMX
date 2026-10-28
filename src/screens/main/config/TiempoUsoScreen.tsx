@@ -253,7 +253,7 @@ export default function TiempoUsoScreen({ navigation }: any) {
           disabled={cargandoLimites || guardandoLimites || !userId}
         >
           {guardandoLimites ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color={theme.onPrimary} />
           ) : (
             <Text style={styles.saveButtonText}>Guardar Límites</Text>
           )}
@@ -317,5 +317,5 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.primary, borderRadius: 12, padding: 16,
     alignItems: 'center', marginTop: 20
   },
-  saveButtonText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' }
+  saveButtonText: { color: theme.onPrimary, fontSize: 16, fontWeight: 'bold' }
 });

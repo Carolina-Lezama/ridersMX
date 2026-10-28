@@ -238,7 +238,7 @@ export default function MotoFormScreen({ navigation, route }: any) {
         {/* SECCIÓN 1: Identidad visual de la moto */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons name="bicycle-outline" size={20} color="#007bff" />
+            <Ionicons name="bicycle-outline" size={20} color={theme.primary} />
             <Text style={styles.cardTitle}>Datos del Vehículo</Text>
           </View>
 
@@ -254,7 +254,7 @@ export default function MotoFormScreen({ navigation, route }: any) {
         {/* SECCIÓN 2: Estado operativo */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons name="speedometer-outline" size={20} color="#10b981" />
+            <Ionicons name="speedometer-outline" size={20} color={theme.successText} />
             <Text style={styles.cardTitle}>Estado y Combustible</Text>
           </View>
 
@@ -266,7 +266,7 @@ export default function MotoFormScreen({ navigation, route }: any) {
         {/* SECCIÓN 3: Papeles / Seguro */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons name="shield-checkmark-outline" size={20} color="#f59e0b" />
+            <Ionicons name="shield-checkmark-outline" size={20} color={theme.warningText} />
             <Text style={styles.cardTitle}>Seguro de Moto (Opcional)</Text>
           </View>
 
@@ -307,7 +307,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   
   scrollContent: { padding: 20, paddingBottom: 40 },
-  card: { backgroundColor: theme.card, padding: 20, borderRadius: 16, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  card: { backgroundColor: theme.card, padding: 20, borderRadius: 16, marginBottom: 20, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.divider, paddingBottom: 10 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginLeft: 10 },
   

@@ -187,7 +187,7 @@ const guardarPerfil = async () => {
       {/* SECCIÓN 2: Información Médica y Legal */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Ionicons name="medkit-outline" size={20} color="#ef4444" />
+          <Ionicons name="medkit-outline" size={20} color={theme.dangerText} />
           <Text style={styles.cardTitle}>Seguridad y Legal</Text>
         </View>
         
@@ -199,7 +199,7 @@ const guardarPerfil = async () => {
       {/* SECCIÓN 3: Nivel de Experiencia (ARREGLADO CON CHIPS) */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Ionicons name="star-outline" size={20} color="#f59e0b" />
+          <Ionicons name="star-outline" size={20} color={theme.star} />
           <Text style={styles.cardTitle}>Experiencia Rider</Text>
         </View>
         
@@ -221,7 +221,7 @@ const guardarPerfil = async () => {
 
       <View style={styles.footer}>
         {saving ? (
-          <ActivityIndicator size="large" color="#007bff" />
+          <ActivityIndicator size="large" color={theme.primary} />
         ) : (
           <CustomButton title="Guardar Perfil" onPress={guardarPerfil} />
         )}
@@ -256,12 +256,12 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   container: { backgroundColor: theme.background, flexGrow: 1, paddingBottom: 20 },
   headerBackground: { backgroundColor: theme.primary, height: 120, width: '100%', position: 'absolute', top: 0, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
   avatarContainer: { alignItems: 'center', marginTop: 60, marginBottom: 20 },
-  avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: theme.card, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, borderWidth: 3, borderColor: theme.background },
+  avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: theme.card, justifyContent: 'center', alignItems: 'center', shadowColor: theme.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, borderWidth: 3, borderColor: theme.background },
   avatarText: { fontSize: 36, fontWeight: 'bold', color: theme.iconSecondary },
   editBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: theme.primary, width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: theme.card },
   nombreUsuario: { fontSize: 22, fontWeight: 'bold', color: theme.textPrimary, marginTop: 10 },
   rolUsuario: { fontSize: 14, color: theme.textSecondary, fontWeight: '500' },
-  card: { backgroundColor: theme.card, marginHorizontal: 20, marginTop: 15, padding: 20, borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  card: { backgroundColor: theme.card, marginHorizontal: 20, marginTop: 15, padding: 20, borderRadius: 16, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.divider, paddingBottom: 10 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginLeft: 10 },
   label: { fontSize: 14, fontWeight: '600', color: theme.textPrimary, marginBottom: 10 },
@@ -272,13 +272,13 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   chip: { backgroundColor: theme.background, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, marginRight: 10, marginBottom: 10, borderWidth: 1, borderColor: theme.border },
   chipActive: { backgroundColor: theme.primary, borderColor: theme.primary },
   chipText: { color: theme.textSecondary, fontWeight: '500', fontSize: 14 },
-  chipTextActive: { color: '#fff', fontWeight: 'bold' },
+  chipTextActive: { color: theme.onPrimary, fontWeight: 'bold' },
   
   dividerContainer: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginTop: 40, marginBottom: 20 },
   dividerLine: { flex: 1, height: 1, backgroundColor: theme.border },
   dividerText: { marginHorizontal: 15, fontSize: 14, fontWeight: 'bold', color: theme.iconSecondary, letterSpacing: 1 },
   
-  btnGaraje: { backgroundColor: theme.card, marginHorizontal: 20, borderRadius: 16, padding: 15, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3, borderWidth: 1, borderColor: theme.border },
+  btnGaraje: { backgroundColor: theme.card, marginHorizontal: 20, borderRadius: 16, padding: 15, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3, borderWidth: 1, borderColor: theme.border },
   btnGarajeContent: { flexDirection: 'row', alignItems: 'center' },
   btnGarajeIcon: { backgroundColor: theme.background, width: 50, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   btnGarajeText: { flex: 1 },

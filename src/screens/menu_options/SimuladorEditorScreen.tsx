@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Defs, LinearGradient, Stop, Rect, Ellipse, Path, Circle, G, Line } from 'react-native-svg';
+import { useTheme } from '../../../assets/theme/ThemeContext';
+import type { Theme } from '../../../assets/theme/theme';
 
 import {
   Acabado, EstiloRin, RolParte, GROSORES, OPACIDADES, acabados, catalogoColores, catalogoFondos, catalogoMotos,
@@ -241,7 +243,7 @@ const CapaBase = React.memo(function CapaBase(p: BaseProps) {
         <Image source={fuenteImg} style={[imgStyle, { tintColor: p.colorPrincipal, opacity: INTENSIDAD_TINTE }]} resizeMode="contain" />
       )}
       {(p.trazos.length > 0 || p.vivo) && (
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
           <Svg width={p.width} height={p.height} viewBox="0 0 400 240">
             {p.trazos.map((t) => (
               <Path key={t.id} d={t.d} stroke={t.color} strokeWidth={t.ancho} strokeOpacity={t.opacidad} fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -292,11 +294,11 @@ export function LienzoEstatico({ diseno, width }: { diseno: Diseno; width: numbe
       {diseno.elementos.map((el) => (
         <View
           key={el.id}
-          pointerEvents="none"
           style={{
             position: 'absolute',
             left: el.x * W,
             top: el.y * H,
+            pointerEvents: 'none',
             transform: [{ rotate: `${el.rotation}deg` }, { scale: el.scale }],
           }}
         >
@@ -323,6 +325,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 const PAD = 14; // zona táctil de las manijas (dentro de los límites del elemento, para que funcione en Android)
 const OFFSET = PAD + 3.5; // PAD + borde (1.5) + relleno (2): el contenido queda exactamente en (x, y)
+type EditorStyles = ReturnType<typeof createStyles>;
 
 const normalizarHex = (v: string) => {
   const m = v.trim().match(/^#?([0-9a-fA-F]{6})$/);
@@ -335,8 +338,9 @@ const construirPath = (pts: { x: number; y: number }[]) =>
     : pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
 function ElementoArrastrable({
-  item, activo, onActivar, W, H,
-}: { item: ElementoDiseno; activo: boolean; onActivar: () => void; W: number; H: number }) {
+  item, activo, onActivar, W, H, styles,
+}: { item: ElementoDiseno; activo: boolean; onActivar: () => void; W: number; H: number; styles: EditorStyles }) {
+  const { theme } = useTheme();
   const itemRef = useRef(item);
   itemRef.current = item;
   const dims = useRef({ W, H });
@@ -397,13 +401,13 @@ function ElementoArrastrable({
       {activo && (
         <>
           <TouchableOpacity style={[styles.manija, styles.manijaEliminar, inv]} onPress={() => eliminarElemento(item.id)}>
-            <Ionicons name="close" size={16} color="#fff" />
+            <Ionicons name="close" size={16} color={theme.onPrimary} />
           </TouchableOpacity>
           <View style={[styles.manija, styles.manijaRotar, inv]} {...rotar.panHandlers}>
-            <Ionicons name="sync" size={14} color="#fff" />
+            <Ionicons name="sync" size={14} color={theme.onPrimary} />
           </View>
           <View style={[styles.manija, styles.manijaEscalar, inv]} {...escalar.panHandlers}>
-            <Ionicons name="resize" size={14} color="#fff" />
+            <Ionicons name="resize" size={14} color={theme.onPrimary} />
           </View>
         </>
       )}
@@ -412,12 +416,13 @@ function ElementoArrastrable({
 }
 
 function FilaColores({
-  colores, valor, onElegir, onBorrar,
+  colores, valor, onElegir, onBorrar, styles,
 }: {
   colores: { id: string; hex: string }[];
   valor: string;
   onElegir: (hex: string) => void;
   onBorrar?: (hex: string) => void;
+  styles: EditorStyles;
 }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fila}>
@@ -434,17 +439,20 @@ function FilaColores({
 }
 
 function Accion({
-  icono, texto, onPress, destacado,
-}: { icono: string; texto: string; onPress: () => void; destacado?: boolean }) {
+  icono, texto, onPress, destacado, styles,
+}: { icono: string; texto: string; onPress: () => void; destacado?: boolean; styles: EditorStyles }) {
+  const { theme } = useTheme();
   return (
     <TouchableOpacity style={[styles.accion, destacado && styles.accionDestacada]} onPress={onPress}>
-      <Ionicons name={icono as any} size={20} color={destacado ? '#fff' : '#0f172a'} />
-      <Text style={[styles.accionTexto, destacado && { color: '#fff' }]}>{texto}</Text>
+      <Ionicons name={icono as any} size={20} color={destacado ? theme.onPrimary : theme.textPrimary} />
+      <Text style={[styles.accionTexto, destacado && { color: theme.onPrimary }]}>{texto}</Text>
     </TouchableOpacity>
   );
 }
 
 export default function SimuladorEditorScreen({ navigation, route }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const d = useDiseno();
   const { width } = useWindowDimensions();
   const W = Math.min(width - 24, 560);
@@ -647,14 +655,14 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <Ionicons name="arrow-back" size={28} color="#0f172a" />
+          <Ionicons name="arrow-back" size={28} color={theme.iconPrimary} />
         </TouchableOpacity>
         <Text style={styles.titulo} numberOfLines={1}>{d.nombre || nombreMoto}</Text>
         <TouchableOpacity onPress={compartir} style={styles.iconBtn}>
-          <Ionicons name="share-social" size={26} color="#3b82f6" />
+          <Ionicons name="share-social" size={26} color={theme.primary} />
         </TouchableOpacity>
         <TouchableOpacity onPress={abrirModalGuardar} style={styles.iconBtn}>
-          <Ionicons name="save" size={28} color="#10b981" />
+          <Ionicons name="save" size={28} color={theme.successText} />
         </TouchableOpacity>
       </View>
 
@@ -671,6 +679,7 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
               onActivar={() => setActiveId(el.id)}
               W={W}
               H={H}
+              styles={styles}
             />
           ))}
           {tab === 'brocha' && <View style={StyleSheet.absoluteFill} {...dibujar.panHandlers} />}
@@ -678,17 +687,17 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
       </View>
 
       <View style={styles.acciones}>
-        <Accion icono="add-circle" texto="Stickers" onPress={() => navigation.navigate('SimuladorLibreria', { tab: 'stickers' })} destacado />
-        <Accion icono="albums" texto="Garaje" onPress={() => navigation.navigate('SimuladorLibreria', { tab: 'garaje' })} />
-        <Accion icono="download" texto="Galería" onPress={descargar} />
-        <Accion icono="refresh" texto="Nuevo" onPress={confirmarNuevo} />
+        <Accion icono="add-circle" texto="Stickers" onPress={() => navigation.navigate('SimuladorLibreria', { tab: 'stickers' })} destacado styles={styles} />
+        <Accion icono="albums" texto="Garaje" onPress={() => navigation.navigate('SimuladorLibreria', { tab: 'garaje' })} styles={styles} />
+        <Accion icono="download" texto="Galería" onPress={descargar} styles={styles} />
+        <Accion icono="refresh" texto="Nuevo" onPress={confirmarNuevo} styles={styles} />
       </View>
 
       <View style={styles.tabs}>
         {TABS.map((t) => (
           <TouchableOpacity key={t.key} style={[styles.tab, tab === t.key && styles.tabActivo]} onPress={() => setTab(t.key)}>
-            <MaterialCommunityIcons name={t.icon as any} size={22} color={tab === t.key ? '#3b82f6' : '#64748b'} />
-            <Text style={[styles.tabTexto, tab === t.key && { color: '#3b82f6' }]}>{t.label}</Text>
+            <MaterialCommunityIcons name={t.icon as any} size={22} color={tab === t.key ? theme.primary : theme.textSecondary} />
+            <Text style={[styles.tabTexto, tab === t.key && { color: theme.primary }]}>{t.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -707,7 +716,7 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
                   <Image source={{ uri: d.fotoUri }} style={{ width: 140, height: 84, borderRadius: 8 }} resizeMode="cover" />
                 ) : (
                   <View style={styles.tarjetaFoto}>
-                    <Ionicons name="camera" size={34} color="#3b82f6" />
+                    <Ionicons name="camera" size={34} color={theme.primary} />
                   </View>
                 )}
                 <Text style={styles.tarjetaTitulo}>Mi moto</Text>
@@ -766,9 +775,9 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
           <>
             {avisoPintura && <Text style={styles.nota}>{avisoPintura}</Text>}
             <Text style={styles.etiqueta}>Color principal</Text>
-            <FilaColores colores={coloresPintura} valor={d.colorPrincipal} onElegir={(hex) => setEstado({ colorPrincipal: hex })} onBorrar={borrarColor} />
+            <FilaColores colores={coloresPintura} valor={d.colorPrincipal} onElegir={(hex) => setEstado({ colorPrincipal: hex })} onBorrar={borrarColor} styles={styles} />
             <Text style={styles.etiqueta}>Color de acento</Text>
-            <FilaColores colores={coloresPintura} valor={d.colorAcento} onElegir={(hex) => setEstado({ colorAcento: hex })} onBorrar={borrarColor} />
+            <FilaColores colores={coloresPintura} valor={d.colorAcento} onElegir={(hex) => setEstado({ colorAcento: hex })} onBorrar={borrarColor} styles={styles} />
             <Text style={styles.etiqueta}>Acabado</Text>
             <View style={styles.fila}>
               {acabados.map((a) => (
@@ -777,26 +786,26 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
                   style={[styles.chip, d.acabado === a.id && styles.chipActivo]}
                   onPress={() => setEstado({ acabado: a.id })}
                 >
-                  <Text style={[styles.chipTexto, d.acabado === a.id && { color: '#3b82f6', fontWeight: 'bold' }]}>{a.nombre}</Text>
+                  <Text style={[styles.chipTexto, d.acabado === a.id && { color: theme.primary, fontWeight: 'bold' }]}>{a.nombre}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             <Text style={styles.etiqueta}>Crear mi color (hex, ej. #ff8800)</Text>
             <View style={[styles.fila, { alignItems: 'center' }]}>
-              <View style={[styles.colorCircle, { backgroundColor: normalizarHex(hexInput) ?? '#e2e8f0' }]} />
+              <View style={[styles.colorCircle, { backgroundColor: normalizarHex(hexInput) ?? theme.border }]} />
               <TextInput
                 style={styles.input}
                 value={hexInput}
                 onChangeText={setHexInput}
                 placeholder="#ff8800"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={theme.iconSecondary}
                 autoCapitalize="none"
                 autoCorrect={false}
                 maxLength={7}
               />
               <TouchableOpacity style={styles.botonAgregar} onPress={guardarColor}>
-                <Ionicons name="add" size={24} color="#fff" />
+                <Ionicons name="add" size={24} color={theme.onPrimary} />
               </TouchableOpacity>
             </View>
             {d.paleta.length > 0 && (
@@ -831,7 +840,7 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
               ))}
             </ScrollView>
             <Text style={styles.etiqueta}>Color del rin</Text>
-            <FilaColores colores={coloresRin} valor={d.rinColor} onElegir={(hex) => setEstado({ rinColor: hex })} />
+            <FilaColores colores={coloresRin} valor={d.rinColor} onElegir={(hex) => setEstado({ rinColor: hex })} styles={styles} />
           </>
         )}
 
@@ -840,12 +849,12 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
           <>
             <Text style={styles.nota}>Dibuja directo sobre la moto para pintar zonas: carrocería, rines, detalles.</Text>
             <Text style={styles.etiqueta}>Color de la brocha</Text>
-            <FilaColores colores={coloresPintura} valor={brochaColor} onElegir={setBrochaColor} />
+            <FilaColores colores={coloresPintura} valor={brochaColor} onElegir={setBrochaColor} styles={styles} />
             <Text style={styles.etiqueta}>Grosor</Text>
             <View style={styles.fila}>
               {GROSORES.map((g) => (
                 <TouchableOpacity key={g.id} style={[styles.chip, grosorId === g.id && styles.chipActivo]} onPress={() => setGrosorId(g.id)}>
-                  <Text style={[styles.chipTexto, grosorId === g.id && { color: '#3b82f6', fontWeight: 'bold' }]}>{g.nombre}</Text>
+                  <Text style={[styles.chipTexto, grosorId === g.id && { color: theme.primary, fontWeight: 'bold' }]}>{g.nombre}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -853,13 +862,13 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
             <View style={styles.fila}>
               {OPACIDADES.map((o) => (
                 <TouchableOpacity key={o.id} style={[styles.chip, opacidadId === o.id && styles.chipActivo]} onPress={() => setOpacidadId(o.id)}>
-                  <Text style={[styles.chipTexto, opacidadId === o.id && { color: '#3b82f6', fontWeight: 'bold' }]}>{o.nombre}</Text>
+                  <Text style={[styles.chipTexto, opacidadId === o.id && { color: theme.primary, fontWeight: 'bold' }]}>{o.nombre}</Text>
                 </TouchableOpacity>
               ))}
             </View>
             <View style={[styles.fila, { gap: 10 }]}>
-              <Accion icono="arrow-undo" texto="Deshacer" onPress={deshacerTrazo} />
-              <Accion icono="trash" texto="Borrar todo" onPress={confirmarBorrarTrazos} />
+              <Accion icono="arrow-undo" texto="Deshacer" onPress={deshacerTrazo} styles={styles} />
+              <Accion icono="trash" texto="Borrar todo" onPress={confirmarBorrarTrazos} styles={styles} />
             </View>
           </>
         )}
@@ -892,7 +901,7 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
               value={nombreInput}
               onChangeText={setNombreInput}
               placeholder="Nombre de tu diseño"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={theme.iconSecondary}
               maxLength={30}
               autoFocus
             />
@@ -916,61 +925,63 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginTop: 50, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#e2e8f0', backgroundColor: '#fff' },
+function createStyles(theme: Theme) {
+return StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginTop: 50, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.card },
   iconBtn: { padding: 5, marginHorizontal: 2 },
-  titulo: { flex: 1, fontSize: 20, fontWeight: 'bold', color: '#0f172a', marginLeft: 8 },
-  canvas: { alignItems: 'center', paddingVertical: 12, backgroundColor: '#e2e8f0' },
+  titulo: { flex: 1, fontSize: 20, fontWeight: 'bold', color: theme.textPrimary, marginLeft: 8 },
+  canvas: { alignItems: 'center', paddingVertical: 12, backgroundColor: theme.cardHeader },
 
   elementoBorde: { borderWidth: 1.5, borderColor: 'transparent', padding: 2 },
-  elementoBordeActivo: { borderColor: '#3b82f6', borderStyle: 'dashed', backgroundColor: 'rgba(59,130,246,0.12)' },
-  manija: { position: 'absolute', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff', zIndex: 20 },
-  manijaEliminar: { top: 0, left: 0, backgroundColor: '#ef4444' },
-  manijaRotar: { top: 0, right: 0, backgroundColor: '#3b82f6' },
-  manijaEscalar: { bottom: 0, right: 0, backgroundColor: '#10b981' },
+  elementoBordeActivo: { borderColor: theme.primary, borderStyle: 'dashed', backgroundColor: `${theme.primary}20` },
+  manija: { position: 'absolute', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: theme.onPrimary, zIndex: 20 },
+  manijaEliminar: { top: 0, left: 0, backgroundColor: theme.dangerText },
+  manijaRotar: { top: 0, right: 0, backgroundColor: theme.primary },
+  manijaEscalar: { bottom: 0, right: 0, backgroundColor: theme.successText },
 
-  acciones: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10, paddingHorizontal: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
-  accion: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#f1f5f9' },
-  accionDestacada: { backgroundColor: '#3b82f6' },
-  accionTexto: { fontSize: 13, fontWeight: '600', color: '#0f172a' },
+  acciones: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10, paddingHorizontal: 8, backgroundColor: theme.card, borderBottomWidth: 1, borderBottomColor: theme.border },
+  accion: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: theme.cardHeader },
+  accionDestacada: { backgroundColor: theme.primary },
+  accionTexto: { fontSize: 13, fontWeight: '600', color: theme.textPrimary },
 
-  tabs: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
+  tabs: { flexDirection: 'row', backgroundColor: theme.card, borderBottomWidth: 1, borderBottomColor: theme.border },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 10 },
-  tabActivo: { borderBottomWidth: 3, borderBottomColor: '#3b82f6' },
-  tabTexto: { fontSize: 11, color: '#64748b', marginTop: 2, fontWeight: '600' },
+  tabActivo: { borderBottomWidth: 3, borderBottomColor: theme.primary },
+  tabTexto: { fontSize: 11, color: theme.textSecondary, marginTop: 2, fontWeight: '600' },
 
-  panel: { flex: 1, backgroundColor: '#fff' },
+  panel: { flex: 1, backgroundColor: theme.card },
   fila: { paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row' },
-  etiqueta: { fontSize: 13, fontWeight: '700', color: '#475569', marginTop: 12, marginLeft: 16 },
-  nota: { fontSize: 12, color: '#475569', backgroundColor: '#f1f5f9', padding: 10, borderRadius: 8, marginHorizontal: 16, marginTop: 12 },
-  colorCircle: { width: 44, height: 44, borderRadius: 22, marginRight: 12, borderWidth: 2, borderColor: '#e2e8f0' },
-  colorSeleccionado: { borderColor: '#3b82f6', borderWidth: 3 },
+  etiqueta: { fontSize: 13, fontWeight: '700', color: theme.textSecondary, marginTop: 12, marginLeft: 16 },
+  nota: { fontSize: 12, color: theme.textSecondary, backgroundColor: theme.cardHeader, padding: 10, borderRadius: 8, marginHorizontal: 16, marginTop: 12 },
+  colorCircle: { width: 44, height: 44, borderRadius: 22, marginRight: 12, borderWidth: 2, borderColor: theme.border },
+  colorSeleccionado: { borderColor: theme.primary, borderWidth: 3 },
 
-  tarjeta: { alignItems: 'center', padding: 8, marginRight: 12, borderRadius: 14, borderWidth: 2, borderColor: '#e2e8f0', backgroundColor: '#f8fafc' },
-  tarjetaFoto: { width: 140, height: 84, borderRadius: 8, backgroundColor: '#eff6ff', justifyContent: 'center', alignItems: 'center' },
-  tarjetaRin: { alignItems: 'center', padding: 8, marginRight: 12, borderRadius: 14, borderWidth: 2, borderColor: '#e2e8f0', backgroundColor: '#f8fafc', width: 92 },
-  tarjetaActiva: { borderColor: '#3b82f6', backgroundColor: '#eff6ff' },
-  tarjetaTitulo: { fontSize: 14, fontWeight: 'bold', color: '#0f172a', marginTop: 4 },
-  tarjetaSub: { fontSize: 11, color: '#64748b', textAlign: 'center' },
+  tarjeta: { alignItems: 'center', padding: 8, marginRight: 12, borderRadius: 14, borderWidth: 2, borderColor: theme.border, backgroundColor: theme.background },
+  tarjetaFoto: { width: 140, height: 84, borderRadius: 8, backgroundColor: theme.cardHeader, justifyContent: 'center', alignItems: 'center' },
+  tarjetaRin: { alignItems: 'center', padding: 8, marginRight: 12, borderRadius: 14, borderWidth: 2, borderColor: theme.border, backgroundColor: theme.background, width: 92 },
+  tarjetaActiva: { borderColor: theme.primary, backgroundColor: `${theme.primary}15` },
+  tarjetaTitulo: { fontSize: 14, fontWeight: 'bold', color: theme.textPrimary, marginTop: 4 },
+  tarjetaSub: { fontSize: 11, color: theme.textSecondary, textAlign: 'center' },
 
-  chip: { paddingHorizontal: 18, paddingVertical: 10, marginRight: 10, borderRadius: 20, backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#cbd5e1' },
-  chipActivo: { borderColor: '#3b82f6', backgroundColor: '#eff6ff' },
-  chipTexto: { fontSize: 14, color: '#475569' },
+  chip: { paddingHorizontal: 18, paddingVertical: 10, marginRight: 10, borderRadius: 20, backgroundColor: theme.cardHeader, borderWidth: 1, borderColor: theme.border },
+  chipActivo: { borderColor: theme.primary, backgroundColor: `${theme.primary}15` },
+  chipTexto: { fontSize: 14, color: theme.textSecondary },
 
-  input: { flex: 1, height: 44, backgroundColor: '#f1f5f9', borderRadius: 10, paddingHorizontal: 14, fontSize: 16, color: '#0f172a' },
-  botonAgregar: { width: 44, height: 44, marginLeft: 10, borderRadius: 22, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center' },
+  input: { flex: 1, height: 44, backgroundColor: theme.background, borderRadius: 10, paddingHorizontal: 14, fontSize: 16, color: theme.textPrimary },
+  botonAgregar: { width: 44, height: 44, marginLeft: 10, borderRadius: 22, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center' },
 
-  fondoChip: { width: 96, height: 84, marginRight: 12, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: '#e2e8f0' },
-  fondoNombre: { position: 'absolute', bottom: 16, alignSelf: 'center', fontSize: 11, fontWeight: 'bold', color: '#fff', textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 3 },
+  fondoChip: { width: 96, height: 84, marginRight: 12, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: theme.border },
+  fondoNombre: { position: 'absolute', bottom: 16, alignSelf: 'center', fontSize: 11, fontWeight: 'bold', color: theme.onPrimary, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 3 },
 
-  modalFondo: { flex: 1, backgroundColor: 'rgba(15,23,42,0.5)', justifyContent: 'center', padding: 24 },
-  modalCaja: { backgroundColor: '#fff', borderRadius: 16, padding: 20 },
-  modalTitulo: { fontSize: 18, fontWeight: 'bold', color: '#0f172a', marginBottom: 12 },
-  modalInput: { height: 46, backgroundColor: '#f1f5f9', borderRadius: 10, paddingHorizontal: 14, fontSize: 16, color: '#0f172a' },
+  modalFondo: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'center', padding: 24 },
+  modalCaja: { backgroundColor: theme.card, borderRadius: 16, padding: 20 },
+  modalTitulo: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 12 },
+  modalInput: { height: 46, backgroundColor: theme.background, borderRadius: 10, paddingHorizontal: 14, fontSize: 16, color: theme.textPrimary },
   modalBotones: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16, gap: 8 },
-  botonGris: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, backgroundColor: '#f1f5f9' },
-  botonGrisTexto: { color: '#475569', fontWeight: '600' },
-  botonAzul: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: '#3b82f6' },
-  botonAzulTexto: { color: '#fff', fontWeight: 'bold' },
+  botonGris: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.cardHeader },
+  botonGrisTexto: { color: theme.textSecondary, fontWeight: '600' },
+  botonAzul: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.primary },
+  botonAzulTexto: { color: theme.onPrimary, fontWeight: 'bold' },
 });
+}

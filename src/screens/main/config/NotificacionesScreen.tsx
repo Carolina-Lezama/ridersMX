@@ -359,7 +359,7 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    backgroundColor: theme.overlay,
   },
   pickerCard: {
     borderRadius: 16,

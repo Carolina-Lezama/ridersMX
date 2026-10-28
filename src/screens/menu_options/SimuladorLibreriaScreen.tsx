@@ -91,11 +91,11 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
         <>
           <View style={styles.searchContainer}>
             <View style={styles.searchBar}>
-              <Ionicons name="search" size={20} color="#94a3b8" />
+              <Ionicons name="search" size={20} color={theme.iconSecondary} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Buscar sticker..."
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={theme.iconSecondary}
                 value={busqueda}
                 onChangeText={setBusqueda}
               />
@@ -118,7 +118,7 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
                       {cantidad > 0 ? `En tu moto: ${cantidad} · toca para agregar otro` : 'Toca para agregarlo a tu moto'}
                     </Text>
                   </View>
-                  <Ionicons name="add-circle" size={26} color="#3b82f6" />
+                  <Ionicons name="add-circle" size={26} color={theme.primary} />
                 </TouchableOpacity>
               );
             }}
@@ -137,11 +137,11 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
               value={texto}
               onChangeText={setTexto}
               placeholder="Ej. 46"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={theme.iconSecondary}
               maxLength={12}
             />
             <TouchableOpacity style={styles.botonAgregar} onPress={() => agregarTexto()}>
-              <Ionicons name="add" size={26} color="#fff" />
+              <Ionicons name="add" size={26} color={theme.onPrimary} />
             </TouchableOpacity>
           </View>
 
@@ -182,7 +182,7 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
           }
           ListEmptyComponent={
             <View style={styles.vacio}>
-              <MaterialCommunityIcons name="garage-open-variant" size={72} color="#cbd5e1" />
+              <MaterialCommunityIcons name="garage-open-variant" size={72} color={theme.iconSecondary} />
               <Text style={styles.vacioTitulo}>Tu garaje está vacío</Text>
               <Text style={styles.vacioTexto}>Diseña una moto y toca el botón de guardar para verla aquí.</Text>
             </View>
@@ -197,7 +197,7 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
                   <Text style={styles.itemSubText}>Editado {fecha(item.actualizado)}</Text>
                 </View>
                 <TouchableOpacity onPress={() => borrar(item)} style={styles.backButton}>
-                  <Ionicons name="trash-outline" size={22} color="#ef4444" />
+                  <Ionicons name="trash-outline" size={22} color={theme.dangerText} />
                 </TouchableOpacity>
               </TouchableOpacity>
             );
@@ -214,7 +214,7 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   backButton: { padding: 5 },
   titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   listoButton: { backgroundColor: theme.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
-  listoText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  listoText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 14 },
   searchContainer: { backgroundColor: theme.card, paddingHorizontal: 20, paddingBottom: 15, paddingTop: 12, borderBottomWidth: 1, borderBottomColor: theme.border },
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.cardHeader, borderRadius: 10, paddingHorizontal: 15, height: 45 },
   searchInput: { flex: 1, marginLeft: 10, color: theme.textPrimary, fontSize: 16 },
@@ -227,23 +227,23 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   listItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, padding: 15, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: theme.border },
   stickerPreview: { width: 50, height: 50, backgroundColor: theme.cardHeader, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   listTextInfo: { flex: 1 },
-  itemName: { color: '#0f172a', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  itemSubText: { color: '#64748b', fontSize: 12 },
-  emptyText: { textAlign: 'center', color: '#94a3b8', marginTop: 40 },
+  itemName: { color: theme.textPrimary, fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+  itemSubText: { color: theme.textSecondary, fontSize: 12 },
+  emptyText: { textAlign: 'center', color: theme.textSecondary, marginTop: 40 },
 
-  etiqueta: { fontSize: 13, fontWeight: '700', color: '#475569', marginTop: 8, marginBottom: 8 },
+  etiqueta: { fontSize: 13, fontWeight: '700', color: theme.textSecondary, marginTop: 8, marginBottom: 8 },
   filaTexto: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  inputTexto: { flex: 1, height: 46, backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 14, fontSize: 16, color: '#0f172a', borderWidth: 1, borderColor: '#e2e8f0' },
-  botonAgregar: { width: 46, height: 46, marginLeft: 10, borderRadius: 23, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center' },
-  colorCircle: { width: 40, height: 40, borderRadius: 20, marginRight: 12, borderWidth: 2, borderColor: '#cbd5e1' },
-  colorSeleccionado: { borderColor: '#3b82f6', borderWidth: 3 },
-  chip: { paddingHorizontal: 18, paddingVertical: 10, marginRight: 10, marginBottom: 10, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: '#cbd5e1' },
-  chipTexto: { fontSize: 15, fontWeight: 'bold', color: '#0f172a' },
+  inputTexto: { flex: 1, height: 46, backgroundColor: theme.background, borderRadius: 10, paddingHorizontal: 14, fontSize: 16, color: theme.textPrimary, borderWidth: 1, borderColor: theme.border },
+  botonAgregar: { width: 46, height: 46, marginLeft: 10, borderRadius: 23, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center' },
+  colorCircle: { width: 40, height: 40, borderRadius: 20, marginRight: 12, borderWidth: 2, borderColor: theme.border },
+  colorSeleccionado: { borderColor: theme.primary, borderWidth: 3 },
+  chip: { paddingHorizontal: 18, paddingVertical: 10, marginRight: 10, marginBottom: 10, borderRadius: 20, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.border },
+  chipTexto: { fontSize: 15, fontWeight: 'bold', color: theme.textPrimary },
 
-  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 14, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0', gap: 12 },
-  nombre: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', marginBottom: 2 },
-  aviso: { fontSize: 12, color: '#b45309', backgroundColor: '#fef3c7', padding: 10, borderRadius: 8, marginBottom: 12 },
+  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, padding: 12, borderRadius: 14, marginBottom: 12, borderWidth: 1, borderColor: theme.border, gap: 12 },
+  nombre: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 2 },
+  aviso: { fontSize: 12, color: theme.warningText, backgroundColor: theme.warningBg, padding: 10, borderRadius: 8, marginBottom: 12 },
   vacio: { alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
-  vacioTitulo: { fontSize: 18, fontWeight: 'bold', color: '#475569', marginTop: 12 },
-  vacioTexto: { fontSize: 14, color: '#94a3b8', marginTop: 4, textAlign: 'center' },
+  vacioTitulo: { fontSize: 18, fontWeight: 'bold', color: theme.textSecondary, marginTop: 12 },
+  vacioTexto: { fontSize: 14, color: theme.textSecondary, marginTop: 4, textAlign: 'center' },
 });

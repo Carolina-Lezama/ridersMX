@@ -134,12 +134,12 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                     buttonStyle = styles.opcionBtnCorrecta;
                     textStyle = styles.opcionTextoCorrecta;
                     iconName = 'checkmark-circle';
-                    iconColor = '#10b981';
+                    iconColor = theme.successText;
                   } else if (fueSeleccionada) {
                     buttonStyle = styles.opcionBtnIncorrecta;
                     textStyle = styles.opcionTextoIncorrecta;
                     iconName = 'close-circle';
-                    iconColor = '#ef4444';
+                    iconColor = theme.dangerText;
                   } else {
                     buttonStyle = styles.opcionBtnAtenuada;
                   }
@@ -171,7 +171,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
             {respondido && (
               <View style={styles.explicacionCard}>
                 <View style={styles.explicacionHeader}>
-                  <Ionicons name="bulb-outline" size={20} color="#f59e0b" />
+                  <Ionicons name="bulb-outline" size={20} color={theme.warningText} />
                   <Text style={styles.explicacionTitulo}>Explicación Técnica</Text>
                 </View>
                 <Text style={styles.explicacionTexto}>
@@ -215,7 +215,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
   StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.65)',
+      backgroundColor: theme.overlay,
       justifyContent: 'flex-end',
     },
     modalCard: {
@@ -293,21 +293,21 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
 
     // Estado 2: Seleccionada Correcta
     opcionBtnCorrecta: {
-      backgroundColor: '#10b98115',
-      borderColor: '#10b981',
+      backgroundColor: theme.successBg,
+      borderColor: theme.successText,
     },
     opcionTextoCorrecta: {
-      color: '#10b981',
+      color: theme.successText,
       fontWeight: '700',
     },
 
     // Estado 3: Seleccionada Incorrecta
     opcionBtnIncorrecta: {
-      backgroundColor: '#ef444415',
-      borderColor: '#ef4444',
+      backgroundColor: theme.dangerBg,
+      borderColor: theme.dangerText,
     },
     opcionTextoIncorrecta: {
-      color: '#ef4444',
+      color: theme.dangerText,
       fontWeight: '700',
     },
 
@@ -353,19 +353,19 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
 
     // Botón Reclamar
     btnReclamar: {
-      backgroundColor: '#ff5722',
+      backgroundColor: theme.accent,
       paddingVertical: 16,
       borderRadius: 16,
       alignItems: 'center',
       marginTop: 8,
-      shadowColor: '#ff5722',
+      shadowColor: theme.accent,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 8,
       elevation: 4,
     },
     btnReclamarTexto: {
-      color: '#ffffff',
+      color: theme.onPrimary,
       fontSize: 16,
       fontWeight: '800',
     },

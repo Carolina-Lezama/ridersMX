@@ -8,6 +8,15 @@ import Skeleton from '../../components/Skeleton';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 
+interface MotoAsociable {
+  id: string;
+  alias: string | null;
+  marca: string;
+  modelo: string;
+}
+
+const OTRO_ACOMPANANTE = 'Otro / Acompañante';
+
 export default function EventoFormScreen({ navigation, route }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
@@ -33,62 +42,79 @@ export default function EventoFormScreen({ navigation, route }: any) {
 
   const [tipo, setTipo] = useState(route.params?.tipo === 'mantenimiento' ? 'mantenimiento' : 'rodada');
   const [descripcion, setDescripcion] = useState('');
+  const [motos, setMotos] = useState<MotoAsociable[]>([]);
   const [motoAsociada, setMotoAsociada] = useState('');
   
   // Estado de la actividad
   const [estado, setEstado] = useState('Planeada');
   const estadosValidos = ['Planeada', 'Completada', 'Reprogramada', 'Cancelada'];
 
-  // 3. Si estamos en modo edición, descargamos los datos
   useEffect(() => {
-    if (esEdicion) {
-      cargarDatosEvento();
-    }
-  }, [eventoId]);
+    let activo = true;
 
-  const cargarDatosEvento = async () => {
-    try {
+    const inicializarPantalla = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('eventos')
-        .select('*')
-        .eq('id', eventoId)
-        .single();
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (!session?.user) throw new Error('Inicia sesión para crear o editar un evento.');
 
-      if (error) throw error;
+        const { data: motosData, error: motosError } = await supabase
+          .from('motocicletas')
+          .select('id, alias, marca, modelo')
+          .eq('perfil_id', session.user.id)
+          .order('created_at', { ascending: true });
 
-      if (data) {
-        setTitulo(data.titulo || '');
-        if (data.fecha) setFechaObj(new Date(data.fecha + 'T00:00:00'));
-        
-        // Parsear hora si existe (ej. "08:00 AM" o "14:30")
-        if (data.hora) {
-          const [time, modifier] = data.hora.split(' ');
-          let [hours, minutes] = time.split(':');
-          let h = parseInt(hours, 10);
-          if (modifier === 'PM' && h < 12) h += 12;
-          if (modifier === 'AM' && h === 12) h = 0;
-          const d = new Date();
-          d.setHours(h, parseInt(minutes || '0', 10));
-          setHoraObj(d);
+        if (motosError) throw motosError;
+        if (activo) setMotos(motosData ?? []);
+
+        if (!esEdicion) return;
+
+        const { data, error } = await supabase
+          .from('eventos')
+          .select('*')
+          .eq('id', eventoId)
+          .single();
+
+        if (error) throw error;
+
+        if (data && activo) {
+          setTitulo(data.titulo || '');
+          if (data.fecha) setFechaObj(new Date(data.fecha + 'T00:00:00'));
+
+          if (data.hora) {
+            const [time, modifier] = data.hora.split(' ');
+            const [hours, minutes] = time.split(':');
+            let hour = parseInt(hours, 10);
+            if (modifier === 'PM' && hour < 12) hour += 12;
+            if (modifier === 'AM' && hour === 12) hour = 0;
+            const date = new Date();
+            date.setHours(hour, parseInt(minutes || '0', 10));
+            setHoraObj(date);
+          }
+
+          setTipo(data.tipo || 'rodada');
+          setDescripcion(data.descripcion || '');
+          setMotoAsociada(data.moto_asociada || '');
+          setEstado(data.estado || 'Planeada');
         }
+      } catch (error: unknown) {
+        if (!activo) return;
+        const mensaje = error instanceof Error ? error.message : 'No se pudo cargar el evento.';
+        Platform.OS === 'web'
+          ? window.alert(`Error al cargar evento: ${mensaje}`)
+          : Alert.alert('Error al cargar evento', mensaje);
+        navigation.goBack();
+      } finally {
+        if (activo) setLoading(false);
+      }
+    };
 
-        setTipo(data.tipo || 'rodada');
-        setDescripcion(data.descripcion || '');
-        setMotoAsociada(data.moto_asociada || '');
-        setEstado(data.estado || 'Planeada');
-      }
-    } catch (error: any) {
-      if (Platform.OS === 'web') {
-        window.alert('Error al cargar evento: ' + error.message);
-      } else {
-        Alert.alert('Error', error.message);
-      }
-      navigation.goBack();
-    } finally {
-      setLoading(false);
-    }
-  };
+    void inicializarPantalla();
+    return () => {
+      activo = false;
+    };
+  }, [eventoId, esEdicion, navigation]);
 
   // Formateadores auxiliares
   const formatearFechaYMD = (date: Date) => {
@@ -120,9 +146,9 @@ export default function EventoFormScreen({ navigation, route }: any) {
 
     try {
       setSaving(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user) return;
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session?.user) throw new Error('Inicia sesión para guardar este evento.');
 
       const eventoPayload = {
         perfil_id: session.user.id,
@@ -131,7 +157,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
         hora: horaStr,
         tipo: tipo,
         descripcion: descripcion.trim(),
-        moto_asociada: motoAsociada.trim(),
+        moto_asociada: motoAsociada.trim() || null,
         estado: estado
       };
 
@@ -215,7 +241,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="#0f172a" />
+          <Ionicons name="arrow-back" size={28} color={theme.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.titulo}>{esEdicion ? 'Editar Evento' : 'Nuevo Evento'}</Text>
         <View style={{ width: 28 }} />
@@ -231,10 +257,10 @@ export default function EventoFormScreen({ navigation, route }: any) {
               {estadosValidos.map((est) => (
                 <TouchableOpacity 
                   key={est} 
-                  style={[styles.estadoChip, estado === est && styles.estadoChipActive]}
+                  style={[styles.chipBase, estado === est && styles.estadoChipActive]}
                   onPress={() => setEstado(est)}
                 >
-                  <Text style={[styles.estadoText, estado === est && styles.estadoTextActive]}>{est}</Text>
+                  <Text style={[styles.chipTextBase, estado === est && styles.chipTextActive]}>{est}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -245,14 +271,14 @@ export default function EventoFormScreen({ navigation, route }: any) {
         <View style={styles.seccion}>
           <Text style={styles.label}>¿Qué tipo de evento es?</Text>
           <View style={styles.chipsContainer}>
-            <TouchableOpacity style={[styles.chip, tipo === 'rodada' && styles.chipActiveAzul]} onPress={() => setTipo('rodada')}>
-              <Ionicons name="map-outline" size={16} color={tipo === 'rodada' ? '#fff' : '#64748b'} />
-              <Text style={[styles.chipText, tipo === 'rodada' && styles.chipTextActive]}> Rodada</Text>
+            <TouchableOpacity style={[styles.chipBase, tipo === 'rodada' && styles.chipActive]} onPress={() => setTipo('rodada')}>
+              <Ionicons name="map-outline" size={16} color={tipo === 'rodada' ? theme.onPrimary : theme.textSecondary} />
+              <Text style={[styles.chipTextBase, tipo === 'rodada' && styles.chipTextActive]}> Rodada</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.chip, tipo === 'mantenimiento' && styles.chipActiveRojo]} onPress={() => setTipo('mantenimiento')}>
-              <Ionicons name="build-outline" size={16} color={tipo === 'mantenimiento' ? '#fff' : '#64748b'} />
-              <Text style={[styles.chipText, tipo === 'mantenimiento' && styles.chipTextActive]}> Taller / Mantenimiento</Text>
+            <TouchableOpacity style={[styles.chipBase, tipo === 'mantenimiento' && styles.chipMantenimientoActivo]} onPress={() => setTipo('mantenimiento')}>
+              <Ionicons name="build-outline" size={16} color={tipo === 'mantenimiento' ? theme.onPrimary : theme.textSecondary} />
+              <Text style={[styles.chipTextBase, tipo === 'mantenimiento' && styles.chipTextActive]}> Taller / Mantenimiento</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -277,9 +303,9 @@ export default function EventoFormScreen({ navigation, route }: any) {
                 style={styles.pickerButton} 
                 onPress={() => setShowDatePicker(true)}
               >
-                <Ionicons name="calendar-outline" size={20} color="#007bff" />
+                <Ionicons name="calendar-outline" size={20} color={theme.primary} />
                 <Text style={styles.pickerButtonText}>{formatearFechaLegible(fechaObj)}</Text>
-                <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+                <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
               </TouchableOpacity>
 
               {showDatePicker && (
@@ -320,9 +346,9 @@ export default function EventoFormScreen({ navigation, route }: any) {
                 style={styles.pickerButton} 
                 onPress={() => setShowTimePicker(true)}
               >
-                <Ionicons name="time-outline" size={20} color="#007bff" />
+                <Ionicons name="time-outline" size={20} color={theme.primary} />
                 <Text style={styles.pickerButtonText}>{formatearHora12h(horaObj)}</Text>
-                <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+                <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
               </TouchableOpacity>
 
               {showTimePicker && (
@@ -342,11 +368,95 @@ export default function EventoFormScreen({ navigation, route }: any) {
         </View>
 
         <CustomInput label="Descripción" placeholder="Detalles, punto de reunión..." value={descripcion} onChangeText={setDescripcion} />
-        <CustomInput label="Moto Asociada (Opcional)" placeholder="Ej. Yamaha MT-07" value={motoAsociada} onChangeText={setMotoAsociada} />
+
+        <View style={styles.seccion}>
+          <Text style={styles.label}>¿Con qué moto asistirás? (Opcional)</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.motosScrollContainer}
+          >
+            {motos.map((moto) => {
+              const nombreMoto = moto.alias || `${moto.marca} ${moto.modelo}`;
+              const seleccionada = motoAsociada === nombreMoto;
+              return (
+                <TouchableOpacity
+                  key={moto.id}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: seleccionada }}
+                  style={[styles.chipBase, seleccionada && styles.chipActive]}
+                  onPress={() => setMotoAsociada(seleccionada ? '' : nombreMoto)}
+                >
+                  <Ionicons
+                    name="bicycle-outline"
+                    size={16}
+                    color={seleccionada ? theme.onPrimary : theme.textSecondary}
+                  />
+                  <Text style={[styles.chipTextBase, seleccionada && styles.chipTextActive]}>
+                    {' '}{nombreMoto}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+
+            {motoAsociada &&
+              motoAsociada !== OTRO_ACOMPANANTE &&
+              !motos.some((moto) => (moto.alias || `${moto.marca} ${moto.modelo}`) === motoAsociada) && (
+                <TouchableOpacity style={[styles.chipBase, styles.chipActive]} onPress={() => setMotoAsociada('')}>
+                  <Ionicons name="bicycle-outline" size={16} color={theme.onPrimary} />
+                  <Text style={[styles.chipTextBase, styles.chipTextActive]}> {motoAsociada}</Text>
+                </TouchableOpacity>
+              )}
+
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityState={{ selected: motoAsociada === OTRO_ACOMPANANTE }}
+              style={[styles.chipBase, motoAsociada === OTRO_ACOMPANANTE && styles.chipActive]}
+              onPress={() =>
+                setMotoAsociada(motoAsociada === OTRO_ACOMPANANTE ? '' : OTRO_ACOMPANANTE)
+              }
+            >
+              <Ionicons
+                name="people-outline"
+                size={16}
+                color={motoAsociada === OTRO_ACOMPANANTE ? theme.onPrimary : theme.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.chipTextBase,
+                  motoAsociada === OTRO_ACOMPANANTE && styles.chipTextActive,
+                ]}
+              >
+                {' '}Otro / Acompañante
+              </Text>
+            </TouchableOpacity>
+
+            {motoAsociada !== '' && (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Quitar moto asociada"
+                style={styles.chipClear}
+                onPress={() => setMotoAsociada('')}
+              >
+                <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+          {motos.length === 0 && (
+            <Text style={styles.motosVacias}>
+              No tienes motos registradas. Puedes continuar sin asociar una.
+            </Text>
+          )}
+          {motoAsociada === OTRO_ACOMPANANTE && (
+            <Text style={styles.motosVacias}>
+              Se guardará “Otro / Acompañante” como texto, sin asociar una moto de tu garaje.
+            </Text>
+          )}
+        </View>
 
         <View style={{ marginTop: 20 }}>
           {saving ? (
-            <ActivityIndicator size="large" color="#007bff" />
+            <ActivityIndicator size="large" color={theme.primary} />
           ) : (
             <CustomButton title={esEdicion ? "Guardar Cambios" : "Guardar en Agenda"} onPress={handleGuardar} />
           )}
@@ -354,7 +464,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
 
         {esEdicion && !saving && (
           <TouchableOpacity style={styles.btnEliminar} onPress={handleEliminar}>
-            <Ionicons name="trash-outline" size={20} color="#ef4444" />
+            <Ionicons name="trash-outline" size={20} color={theme.dangerText} />
             <Text style={styles.textEliminar}>Borrar de la Agenda</Text>
           </TouchableOpacity>
         )}
@@ -413,18 +523,36 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     color: theme.textPrimary,
   },
 
-  chipsContainer: { flexDirection: 'row', flexWrap: 'wrap' },
-  chip: { flexDirection: 'row', backgroundColor: theme.background, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, marginRight: 10, marginBottom: 10, borderWidth: 1, borderColor: theme.border, alignItems: 'center' },
-  chipActiveAzul: { backgroundColor: theme.primary, borderColor: theme.primary },
-  chipActiveRojo: { backgroundColor: '#ef4444', borderColor: '#ef4444' },
-  chipText: { color: theme.textSecondary, fontWeight: '500', fontSize: 14 },
-  chipTextActive: { color: '#fff', fontWeight: 'bold' },
-
-  estadoChip: { backgroundColor: theme.background, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginRight: 8, marginBottom: 8, borderWidth: 1, borderColor: theme.border },
+  chipsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  motosScrollContainer: { gap: 10, paddingVertical: 4, paddingRight: 20, alignItems: 'center' },
+  chipBase: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  chipActive: { backgroundColor: theme.primary, borderColor: theme.primary },
+  chipMantenimientoActivo: { backgroundColor: theme.dangerText, borderColor: theme.dangerText },
+  chipTextBase: { color: theme.textSecondary, fontSize: 14, fontWeight: '600' },
+  chipTextActive: { color: theme.onPrimary, fontWeight: 'bold' },
   estadoChipActive: { backgroundColor: theme.textPrimary, borderColor: theme.textPrimary },
-  estadoText: { color: theme.textSecondary, fontWeight: '600', fontSize: 13 },
-  estadoTextActive: { color: '#fff', fontWeight: 'bold' },
+  chipClear: { justifyContent: 'center', paddingHorizontal: 6 },
+  motosVacias: { color: theme.textSecondary, fontSize: 13, marginTop: 8 },
 
-  btnEliminar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: theme.dangerBg, paddingVertical: 15, borderRadius: 12, marginTop: 20, borderWidth: 1, borderColor: theme.dangerBorder },
-  textEliminar: { color: theme.dangerText, fontWeight: 'bold', marginLeft: 8, fontSize: 16 }
+  btnEliminar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.dangerBg,
+    paddingVertical: 15,
+    borderRadius: 12,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: theme.dangerBorder,
+  },
+  textEliminar: { color: theme.dangerText, fontWeight: 'bold', marginLeft: 8, fontSize: 16 },
 });

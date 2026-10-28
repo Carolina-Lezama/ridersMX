@@ -379,7 +379,7 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     marginTop: -8,
     marginBottom: 15,
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -406,7 +406,7 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   },
   chipSelected: { backgroundColor: theme.primary, borderColor: theme.primary },
   chipText: { fontSize: 14, fontWeight: '600', color: theme.textSecondary },
-  chipTextSelected: { color: '#ffffff' },
+  chipTextSelected: { color: theme.onPrimary },
 
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
   selectCard: {
@@ -425,7 +425,7 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     marginTop: 20,
   },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'flex-end' },
   modalContent: {
     backgroundColor: theme.card,
     borderTopLeftRadius: 24,
