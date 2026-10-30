@@ -7,6 +7,13 @@ import { MultiAccountService } from '../../services/MultiAccountService';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import { isValidEmail, isValidPassword, MIN_PASSWORD_LENGTH } from '../../utils/validations';
 
+function isExistingAccountError(error: unknown): error is { code: 'user_already_exists' } {
+  return typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && error.code === 'user_already_exists';
+}
+
 export default function RegisterScreen({ navigation, route }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
@@ -88,16 +95,32 @@ export default function RegisterScreen({ navigation, route }: any) {
         }
       }
     } catch (error: unknown) {
-      console.error('Error al crear la cuenta:', error);
+      const accountAlreadyExists = isExistingAccountError(error);
+      if (!accountAlreadyExists) {
+        console.error('Error al crear la cuenta:', error);
+      }
+
       if (previousSession) {
         const { error: restoreError } = await supabase.auth.setSession({
           access_token: previousSession.access_token,
           refresh_token: previousSession.refresh_token,
         });
         if (restoreError) console.error('No se pudo restaurar la sesión anterior:', restoreError);
-      } else {
+      } else if (!accountAlreadyExists) {
         const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
         if (signOutError) console.error('No se pudo cerrar la sesión incompleta del registro:', signOutError);
+      }
+
+      if (accountAlreadyExists) {
+        Alert.alert(
+          'Cuenta ya registrada',
+          'Ya existe una cuenta con este correo. Inicia sesión o usa la opción de recuperación de contraseña.',
+          [
+            { text: 'Ir a iniciar sesión', onPress: () => navigation.goBack() },
+            { text: 'Entendido', style: 'cancel' },
+          ],
+        );
+        return;
       }
 
       const message = error instanceof Error ? error.message : 'Algo salió mal.';
