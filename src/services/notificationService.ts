@@ -1,6 +1,8 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+const CANAL_RECORDATORIOS = 'riders-reminders';
+
 // Configuración para que la alerta se muestre en pantalla incluso si la app está en primer plano
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -11,17 +13,23 @@ Notifications.setNotificationHandler({
   }),
 });
 
+const configurarCanalNotificaciones = async () => {
+  if (Platform.OS !== 'android') return;
+
+  await Notifications.setNotificationChannelAsync(CANAL_RECORDATORIOS, {
+    name: 'RidersMX · Recordatorios',
+    description: 'Avisos para cuidar tu racha diaria.',
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: 'default',
+    vibrationPattern: [0, 250, 150, 250],
+    lightColor: '#3B82F6',
+  });
+};
+
 export const solicitarPermisosNotificaciones = async (): Promise<boolean> => {
   if (Platform.OS === 'web') return false;
 
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'Notificaciones',
-      importance: Notifications.AndroidImportance.HIGH,
-      sound: 'default',
-      vibrationPattern: [0, 250, 250, 250],
-    });
-  }
+  await configurarCanalNotificaciones();
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -57,6 +65,7 @@ export const limpiarNotificacionesRacha = async () => {
 export const programarNotificacionesRacha = async (
   completadoHoy: boolean,
   horaRecordatorio = '19:00',
+  pedirPermiso = false,
 ): Promise<boolean> => {
   const [hora, minuto] = horaRecordatorio.split(':').map(Number);
   if (
@@ -70,7 +79,11 @@ export const programarNotificacionesRacha = async (
     throw new Error(`Hora de recordatorio no válida: ${horaRecordatorio}`);
   }
 
-  const tienePermiso = await solicitarPermisosNotificaciones();
+  if (Platform.OS === 'web') return false;
+  await configurarCanalNotificaciones();
+  const { status } = await Notifications.getPermissionsAsync();
+  const tienePermiso = status === 'granted'
+    || (pedirPermiso && await solicitarPermisosNotificaciones());
   if (!tienePermiso) return false;
 
   await limpiarNotificacionesRacha();
@@ -95,12 +108,13 @@ export const programarNotificacionesRacha = async (
       await Notifications.scheduleNotificationAsync({
         identifier: `racha-recordatorio-dia${i}`,
         content: {
-          title: '🔥 ¡No pierdas tu racha!',
-          body: 'Es hora de hacer tu check-in diario. Entra y asegura tu progreso.',
+          title: '🏍️ RidersMX · Tu racha te espera',
+          body: 'Haz tu check-in de hoy y mantén vivo tu progreso.',
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: fechaRecordatorio,
+          channelId: CANAL_RECORDATORIOS,
         },
       });
     }
@@ -109,12 +123,13 @@ export const programarNotificacionesRacha = async (
       await Notifications.scheduleNotificationAsync({
         identifier: `racha-urgencia-dia${i}`,
         content: {
-          title: '⚠️ ¡Última llamada para tu racha!',
-          body: 'Faltan un par de horas para que termine el día. ¡Salva tu racha ahora!',
+          title: '🔥 RidersMX · Último aviso del día',
+          body: 'Aún puedes completar tu check-in y conservar tu racha.',
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: fechaUrgencia,
+          channelId: CANAL_RECORDATORIOS,
         },
       });
     }

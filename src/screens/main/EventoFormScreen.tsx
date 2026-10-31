@@ -16,6 +16,56 @@ interface MotoAsociable {
 }
 
 const OTRO_ACOMPANANTE = 'Otro / Acompañante';
+type Recurrencia = 'none' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
+
+const generarIdSerie = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (caracter) => {
+  const aleatorio = Math.floor(Math.random() * 16);
+  return (caracter === 'x' ? aleatorio : (aleatorio & 0x3) | 0x8).toString(16);
+});
+
+const agregarMeses = (fecha: Date, meses: number, diaPreferido = fecha.getDate()) => {
+  const siguiente = new Date(fecha);
+  siguiente.setDate(1);
+  siguiente.setMonth(siguiente.getMonth() + meses);
+  const ultimoDiaDelMes = new Date(siguiente.getFullYear(), siguiente.getMonth() + 1, 0).getDate();
+  siguiente.setDate(Math.min(diaPreferido, ultimoDiaDelMes));
+  return siguiente;
+};
+
+const obtenerFechasRecurrentes = (
+  inicio: Date,
+  fin: Date,
+  recurrencia: Recurrencia,
+  intervaloDias: number,
+) => {
+  const fechas: Date[] = [];
+  let actual = new Date(inicio);
+  actual.setHours(0, 0, 0, 0);
+  const finNormalizado = new Date(fin);
+  finNormalizado.setHours(0, 0, 0, 0);
+  const diaPreferido = actual.getDate();
+
+  while (actual <= finNormalizado) {
+    fechas.push(new Date(actual));
+    if (fechas.length > 100) {
+      throw new Error('Elige un periodo menor: puedes programar hasta 100 citas por serie.');
+    }
+
+    if (recurrencia === 'weekly') {
+      actual.setDate(actual.getDate() + 7);
+    } else if (recurrencia === 'biweekly') {
+      actual.setDate(actual.getDate() + 14);
+    } else if (recurrencia === 'monthly') {
+      actual = agregarMeses(actual, 1, diaPreferido);
+    } else if (recurrencia === 'custom') {
+      actual.setDate(actual.getDate() + intervaloDias);
+    } else {
+      break;
+    }
+  }
+
+  return fechas;
+};
 
 export default function EventoFormScreen({ navigation, route }: any) {
   const { theme } = useTheme();
@@ -39,6 +89,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
   // Visibilidad de los pickers nativos
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showRecurrenceEndPicker, setShowRecurrenceEndPicker] = useState(false);
 
   const [tipo, setTipo] = useState(route.params?.tipo === 'mantenimiento' ? 'mantenimiento' : 'rodada');
   const [descripcion, setDescripcion] = useState('');
@@ -48,6 +99,13 @@ export default function EventoFormScreen({ navigation, route }: any) {
   // Estado de la actividad
   const [estado, setEstado] = useState('Planeada');
   const estadosValidos = ['Planeada', 'Completada', 'Reprogramada', 'Cancelada'];
+  const [recurrencia, setRecurrencia] = useState<Recurrencia>('none');
+  const [intervaloDias, setIntervaloDias] = useState('7');
+  const [fechaFinRecurrencia, setFechaFinRecurrencia] = useState(() => {
+    const fecha = new Date(fechaBase + 'T00:00:00');
+    fecha.setMonth(fecha.getMonth() + 3);
+    return fecha;
+  });
 
   useEffect(() => {
     let activo = true;
@@ -150,6 +208,16 @@ export default function EventoFormScreen({ navigation, route }: any) {
       if (sessionError) throw sessionError;
       if (!session?.user) throw new Error('Inicia sesión para guardar este evento.');
 
+      const intervaloNumerico = Number(intervaloDias);
+      if (recurrencia === 'custom' && (!Number.isInteger(intervaloNumerico) || intervaloNumerico < 1 || intervaloNumerico > 365)) {
+        throw new Error('El intervalo personalizado debe ser de 1 a 365 días.');
+      }
+
+      const fechaFinStr = recurrencia === 'none' ? null : formatearFechaYMD(fechaFinRecurrencia);
+      if (fechaFinStr !== null && fechaFinStr < fechaStr) {
+        throw new Error('La fecha final debe ser igual o posterior a la primera cita.');
+      }
+
       const eventoPayload = {
         perfil_id: session.user.id,
         titulo: titulo.trim(),
@@ -158,7 +226,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
         tipo: tipo,
         descripcion: descripcion.trim(),
         moto_asociada: motoAsociada.trim() || null,
-        estado: estado
+        estado,
       };
 
       if (esEdicion) {
@@ -166,9 +234,24 @@ export default function EventoFormScreen({ navigation, route }: any) {
         if (error) throw error;
         Platform.OS === 'web' ? window.alert('Evento actualizado') : Alert.alert('Éxito', 'Evento actualizado');
       } else {
-        const { error } = await supabase.from('eventos').insert([eventoPayload]);
+        const fechas = recurrencia === 'none'
+          ? [fechaObj]
+          : obtenerFechasRecurrentes(fechaObj, fechaFinRecurrencia, recurrencia, intervaloNumerico);
+        const serieId = recurrencia === 'none' ? null : generarIdSerie();
+        const eventos = fechas.map((fecha) => ({
+          ...eventoPayload,
+          fecha: formatearFechaYMD(fecha),
+          serie_id: serieId,
+          recurrencia,
+          intervalo_recurrencia: recurrencia === 'custom' ? intervaloNumerico : null,
+          recurrencia_hasta: fechaFinStr,
+        }));
+        const { error } = await supabase.from('eventos').insert(eventos);
         if (error) throw error;
-        Platform.OS === 'web' ? window.alert('Evento agendado') : Alert.alert('Éxito', 'Evento agendado');
+        const mensaje = eventos.length > 1
+          ? `Se agendaron ${eventos.length} citas.`
+          : 'Evento agendado.';
+        Platform.OS === 'web' ? window.alert(mensaje) : Alert.alert('Éxito', mensaje);
       }
 
       navigation.goBack();
@@ -322,6 +405,92 @@ export default function EventoFormScreen({ navigation, route }: any) {
             </>
           )}
         </View>
+
+        {!esEdicion && (
+          <View style={styles.seccion}>
+            <Text style={styles.label}>Repetir cita</Text>
+            <View style={styles.chipsContainer}>
+              {([
+                ['none', 'No repetir'],
+                ['weekly', 'Semanal'],
+                ['biweekly', 'Quincenal'],
+                ['monthly', 'Mensual'],
+                ['custom', 'Personalizado'],
+              ] as const).map(([valor, etiqueta]) => {
+                const seleccionada = recurrencia === valor;
+                return (
+                  <TouchableOpacity
+                    key={valor}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: seleccionada }}
+                    style={[styles.chipBase, seleccionada && styles.chipActive]}
+                    onPress={() => setRecurrencia(valor)}
+                  >
+                    <Text style={[styles.chipTextBase, seleccionada && styles.chipTextActive]}>
+                      {etiqueta}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {recurrencia !== 'none' && (
+              <>
+                {recurrencia === 'custom' && (
+                  <CustomInput
+                    label="Repetir cada cuántos días"
+                    placeholder="Ej. 10"
+                    keyboardType="numeric"
+                    value={intervaloDias}
+                    onChangeText={(value) => setIntervaloDias(value.replace(/\D/g, ''))}
+                  />
+                )}
+                <Text style={styles.label}>Última fecha de la serie</Text>
+                {Platform.OS === 'web' ? (
+                  <input
+                    type="date"
+                    min={formatearFechaYMD(fechaObj)}
+                    value={formatearFechaYMD(fechaFinRecurrencia)}
+                    onChange={(event) => {
+                      if (event.target.value) {
+                        setFechaFinRecurrencia(new Date(`${event.target.value}T00:00:00`));
+                      }
+                    }}
+                    style={styles.webInput}
+                  />
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => setShowRecurrenceEndPicker(true)}
+                    >
+                      <Ionicons name="calendar-outline" size={20} color={theme.primary} />
+                      <Text style={styles.pickerButtonText}>
+                        {formatearFechaLegible(fechaFinRecurrencia)}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                    {showRecurrenceEndPicker && (
+                      <DateTimePicker
+                        value={fechaFinRecurrencia}
+                        mode="date"
+                        minimumDate={fechaObj}
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
+                          setShowRecurrenceEndPicker(Platform.OS === 'ios');
+                          if (selectedDate) setFechaFinRecurrencia(selectedDate);
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+                <Text style={styles.motosVacias}>
+                  Se crearán citas para {tipo === 'mantenimiento' ? 'taller' : 'rodadas'} hasta esta fecha.
+                </Text>
+              </>
+            )}
+          </View>
+        )}
 
 {/* SELECTOR DE HORA INTERACTIVO */}
         <View style={styles.seccion}>

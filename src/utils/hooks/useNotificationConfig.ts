@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { 
   obtenerConfigNotificaciones, 
   guardarConfigNotificaciones, 
@@ -29,7 +31,18 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
       setLoading(true);
       try {
         const data = await obtenerConfigNotificaciones(userId);
-        if (mounted) setConfig(data);
+        if (!mounted) return;
+
+        if (Platform.OS !== 'web' && data.checkInEnabled) {
+          const permissions = await Notifications.getPermissionsAsync();
+          if (mounted) {
+            setConfig(permissions.status === 'granted'
+              ? data
+              : { ...data, checkInEnabled: false });
+          }
+        } else {
+          setConfig(data);
+        }
       } catch (error) {
         console.error('No se pudo cargar la configuración de notificaciones:', error);
       } finally {
@@ -51,7 +64,7 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
 
     try {
       if (enabled) {
-        const programadas = await programarNotificacionesRacha(rachaCompletadaHoy, config.checkInTime);
+        const programadas = await programarNotificacionesRacha(rachaCompletadaHoy, config.checkInTime, true);
         if (!programadas) {
           throw new Error('Concede permisos de notificación en tu dispositivo para activar los recordatorios.');
         }
@@ -101,7 +114,7 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
     setConfig(nuevaConfig);
     try {
       if (config.checkInEnabled) {
-        const programadas = await programarNotificacionesRacha(rachaCompletadaHoy, nuevaHora);
+        const programadas = await programarNotificacionesRacha(rachaCompletadaHoy, nuevaHora, true);
         if (!programadas) {
           throw new Error('Concede permisos de notificación en tu dispositivo para cambiar la hora.');
         }

@@ -416,6 +416,46 @@
 "column_default": "timezone('utc'::text, now())"
 },
 {
+"table_name": "historial_checkins",
+"column_name": "id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "historial_checkins",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "historial_checkins",
+"column_name": "fecha",
+"data_type": "date",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "historial_checkins",
+"column_name": "tipo",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "'quiz'::text"
+},
+{
+"table_name": "historial_checkins",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
 "table_name": "insignias",
 "column_name": "id",
 "data_type": "uuid",
@@ -654,12 +694,49 @@
 "character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": "timezone('utc'::text, now())"
+}
+]
+
+[
+{
+"table_name": "historial_checkins",
+"column_name": "id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "historial_checkins",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "historial_checkins",
+"column_name": "fecha",
+"data_type": "date",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "historial_checkins",
+"column_name": "tipo",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": "'quiz'::text"
+},
+{
+"table_name": "historial_checkins",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
 },
 {
 "table_name": "motos_catalogo",
 "column_name": "id",
 "data_type": "uuid",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": "uuid_generate_v4()"
 },
@@ -667,7 +744,6 @@
 "table_name": "motos_catalogo",
 "column_name": "perfil_id",
 "data_type": "uuid",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -675,7 +751,6 @@
 "table_name": "motos_catalogo",
 "column_name": "nombre",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": null
 },
@@ -683,7 +758,6 @@
 "table_name": "motos_catalogo",
 "column_name": "marca",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": null
 },
@@ -691,7 +765,6 @@
 "table_name": "motos_catalogo",
 "column_name": "modelo",
 "data_type": "integer",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": null
 },
@@ -699,7 +772,6 @@
 "table_name": "motos_catalogo",
 "column_name": "tipo",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -707,7 +779,6 @@
 "table_name": "motos_catalogo",
 "column_name": "cilindrada",
 "data_type": "integer",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -715,7 +786,6 @@
 "table_name": "motos_catalogo",
 "column_name": "precio",
 "data_type": "numeric",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -723,7 +793,6 @@
 "table_name": "motos_catalogo",
 "column_name": "descripcion",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -731,7 +800,6 @@
 "table_name": "motos_catalogo",
 "column_name": "imagen_url",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -739,7 +807,6 @@
 "table_name": "motos_catalogo",
 "column_name": "propietario",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -747,7 +814,6 @@
 "table_name": "motos_catalogo",
 "column_name": "created_at",
 "data_type": "timestamp with time zone",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": "timezone('utc'::text, now())"
 },
@@ -755,7 +821,6 @@
 "table_name": "perfiles",
 "column_name": "id",
 "data_type": "uuid",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": null
 },
@@ -763,7 +828,6 @@
 "table_name": "perfiles",
 "column_name": "username",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": null
 },
@@ -771,7 +835,6 @@
 "table_name": "perfiles",
 "column_name": "nombre_completo",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -779,7 +842,6 @@
 "table_name": "perfiles",
 "column_name": "fecha_nacimiento",
 "data_type": "date",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -787,7 +849,6 @@
 "table_name": "perfiles",
 "column_name": "telefono",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -795,318 +856,371 @@
 "table_name": "perfiles",
 "column_name": "ciudad",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
+},
+{
+"table_name": "perfiles",
+"column_name": "bio",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "perfiles",
+"column_name": "tipo_sangre",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "perfiles",
+"column_name": "contacto_emergencia",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "perfiles",
+"column_name": "nivel_experiencia",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "perfiles",
+"column_name": "avatar_url",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "perfiles",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "perfiles",
+"column_name": "numero_licencia",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "perfiles",
+"column_name": "limite_notificacion",
+"data_type": "integer",
+"is_nullable": "YES",
+"column_default": "60"
+},
+{
+"table_name": "perfiles",
+"column_name": "limite_bloqueo",
+"data_type": "integer",
+"is_nullable": "YES",
+"column_default": "120"
+},
+{
+"table_name": "perfiles",
+"column_name": "last_password_change_at",
+"data_type": "timestamp with time zone",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "perfiles",
+"column_name": "notificaciones_config",
+"data_type": "jsonb",
+"is_nullable": "NO",
+"column_default": "'{\"checkInTime\": \"19:00\", \"limiteEnabled\": true, \"checkInEnabled\": true}'::jsonb"
+},
+{
+"table_name": "perfiles_publicos",
+"column_name": "id",
+"data_type": "uuid",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "perfiles_publicos",
+"column_name": "username",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "perfiles_publicos",
+"column_name": "avatar_url",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "racha_actual",
+"data_type": "integer",
+"is_nullable": "NO",
+"column_default": "0"
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "racha_maxima",
+"data_type": "integer",
+"is_nullable": "NO",
+"column_default": "0"
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "ultimo_checkin",
+"data_type": "date",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "comodines_disponibles",
+"data_type": "integer",
+"is_nullable": "NO",
+"column_default": "1"
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "ultimo_comodin_usado",
+"data_type": "date",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "rachas_usuario",
+"column_name": "updated_at",
+"data_type": "timestamp with time zone",
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "resenas",
+"column_name": "id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "resenas",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "resenas",
+"column_name": "entidad_evaluada",
+"data_type": "text",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "resenas",
+"column_name": "tipo_entidad",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "resenas",
+"column_name": "calificacion",
+"data_type": "integer",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "resenas",
+"column_name": "comentario",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "resenas",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "security_logs",
+"column_name": "id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "security_logs",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "security_logs",
+"column_name": "event_type",
+"data_type": "text",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "security_logs",
+"column_name": "ip_address",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "security_logs",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "support_tickets",
+"column_name": "id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "support_tickets",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "support_tickets",
+"column_name": "asunto",
+"data_type": "text",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "support_tickets",
+"column_name": "mensaje",
+"data_type": "text",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "support_tickets",
+"column_name": "estado",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": "'abierto'::text"
+},
+{
+"table_name": "support_tickets",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "fecha",
+"data_type": "date",
+"is_nullable": "NO",
+"column_default": "CURRENT_DATE"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "minutos_usados",
+"data_type": "numeric",
+"is_nullable": "NO",
+"column_default": "0"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "limite_diario_minutos",
+"data_type": "integer",
+"is_nullable": "NO",
+"column_default": "120"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "recordatorio_minutos",
+"data_type": "integer",
+"is_nullable": "NO",
+"column_default": "60"
+},
+{
+"table_name": "tiempo_uso",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "usuario_insignias",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "usuario_insignias",
+"column_name": "insignia_id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "usuario_insignias",
+"column_name": "fecha_desbloqueo",
+"data_type": "timestamp with time zone",
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
 }
 ]
-[
-  {
-    "table_name": "perfiles_publicos",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "perfiles_publicos",
-    "column_name": "username",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "perfiles_publicos",
-    "column_name": "avatar_url",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "rachas_usuario",
-    "column_name": "perfil_id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": null
-  },
-  {
-    "table_name": "rachas_usuario",
-    "column_name": "racha_actual",
-    "data_type": "integer",
-    "is_nullable": "NO",
-    "column_default": "0"
-  },
-  {
-    "table_name": "rachas_usuario",
-    "column_name": "racha_maxima",
-    "data_type": "integer",
-    "is_nullable": "NO",
-    "column_default": "0"
-  },
-  {
-    "table_name": "rachas_usuario",
-    "column_name": "ultimo_checkin",
-    "data_type": "date",
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "rachas_usuario",
-    "column_name": "comodines_disponibles",
-    "data_type": "integer",
-    "is_nullable": "NO",
-    "column_default": "1"
-  },
-  {
-    "table_name": "rachas_usuario",
-    "column_name": "ultimo_comodin_usado",
-    "data_type": "date",
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "rachas_usuario",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "timezone('utc'::text, now())"
-  },
-  {
-    "table_name": "rachas_usuario",
-    "column_name": "updated_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "timezone('utc'::text, now())"
-  },
-  {
-    "table_name": "resenas",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "uuid_generate_v4()"
-  },
-  {
-    "table_name": "resenas",
-    "column_name": "perfil_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "resenas",
-    "column_name": "entidad_evaluada",
-    "data_type": "text",
-    "is_nullable": "NO",
-    "column_default": null
-  },
-  {
-    "table_name": "resenas",
-    "column_name": "tipo_entidad",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "resenas",
-    "column_name": "calificacion",
-    "data_type": "integer",
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "resenas",
-    "column_name": "comentario",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "resenas",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "timezone('utc'::text, now())"
-  },
-  {
-    "table_name": "security_logs",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "uuid_generate_v4()"
-  },
-  {
-    "table_name": "security_logs",
-    "column_name": "perfil_id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": null
-  },
-  {
-    "table_name": "security_logs",
-    "column_name": "event_type",
-    "data_type": "text",
-    "is_nullable": "NO",
-    "column_default": null
-  },
-  {
-    "table_name": "security_logs",
-    "column_name": "ip_address",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "security_logs",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "timezone('utc'::text, now())"
-  },
-  {
-    "table_name": "support_tickets",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "uuid_generate_v4()"
-  },
-  {
-    "table_name": "support_tickets",
-    "column_name": "perfil_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "support_tickets",
-    "column_name": "asunto",
-    "data_type": "text",
-    "is_nullable": "NO",
-    "column_default": null
-  },
-  {
-    "table_name": "support_tickets",
-    "column_name": "mensaje",
-    "data_type": "text",
-    "is_nullable": "NO",
-    "column_default": null
-  },
-  {
-    "table_name": "support_tickets",
-    "column_name": "estado",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": "'abierto'::text"
-  },
-  {
-    "table_name": "support_tickets",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "timezone('utc'::text, now())"
-  },
-  {
-    "table_name": "tiempo_uso",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "uuid_generate_v4()"
-  },
-  {
-    "table_name": "tiempo_uso",
-    "column_name": "perfil_id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": null
-  },
-  {
-    "table_name": "tiempo_uso",
-    "column_name": "fecha",
-    "data_type": "date",
-    "is_nullable": "NO",
-    "column_default": "CURRENT_DATE"
-  },
-  {
-    "table_name": "tiempo_uso",
-    "column_name": "minutos_usados",
-    "data_type": "numeric",
-    "is_nullable": "NO",
-    "column_default": "0"
-  },
-  {
-    "table_name": "tiempo_uso",
-    "column_name": "limite_diario_minutos",
-    "data_type": "integer",
-    "is_nullable": "NO",
-    "column_default": "120"
-  },
-  {
-    "table_name": "tiempo_uso",
-    "column_name": "recordatorio_minutos",
-    "data_type": "integer",
-    "is_nullable": "NO",
-    "column_default": "60"
-  },
-  {
-    "table_name": "tiempo_uso",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "timezone('utc'::text, now())"
-  },
-  {
-    "table_name": "usuario_insignias",
-    "column_name": "perfil_id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": null
-  },
-  {
-    "table_name": "usuario_insignias",
-    "column_name": "insignia_id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": null
-  },
-  {
-    "table_name": "usuario_insignias",
-    "column_name": "fecha_desbloqueo",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "timezone('utc'::text, now())"
-  }
-]
-  {
-    "table_name": "historial_checkins",
-    "column_name": "id",
-    "data_type": "uuid",
-    "is_nullable": "NO",
-    "column_default": "uuid_generate_v4()"
-  },
-  {
-    "table_name": "historial_checkins",
-    "column_name": "perfil_id",
-    "data_type": "uuid",
-    "is_nullable": "YES",
-    "column_default": null
-  },
-  {
-    "table_name": "historial_checkins",
-    "column_name": "fecha",
-    "data_type": "date",
-    "is_nullable": "NO",
-    "column_default": null
-  },
-  {
-    "table_name": "historial_checkins",
-    "column_name": "tipo",
-    "data_type": "text",
-    "is_nullable": "YES",
-    "column_default": "'quiz'::text"
-  },
-  {
-    "table_name": "historial_checkins",
-    "column_name": "created_at",
-    "data_type": "timestamp with time zone",
-    "is_nullable": "YES",
-    "column_default": "timezone('utc'::text, now())"
-  }
+
+## Cambios de esquema de RidersMX
+
+La migración `20261031000000_add_badge_favorite_and_event_recurrence.sql` agrega:
+
+- `perfiles.insignia_favorita_id` (`text`): identificador de la insignia desbloqueada que se muestra como favorita.
+- `eventos.serie_id` (`uuid`): agrupa las citas generadas por una misma programación recurrente.
+- `eventos.recurrencia` (`text`, predeterminado `none`): `none`, `weekly`, `biweekly`, `monthly` o `custom`.
+- `eventos.intervalo_recurrencia` (`integer`): intervalo en días de las series `custom` (entre 1 y 365).
+- `eventos.recurrencia_hasta` (`date`): fecha final inclusiva de la serie.
+
+La migración `20261031000001_add_profile_avatar_storage.sql` crea el bucket público `avatars`.
+La escritura y eliminación de objetos se restringe a la carpeta cuyo primer segmento coincide
+con el ID del usuario autenticado.

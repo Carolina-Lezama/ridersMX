@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import Skeleton from '../../components/Skeleton';
@@ -13,7 +15,9 @@ export default function PerfilScreen({ navigation }: any) {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [subiendoAvatar, setSubiendoAvatar] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const [username, setUsername] = useState('');
   const [nombreCompleto, setNombreCompleto] = useState('');
@@ -22,6 +26,7 @@ export default function PerfilScreen({ navigation }: any) {
   const [bio, setBio] = useState(':?');
   
   const [fechaNacimiento, setFechaNacimiento] = useState('');
+  const [mostrarSelectorFecha, setMostrarSelectorFecha] = useState(false);
   const [tipoSangre, setTipoSangre] = useState('');
   const [contactoEmergencia, setContactoEmergencia] = useState('');
   const [nivelExperiencia, setNivelExperiencia] = useState('');
@@ -29,6 +34,28 @@ export default function PerfilScreen({ navigation }: any) {
 
   // Opciones válidas para la base de datos
   const nivelesValidos = ['Novato', 'Intermedio', 'Experto', 'Profesional'];
+
+  const formatearFechaISO = (fecha: Date) => {
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    return `${anio}-${mes}-${dia}`;
+  };
+
+  const fechaNacimientoLegible = () => {
+    if (!fechaNacimiento) return 'Selecciona tu fecha de nacimiento';
+    const [anio, mes, dia] = fechaNacimiento.split('-').map(Number);
+    const fecha = new Date(anio, mes - 1, dia);
+    if (Number.isNaN(fecha.getTime())) return 'Selecciona tu fecha de nacimiento';
+    return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
+  const fechaNacimientoSeleccionada = () => {
+    if (!fechaNacimiento) return new Date(2000, 0, 1);
+    const [anio, mes, dia] = fechaNacimiento.split('-').map(Number);
+    const fecha = new Date(anio, mes - 1, dia);
+    return Number.isNaN(fecha.getTime()) ? new Date(2000, 0, 1) : fecha;
+  };
 
   useEffect(() => {
     cargarPerfil();
@@ -53,6 +80,7 @@ export default function PerfilScreen({ navigation }: any) {
         if (data) {
           setUsername(data.username || '');
           setNombreCompleto(data.nombre_completo || '');
+          setAvatarUrl(data.avatar_url || null);
           setTelefono(data.telefono || '');
           setCiudad(data.ciudad || '');
           setBio(data.bio || '');
@@ -70,6 +98,80 @@ export default function PerfilScreen({ navigation }: any) {
     }
   };
 
+  const seleccionarFotoPerfil = async () => {
+    try {
+      if (!userId) throw new Error('Inicia sesión para actualizar tu foto de perfil.');
+
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso necesario', 'Permite el acceso a tus fotos para elegir una imagen de perfil.');
+        return;
+      }
+
+      const seleccion = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (seleccion.canceled || !seleccion.assets[0]) return;
+
+      const foto = seleccion.assets[0];
+      if (foto.fileSize && foto.fileSize > 8 * 1024 * 1024) {
+        throw new Error('La foto debe pesar menos de 8 MB.');
+      }
+
+      setSubiendoAvatar(true);
+      const respuesta = await fetch(foto.uri);
+      if (!respuesta.ok) throw new Error('No se pudo leer la foto seleccionada.');
+      const contenido = await respuesta.arrayBuffer();
+      const contentType = foto.mimeType?.startsWith('image/')
+        ? foto.mimeType
+        : 'image/jpeg';
+      const extension = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+      const ruta = `${userId}/${Date.now()}.${extension}`;
+
+      const { error: errorSubida } = await supabase.storage
+        .from('avatars')
+        .upload(ruta, contenido, { contentType, upsert: false });
+      if (errorSubida) throw errorSubida;
+
+      const urlPublica = supabase.storage.from('avatars').getPublicUrl(ruta).data.publicUrl;
+      const nuevaUrl = `${urlPublica}?v=${Date.now()}`;
+      const { data: perfilActualizado, error: errorPerfil } = await supabase
+        .from('perfiles')
+        .update({ avatar_url: nuevaUrl })
+        .eq('id', userId)
+        .select('id')
+        .maybeSingle();
+
+      if (errorPerfil || !perfilActualizado) {
+        const { error: errorLimpieza } = await supabase.storage.from('avatars').remove([ruta]);
+        if (errorLimpieza) console.error('No se pudo limpiar la foto no guardada:', errorLimpieza);
+        if (errorPerfil) throw errorPerfil;
+        throw new Error('No se encontró el perfil para guardar la foto.');
+      }
+
+      const fotoAnterior = avatarUrl?.split('/storage/v1/object/public/avatars/')[1]?.split('?')[0];
+      if (fotoAnterior?.startsWith(`${userId}/`)) {
+        const { error: errorBorrado } = await supabase.storage
+          .from('avatars')
+          .remove([decodeURIComponent(fotoAnterior)]);
+        if (errorBorrado) console.warn('No se pudo borrar la foto de perfil anterior:', errorBorrado);
+      }
+
+      setAvatarUrl(nuevaUrl);
+    } catch (error) {
+      console.error('Error al actualizar la foto de perfil:', error);
+      Alert.alert(
+        'No se pudo actualizar la foto',
+        error instanceof Error ? error.message : 'Inténtalo de nuevo más tarde.',
+      );
+    } finally {
+      setSubiendoAvatar(false);
+    }
+  };
+
 const guardarPerfil = async () => {
     // 1. Prevenir el fallo silencioso
     if (!userId) {
@@ -83,11 +185,19 @@ const guardarPerfil = async () => {
       console.log("Iniciando guardado para el usuario:", userId); // Útil para depurar en PC
 
       let fechaValidada = fechaNacimiento.trim();
-      if (fechaValidada !== '' && !fechaValidada.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        const msg = 'La fecha debe tener el formato YYYY-MM-DD (Ej. 1998-08-15)';
-        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Formato incorrecto', msg);
-        setSaving(false);
-        return;
+      if (fechaValidada !== '') {
+        const [anio, mes, dia] = fechaValidada.split('-').map(Number);
+        const fecha = new Date(anio, mes - 1, dia);
+        const fechaExiste = Number.isInteger(anio)
+          && Number.isInteger(mes)
+          && Number.isInteger(dia)
+          && formatearFechaISO(fecha) === fechaValidada;
+        if (!fechaExiste || fecha > new Date()) {
+          const msg = 'Selecciona una fecha de nacimiento válida que no sea futura.';
+          Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Formato incorrecto', msg);
+          setSaving(false);
+          return;
+        }
       }
 
       const { error } = await supabase
@@ -157,9 +267,26 @@ const guardarPerfil = async () => {
 
       <View style={styles.avatarContainer}>
         <View style={styles.avatarPlaceholder}>
-          <Text style={styles.avatarText}>{nombreCompleto ? nombreCompleto.substring(0, 2).toUpperCase() : 'UI'}</Text>
-          <TouchableOpacity style={styles.editBadge}>
-            <Ionicons name="camera" size={16} color={theme.card} />
+          {avatarUrl ? (
+            <Image
+              source={{ uri: avatarUrl }}
+              style={styles.avatarImage}
+              accessibilityLabel={`Foto de perfil de ${nombreCompleto || 'Rider'}`}
+              onError={() => setAvatarUrl(null)}
+            />
+          ) : (
+            <Text style={styles.avatarText}>{nombreCompleto ? nombreCompleto.substring(0, 2).toUpperCase() : 'UI'}</Text>
+          )}
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Cambiar foto de perfil"
+            style={styles.editBadge}
+            onPress={() => void seleccionarFotoPerfil()}
+            disabled={subiendoAvatar}
+          >
+            {subiendoAvatar
+              ? <ActivityIndicator size="small" color={theme.card} />
+              : <Ionicons name="camera" size={16} color={theme.card} />}
           </TouchableOpacity>
         </View>
         <Text style={styles.nombreUsuario}>{nombreCompleto || 'Rider'}</Text>
@@ -176,8 +303,41 @@ const guardarPerfil = async () => {
         <CustomInput label="Nombre Completo" placeholder="Tu nombre real" value={nombreCompleto} onChangeText={setNombreCompleto} />
         <CustomInput label="Nombre de usuario" placeholder="caro_rider" value={username} onChangeText={setUsername} autoCapitalize="none" />
         
-        {/* Input de Fecha Corregido temporalmente con formato estricto */}
-        <CustomInput label="Fecha de Nacimiento (YYYY-MM-DD)" placeholder="Ej. 1998-08-15" value={fechaNacimiento} onChangeText={setFechaNacimiento} />
+        <Text style={styles.label}>Fecha de nacimiento</Text>
+        {Platform.OS === 'web' ? (
+          <input
+            type="date"
+            max={formatearFechaISO(new Date())}
+            value={fechaNacimiento}
+            onChange={(event) => setFechaNacimiento(event.target.value)}
+            style={styles.webDateInput}
+          />
+        ) : (
+          <>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`Fecha de nacimiento: ${fechaNacimientoLegible()}`}
+              style={styles.datePickerButton}
+              onPress={() => setMostrarSelectorFecha(true)}
+            >
+              <Ionicons name="calendar-outline" size={20} color={theme.primary} />
+              <Text style={styles.datePickerText}>{fechaNacimientoLegible()}</Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.iconSecondary} />
+            </TouchableOpacity>
+            {mostrarSelectorFecha && (
+              <DateTimePicker
+                value={fechaNacimientoSeleccionada()}
+                mode="date"
+                maximumDate={new Date()}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
+                  setMostrarSelectorFecha(Platform.OS === 'ios');
+                  if (selectedDate) setFechaNacimiento(formatearFechaISO(selectedDate));
+                }}
+              />
+            )}
+          </>
+        )}
         
         <CustomInput label="Teléfono" placeholder="+52 000 000 0000" keyboardType="numeric" value={telefono} onChangeText={setTelefono} />
         <CustomInput label="Ciudad" placeholder="Ej. Puebla, México" value={ciudad} onChangeText={setCiudad} />
@@ -256,7 +416,8 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   container: { backgroundColor: theme.background, flexGrow: 1, paddingBottom: 20 },
   headerBackground: { backgroundColor: theme.primary, height: 120, width: '100%', position: 'absolute', top: 0, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
   avatarContainer: { alignItems: 'center', marginTop: 60, marginBottom: 20 },
-  avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: theme.card, justifyContent: 'center', alignItems: 'center', shadowColor: theme.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, borderWidth: 3, borderColor: theme.background },
+  avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: theme.card, justifyContent: 'center', alignItems: 'center', shadowColor: theme.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, borderWidth: 3, borderColor: theme.background, overflow: 'hidden' },
+  avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: 36, fontWeight: 'bold', color: theme.iconSecondary },
   editBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: theme.primary, width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: theme.card },
   nombreUsuario: { fontSize: 22, fontWeight: 'bold', color: theme.textPrimary, marginTop: 10 },
@@ -265,6 +426,9 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.divider, paddingBottom: 10 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginLeft: 10 },
   label: { fontSize: 14, fontWeight: '600', color: theme.textPrimary, marginBottom: 10 },
+  datePickerButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 13, marginBottom: 15 },
+  datePickerText: { flex: 1, marginLeft: 10, color: theme.textPrimary, fontSize: 16 },
+  webDateInput: { width: '100%', backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border, borderRadius: 10, padding: 12, fontSize: 16, color: theme.textPrimary, marginBottom: 15 },
   footer: { paddingHorizontal: 20, marginTop: 30 },
   
   // NUEVOS ESTILOS PARA LOS CHIPS DE EXPERIENCIA

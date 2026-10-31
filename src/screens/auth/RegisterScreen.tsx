@@ -161,6 +161,7 @@ export default function RegisterScreen({ navigation, route }: any) {
         label="Contraseña" 
         placeholder="********" 
         secureTextEntry 
+        showPasswordToggle
         value={password} 
         onChangeText={setPassword} 
         error={passwordError}

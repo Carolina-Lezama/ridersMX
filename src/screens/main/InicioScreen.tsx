@@ -9,6 +9,7 @@ import { QuizModal, type PreguntaQuiz } from '../../components/QuizModal';
 import PostRideReviewModal from '../../components/PostRideReviewModal';
 import DashboardEmptyState from '../../components/DashboardEmptyState';
 import { getPreguntaDelDia } from '../../services/quizService';
+import { obtenerResumenInsignias, type Insignia } from '../../services/badgeService';
 import { supabase } from '../../services/supabase';
 import { obtenerEventoPendiente, obtenerTotalKilometros } from '../../services/reviewService';
 import { clearSelectedMotorcycleId, getSelectedMotorcycleId, setSelectedMotorcycleId } from '../../services/motorcycleSelectionService';
@@ -26,6 +27,7 @@ interface DashboardMoto {
 }
 
 interface DashboardMaintenance {
+  id: string;
   titulo: string;
   fecha: string;
 }
@@ -37,7 +39,9 @@ export default function InicioScreen({ navigation }: any) {
   const [nombreUsuario, setNombreUsuario] = useState('');
   const [loadingDashboard, setLoadingDashboard] = useState(true);
   const [motoPrincipal, setMotoPrincipal] = useState<DashboardMoto | null>(null);
-  const [proximoMantenimiento, setProximoMantenimiento] = useState<DashboardMaintenance | null>(null);
+  const [proximosMantenimientos, setProximosMantenimientos] = useState<DashboardMaintenance[]>([]);
+  const [insigniaFavorita, setInsigniaFavorita] = useState<Insignia | null>(null);
+  const [favoritaElegida, setFavoritaElegida] = useState(false);
 
   const {
     loading: cargandoRacha,
@@ -104,7 +108,7 @@ export default function InicioScreen({ navigation }: any) {
 
           const hoy = new Date();
           const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
-          const [motoResult, mantenimientoResult] = await Promise.all([
+          const [motoResult, mantenimientoResult, insigniasResult] = await Promise.all([
             supabase
               .from('motocicletas')
               .select('id, alias, marca, modelo, anio, placas, kilometraje_actual')
@@ -112,13 +116,14 @@ export default function InicioScreen({ navigation }: any) {
               .order('created_at', { ascending: true }),
             supabase
               .from('eventos')
-              .select('titulo, fecha')
+              .select('id, titulo, fecha')
               .eq('perfil_id', uid)
               .eq('tipo', 'mantenimiento')
+              .neq('estado', 'Cancelada')
               .gte('fecha', fechaHoy)
               .order('fecha', { ascending: true })
-              .limit(1)
-              .maybeSingle(),
+              .limit(3),
+            obtenerResumenInsignias(uid),
           ]);
 
           if (motoResult.error) throw motoResult.error;
@@ -134,7 +139,9 @@ export default function InicioScreen({ navigation }: any) {
           } else if (!motoSeleccionada && selectedMotorcycleId) {
             await clearSelectedMotorcycleId(uid);
           }
-          setProximoMantenimiento(mantenimientoResult.data);
+          setProximosMantenimientos(mantenimientoResult.data ?? []);
+          setInsigniaFavorita(insigniasResult.favorita);
+          setFavoritaElegida(Boolean(insigniasResult.favoritaId));
 
           await cargarEventoPendiente(uid);
         } catch (error) {
@@ -204,7 +211,12 @@ export default function InicioScreen({ navigation }: any) {
             </>
           )}
         </View>
-        <TouchableOpacity style={styles.btnNotificacion}>
+        <TouchableOpacity
+          style={styles.btnNotificacion}
+          accessibilityRole="button"
+          accessibilityLabel="Configurar notificaciones"
+          onPress={() => navigation.navigate('Notificaciones')}
+        >
           <Ionicons name="notifications-outline" size={22} color={theme.textPrimary} />
           <View style={styles.badgeNotificacion} />
         </TouchableOpacity>
@@ -338,25 +350,38 @@ export default function InicioScreen({ navigation }: any) {
           <Skeleton width={190} height={18} />
           <Skeleton width="75%" height={14} style={{ marginTop: 10 }} />
         </View>
-      ) : proximoMantenimiento ? (
-        <View style={styles.mantenimientoCard}>
-          <View style={styles.mantenimientoRow}>
-            <View style={styles.mantenimientoLeft}>
-              <View style={[styles.smallIcon, { backgroundColor: `${theme.dangerText}15` }]}>
-                <Ionicons name="build-outline" size={20} color={theme.dangerText} />
+      ) : proximosMantenimientos.length > 0 ? (
+        <View style={styles.mantenimientosList}>
+          {proximosMantenimientos.map((mantenimiento) => (
+            <TouchableOpacity
+              key={mantenimiento.id}
+              style={styles.mantenimientoCard}
+              onPress={() => navigation.navigate('Calendario')}
+              accessibilityRole="button"
+              accessibilityLabel={`Ver agenda: ${mantenimiento.titulo}`}
+            >
+              <View style={styles.mantenimientoRow}>
+                <View style={styles.mantenimientoLeft}>
+                  <View style={[styles.smallIcon, { backgroundColor: `${theme.dangerText}15` }]}>
+                    <Ionicons name="build-outline" size={20} color={theme.dangerText} />
+                  </View>
+                  <View style={styles.maintenanceText}>
+                    <Text style={styles.mantenimientoTitle} numberOfLines={1}>
+                      {mantenimiento.titulo}
+                    </Text>
+                    <Text style={styles.mantenimientoSub}>
+                      {new Date(`${mantenimiento.fecha}T00:00:00`).toLocaleDateString('es-MX', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} />
               </View>
-              <View style={styles.maintenanceText}>
-                <Text style={styles.mantenimientoTitle}>{proximoMantenimiento.titulo}</Text>
-                <Text style={styles.mantenimientoSub}>
-                  {new Date(`${proximoMantenimiento.fecha}T00:00:00`).toLocaleDateString('es-MX', {
-                    day: 'numeric',
-                    month: 'long',
-                  })}
-                </Text>
-              </View>
-            </View>
-            <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} />
-          </View>
+            </TouchableOpacity>
+          ))}
         </View>
       ) : (
         <DashboardEmptyState
@@ -388,6 +413,44 @@ export default function InicioScreen({ navigation }: any) {
     <Text style={[styles.sectionLink, { color: theme.primary }]}>Ver insignias</Text>
   </TouchableOpacity>
 </View>
+      {loadingDashboard ? (
+        <View style={styles.badgePreview}>
+          <Skeleton width={48} height={48} borderRadius={24} />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Skeleton width="65%" height={16} />
+            <Skeleton width="90%" height={13} style={{ marginTop: 8 }} />
+          </View>
+        </View>
+      ) : insigniaFavorita ? (
+        <TouchableOpacity
+          style={styles.badgePreview}
+          onPress={() => navigation.navigate('Insignias')}
+          accessibilityRole="button"
+          accessibilityLabel={`Insignia favorita: ${insigniaFavorita.nombre}. Elegir otra insignia`}
+        >
+          <View style={[styles.badgeIcon, { backgroundColor: `${insigniaFavorita.color}20` }]}>
+            <Ionicons name={insigniaFavorita.icono} size={26} color={insigniaFavorita.color} />
+          </View>
+          <View style={styles.progressText}>
+            <Text style={styles.cardTitle}>{insigniaFavorita.nombre}</Text>
+            <Text style={styles.cardSubtitle}>
+              {favoritaElegida
+                ? 'Tu insignia favorita · toca para cambiarla'
+                : 'Insignia desbloqueada · toca para elegir tu favorita'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.iconSecondary} />
+        </TouchableOpacity>
+      ) : (
+        <DashboardEmptyState
+          icon="trophy-outline"
+          title="Aún no tienes insignias"
+          description="Completa check-ins, registra rodadas o cuida tu moto para desbloquear tu primer logro."
+          actionLabel="Ver insignias"
+          onAction={() => navigation.navigate('Insignias')}
+          accentColor={theme.warningText}
+        />
+      )}
 
       {/* Espaciado inferior para la barra de navegación */}
       <View style={{ height: 40 }} />
@@ -672,6 +735,16 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   },
   progressText: { flex: 1 },
   maintenanceText: { flex: 1 },
+  badgePreview: {
+    alignItems: 'center',
+    backgroundColor: theme.card,
+    borderColor: theme.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 14,
+    padding: 16,
+  },
   // Logros / Insignias
   badgeIcon: {
     width: 50,
@@ -682,6 +755,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   },
 
   // Mantenimiento Card
+  mantenimientosList: { gap: 10 },
   mantenimientoCard: {
     backgroundColor: theme.card,
     borderRadius: 16,

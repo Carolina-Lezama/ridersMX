@@ -28,7 +28,36 @@
     },
     "plugins": [
       "@react-native-community/datetimepicker",
-      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "RidersMX necesita acceder a tus fotos para usar una imagen de perfil o adjuntarla a tus reseñas.",
+          "cameraPermission": "RidersMX necesita usar la cámara para tomar fotos de tus reseñas.",
+          "microphonePermission": false,
+          "colors": {
+            "cropToolbarColor": "#3B82F6",
+            "cropToolbarIconColor": "#FFFFFF",
+            "cropToolbarActionTextColor": "#FFFFFF",
+            "cropBackButtonIconColor": "#FFFFFF",
+            "cropBackgroundColor": "#FFFFFF"
+          },
+          "dark": {
+            "colors": {
+              "cropToolbarColor": "#172033",
+              "cropToolbarIconColor": "#FFFFFF",
+              "cropToolbarActionTextColor": "#FFFFFF",
+              "cropBackButtonIconColor": "#FFFFFF",
+              "cropBackgroundColor": "#0F172A"
+            }
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#3B82F6"
+        }
+      ],
       "expo-secure-store",
       "expo-font",
       "expo-sharing"
