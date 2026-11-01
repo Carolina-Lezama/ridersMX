@@ -13,6 +13,8 @@ import { obtenerResumenInsignias, type Insignia } from '../../services/badgeServ
 import { supabase } from '../../services/supabase';
 import { obtenerEventoPendiente, obtenerTotalKilometros } from '../../services/reviewService';
 import { clearSelectedMotorcycleId, getSelectedMotorcycleId, setSelectedMotorcycleId } from '../../services/motorcycleSelectionService';
+import { obtenerTotalNotificacionesProgramadas } from '../../services/notificationService';
+import { navigate } from '../../utils/helper/navigationRef';
 import { useStreak } from '../../utils/hooks/useStreak';
 import Skeleton from '../../components/Skeleton';
 
@@ -22,7 +24,6 @@ interface DashboardMoto {
   marca: string;
   modelo: string;
   anio: number | null;
-  placas: string | null;
   kilometraje_actual: number | null;
 }
 
@@ -42,6 +43,7 @@ export default function InicioScreen({ navigation }: any) {
   const [proximosMantenimientos, setProximosMantenimientos] = useState<DashboardMaintenance[]>([]);
   const [insigniaFavorita, setInsigniaFavorita] = useState<Insignia | null>(null);
   const [favoritaElegida, setFavoritaElegida] = useState(false);
+  const [notificacionesProgramadas, setNotificacionesProgramadas] = useState(0);
 
   const {
     loading: cargandoRacha,
@@ -61,6 +63,21 @@ export default function InicioScreen({ navigation }: any) {
 
   const [motos, setMotos] = useState<DashboardMoto[]>([]);
   const [selectorMotosVisible, setSelectorMotosVisible] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      let activo = true;
+      void obtenerTotalNotificacionesProgramadas()
+        .then((total) => {
+          if (activo) setNotificacionesProgramadas(total);
+        })
+        .catch((error) => console.error('No se pudo consultar el estado de las notificaciones:', error));
+
+      return () => {
+        activo = false;
+      };
+    }, []),
+  );
 
   const cargarEventoPendiente = useCallback(async (uid?: string) => {
     if (!uid) {
@@ -111,7 +128,7 @@ export default function InicioScreen({ navigation }: any) {
           const [motoResult, mantenimientoResult, insigniasResult] = await Promise.all([
             supabase
               .from('motocicletas')
-              .select('id, alias, marca, modelo, anio, placas, kilometraje_actual')
+              .select('id, alias, marca, modelo, anio, kilometraje_actual')
               .eq('perfil_id', uid)
               .order('created_at', { ascending: true }),
             supabase
@@ -214,11 +231,21 @@ export default function InicioScreen({ navigation }: any) {
         <TouchableOpacity
           style={styles.btnNotificacion}
           accessibilityRole="button"
-          accessibilityLabel="Configurar notificaciones"
-          onPress={() => navigation.navigate('Notificaciones')}
+          accessibilityLabel={
+            notificacionesProgramadas > 0
+              ? `Abrir notificaciones. ${notificacionesProgramadas} recordatorios programados`
+              : 'Abrir notificaciones y configurar recordatorios'
+          }
+          onPress={() => navigate('Notificaciones')}
         >
           <Ionicons name="notifications-outline" size={22} color={theme.textPrimary} />
-          <View style={styles.badgeNotificacion} />
+          {notificacionesProgramadas > 0 && (
+            <View style={styles.badgeNotificacion}>
+              <Text style={styles.badgeNotificacionText}>
+                {notificacionesProgramadas > 99 ? '99+' : notificacionesProgramadas}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -262,8 +289,7 @@ export default function InicioScreen({ navigation }: any) {
                   {motoPrincipal.alias || `${motoPrincipal.marca} ${motoPrincipal.modelo}`}
                 </Text>
                 <Text style={styles.cardSubtitle}>
-                  {motoPrincipal.anio ? `${motoPrincipal.anio} · ` : ''}
-                  {motoPrincipal.placas || 'Tu moto registrada'}
+                  {motoPrincipal.anio ? `Año ${motoPrincipal.anio}` : 'Motocicleta registrada'}
                 </Text>
               </View>
             </View>
@@ -612,12 +638,20 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   },
   badgeNotificacion: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: theme.dangerText
+    top: -6,
+    right: -6,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.dangerText,
+  },
+  badgeNotificacionText: {
+    color: theme.onPrimary,
+    fontSize: 10,
+    fontWeight: '700',
   },
 
   // Titles & Section Headers

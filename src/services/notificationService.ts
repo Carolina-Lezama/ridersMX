@@ -1,7 +1,19 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { supabase } from './supabase';
+import { obtenerFechaRecordatorioEvento } from '../utils/eventoNotifications';
 
 const CANAL_RECORDATORIOS = 'riders-reminders';
+const PREFIJO_NOTIFICACION_EVENTO = 'evento-';
+
+interface EventoProgramable {
+  id: string;
+  titulo: string;
+  fecha: string;
+  hora: string | null;
+  tipo: string | null;
+  estado: string | null;
+}
 
 // Configuración para que la alerta se muestre en pantalla incluso si la app está en primer plano
 Notifications.setNotificationHandler({
@@ -56,6 +68,72 @@ export const limpiarNotificacionesRacha = async () => {
       await Notifications.cancelScheduledNotificationAsync(notif.identifier);
     }
   }
+};
+
+export const limpiarNotificacionesEventos = async (): Promise<void> => {
+  if (Platform.OS === 'web') return;
+
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  for (const notification of scheduled) {
+    if (notification.identifier.startsWith(PREFIJO_NOTIFICACION_EVENTO)) {
+      await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+    }
+  }
+};
+
+export const obtenerTotalNotificacionesProgramadas = async (): Promise<number> => {
+  if (Platform.OS === 'web') return 0;
+  const notifications = await Notifications.getAllScheduledNotificationsAsync();
+  return notifications.length;
+};
+
+export const programarNotificacionesEventos = async (userId: string): Promise<boolean> => {
+  if (Platform.OS === 'web') return false;
+
+  const { status } = await Notifications.getPermissionsAsync();
+  if (status !== 'granted') return false;
+
+  await configurarCanalNotificaciones();
+  const hoy = new Date();
+  const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+  const { data: eventos, error } = await supabase
+    .from('eventos')
+    .select('id, titulo, fecha, hora, tipo, estado')
+    .eq('perfil_id', userId)
+    .eq('estado', 'Planeada')
+    .gte('fecha', fechaHoy)
+    .order('fecha', { ascending: true })
+    .limit(100);
+
+  if (error) throw error;
+
+  await limpiarNotificacionesEventos();
+  const ahora = Date.now();
+
+  for (const evento of (eventos ?? []) as EventoProgramable[]) {
+    if (!evento.hora) continue;
+
+    const fechaRecordatorio = obtenerFechaRecordatorioEvento(evento.fecha, evento.hora);
+    if (!fechaRecordatorio || fechaRecordatorio.getTime() <= ahora) continue;
+
+    const esMantenimiento = evento.tipo === 'mantenimiento';
+    await Notifications.scheduleNotificationAsync({
+      identifier: `${PREFIJO_NOTIFICACION_EVENTO}${evento.id}`,
+      content: {
+        title: esMantenimiento ? 'Recordatorio de mantenimiento' : 'Tu rodada se acerca',
+        body: `${evento.titulo} comienza en 30 minutos.`,
+        data: { eventId: evento.id },
+        sound: 'default',
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: fechaRecordatorio,
+        channelId: CANAL_RECORDATORIOS,
+      },
+    });
+  }
+
+  return true;
 };
 
 /**

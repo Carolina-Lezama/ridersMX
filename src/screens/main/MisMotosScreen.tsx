@@ -92,7 +92,7 @@ export default function MisMotosScreen({ navigation }: any) {
               {item.alias || `${item.marca} ${item.modelo}`}
             </Text>
             <Text style={styles.motoSubtitulo}>
-              {item.anio ? `${item.anio} • ` : ''}Placas: {item.placas || 'N/A'}
+              {item.anio ? `Año ${item.anio}` : 'Año no especificado'}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
               <Ionicons name="speedometer-outline" size={12} color={theme.primary} />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform, Image, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
@@ -8,6 +8,43 @@ import CustomButton from '../../components/CustomButton';
 import Skeleton from '../../components/Skeleton';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+
+const CODIGOS_PAIS = [
+  { nombre: 'México', codigo: '+52', digitos: '52' },
+  { nombre: 'Estados Unidos / Canadá', codigo: '+1', digitos: '1' },
+  { nombre: 'España', codigo: '+34', digitos: '34' },
+  { nombre: 'Argentina', codigo: '+54', digitos: '54' },
+  { nombre: 'Brasil', codigo: '+55', digitos: '55' },
+  { nombre: 'Chile', codigo: '+56', digitos: '56' },
+  { nombre: 'Colombia', codigo: '+57', digitos: '57' },
+  { nombre: 'Venezuela', codigo: '+58', digitos: '58' },
+  { nombre: 'Perú', codigo: '+51', digitos: '51' },
+  { nombre: 'Ecuador', codigo: '+593', digitos: '593' },
+  { nombre: 'Bolivia', codigo: '+591', digitos: '591' },
+  { nombre: 'Paraguay', codigo: '+595', digitos: '595' },
+  { nombre: 'Uruguay', codigo: '+598', digitos: '598' },
+  { nombre: 'Guatemala', codigo: '+502', digitos: '502' },
+  { nombre: 'El Salvador', codigo: '+503', digitos: '503' },
+  { nombre: 'Honduras', codigo: '+504', digitos: '504' },
+  { nombre: 'Nicaragua', codigo: '+505', digitos: '505' },
+  { nombre: 'Costa Rica', codigo: '+506', digitos: '506' },
+  { nombre: 'Panamá', codigo: '+507', digitos: '507' },
+  { nombre: 'Cuba', codigo: '+53', digitos: '53' },
+  { nombre: 'Reino Unido', codigo: '+44', digitos: '44' },
+] as const;
+
+const separarTelefono = (telefonoGuardado: string) => {
+  const digitos = telefonoGuardado.replace(/\D/g, '');
+  if (digitos.length === 10) return { codigo: '+52', numero: digitos };
+
+  const pais = [...CODIGOS_PAIS]
+    .sort((a, b) => b.digitos.length - a.digitos.length)
+    .find(({ digitos: codigo }) => digitos.startsWith(codigo) && digitos.length > codigo.length);
+
+  return pais
+    ? { codigo: pais.codigo, numero: digitos.slice(pais.digitos.length) }
+    : { codigo: '+52', numero: digitos };
+};
 
 export default function PerfilScreen({ navigation }: any) {
   const { theme } = useTheme();
@@ -22,15 +59,15 @@ export default function PerfilScreen({ navigation }: any) {
   const [username, setUsername] = useState('');
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [telefono, setTelefono] = useState('');
+  const [codigoPais, setCodigoPais] = useState<string>('+52');
+  const [mostrarCodigosPais, setMostrarCodigosPais] = useState(false);
+  const [telefonoInvalido, setTelefonoInvalido] = useState(false);
   const [ciudad, setCiudad] = useState('');
   const [bio, setBio] = useState(':?');
   
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [mostrarSelectorFecha, setMostrarSelectorFecha] = useState(false);
-  const [tipoSangre, setTipoSangre] = useState('');
-  const [contactoEmergencia, setContactoEmergencia] = useState('');
   const [nivelExperiencia, setNivelExperiencia] = useState('');
-  const [numeroLicencia, setNumeroLicencia] = useState('');
 
   // Opciones válidas para la base de datos
   const nivelesValidos = ['Novato', 'Intermedio', 'Experto', 'Profesional'];
@@ -81,14 +118,13 @@ export default function PerfilScreen({ navigation }: any) {
           setUsername(data.username || '');
           setNombreCompleto(data.nombre_completo || '');
           setAvatarUrl(data.avatar_url || null);
-          setTelefono(data.telefono || '');
+          const telefonoSeparado = separarTelefono(data.telefono || '');
+          setCodigoPais(telefonoSeparado.codigo);
+          setTelefono(telefonoSeparado.numero);
           setCiudad(data.ciudad || '');
           setBio(data.bio || '');
           setFechaNacimiento(data.fecha_nacimiento || '');
-          setTipoSangre(data.tipo_sangre || '');
-          setContactoEmergencia(data.contacto_emergencia || '');
           setNivelExperiencia(data.nivel_experiencia || '');
-          setNumeroLicencia(data.numero_licencia || '');
         }
       }
     } catch (error: any) {
@@ -180,6 +216,13 @@ const guardarPerfil = async () => {
       return;
     }
 
+    if (telefono.length > 0 && telefono.length !== 10) {
+      setTelefonoInvalido(true);
+      const msg = 'Ingresa exactamente 10 dígitos en el número de teléfono.';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Teléfono incompleto', msg);
+      return;
+    }
+
     try {
       setSaving(true);
       console.log("Iniciando guardado para el usuario:", userId); // Útil para depurar en PC
@@ -205,14 +248,11 @@ const guardarPerfil = async () => {
         .update({
           username: username.trim(), 
           nombre_completo: nombreCompleto.trim(), 
-          telefono: telefono.trim(), 
+          telefono: telefono ? `${codigoPais}${telefono}` : '',
           ciudad: ciudad.trim(), 
           bio: bio.trim(),
           fecha_nacimiento: fechaValidada || null,
-          tipo_sangre: tipoSangre.trim(),
-          contacto_emergencia: contactoEmergencia.trim(),
           nivel_experiencia: nivelExperiencia || null,
-          numero_licencia: numeroLicencia.trim()
         })
         .eq('id', userId);
 
@@ -339,24 +379,73 @@ const guardarPerfil = async () => {
           </>
         )}
         
-        <CustomInput label="Teléfono" placeholder="+52 000 000 0000" keyboardType="numeric" value={telefono} onChangeText={setTelefono} />
+        <View style={styles.telefonoRow}>
+          <View style={styles.codigoPaisContainer}>
+            <Text style={styles.label}>Código</Text>
+            <TouchableOpacity
+              style={styles.codigoPaisButton}
+              onPress={() => setMostrarCodigosPais(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Código de país ${codigoPais}. Seleccionar otro código`}
+            >
+              <Text style={styles.codigoPaisText}>{codigoPais}</Text>
+              <Ionicons name="chevron-down" size={16} color={theme.iconSecondary} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.telefonoInput}>
+            <CustomInput
+              label="Teléfono"
+              placeholder="10 dígitos"
+              keyboardType="numeric"
+              value={telefono}
+              maxLength={10}
+              error={telefonoInvalido ? 'Ingresa exactamente 10 dígitos.' : undefined}
+              onChangeText={(valor) => {
+                setTelefono(valor.replace(/\D/g, '').slice(0, 10));
+                setTelefonoInvalido(false);
+              }}
+            />
+          </View>
+        </View>
+        <Modal
+          visible={mostrarCodigosPais}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setMostrarCodigosPais(false)}
+        >
+          <View style={styles.codigoPaisOverlay}>
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              onPress={() => setMostrarCodigosPais(false)}
+              accessibilityLabel="Cerrar selección de código de país"
+            />
+            <View style={styles.codigoPaisModal}>
+              <Text style={styles.codigoPaisTitulo}>Selecciona tu país</Text>
+              <ScrollView>
+                {CODIGOS_PAIS.map((pais) => (
+                  <TouchableOpacity
+                    key={pais.nombre}
+                    style={styles.codigoPaisOpcion}
+                    onPress={() => {
+                      setCodigoPais(pais.codigo);
+                      setTelefonoInvalido(false);
+                      setMostrarCodigosPais(false);
+                    }}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.codigoPaisOpcionTexto}>{pais.nombre}</Text>
+                    <Text style={styles.codigoPaisOpcionCodigo}>{pais.codigo}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
         <CustomInput label="Ciudad" placeholder="Ej. Puebla, México" value={ciudad} onChangeText={setCiudad} />
         <CustomInput label="Bio" placeholder="¿Qué te motiva a rodar?" value={bio} onChangeText={setBio} />
       </View>
 
-      {/* SECCIÓN 2: Información Médica y Legal */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Ionicons name="medkit-outline" size={20} color={theme.dangerText} />
-          <Text style={styles.cardTitle}>Seguridad y Legal</Text>
-        </View>
-        
-        <CustomInput label="Tipo de Sangre" placeholder="Ej. O+, A-" value={tipoSangre} onChangeText={setTipoSangre} autoCapitalize="characters" />
-        <CustomInput label="Contacto de Emergencia" placeholder="Teléfono de familiar/amigo" keyboardType="numeric" value={contactoEmergencia} onChangeText={setContactoEmergencia} />
-        <CustomInput label="Número de Licencia" placeholder="Opcional" value={numeroLicencia} onChangeText={setNumeroLicencia} />
-      </View>
-
-      {/* SECCIÓN 3: Nivel de Experiencia (ARREGLADO CON CHIPS) */}
+      {/* SECCIÓN 2: Nivel de Experiencia */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Ionicons name="star-outline" size={20} color={theme.star} />
@@ -387,7 +476,7 @@ const guardarPerfil = async () => {
         )}
       </View>
 
-      {/* SECCIÓN 4: EL PUENTE HACIA LA TABLA MOTOCICLETAS */}
+      {/* SECCIÓN 3: EL PUENTE HACIA LA TABLA MOTOCICLETAS */}
       <View style={styles.dividerContainer}>
         <View style={styles.dividerLine} />
         <Text style={styles.dividerText}>MI GARAJE</Text>
@@ -429,6 +518,17 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   datePickerButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 13, marginBottom: 15 },
   datePickerText: { flex: 1, marginLeft: 10, color: theme.textPrimary, fontSize: 16 },
   webDateInput: { width: '100%', backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border, borderRadius: 10, padding: 12, fontSize: 16, color: theme.textPrimary, marginBottom: 15 },
+  telefonoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  codigoPaisContainer: { width: 108 },
+  codigoPaisButton: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border, borderRadius: 10 },
+  codigoPaisText: { color: theme.textPrimary, fontSize: 15, fontWeight: '600' },
+  telefonoInput: { flex: 1 },
+  codigoPaisOverlay: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: theme.overlay },
+  codigoPaisModal: { maxHeight: '75%', backgroundColor: theme.card, borderRadius: 16, paddingHorizontal: 18, paddingTop: 18, paddingBottom: 8, borderWidth: 1, borderColor: theme.border },
+  codigoPaisTitulo: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 8 },
+  codigoPaisOpcion: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: theme.divider },
+  codigoPaisOpcionTexto: { color: theme.textPrimary, fontSize: 15 },
+  codigoPaisOpcionCodigo: { color: theme.textSecondary, fontSize: 15, fontWeight: '600' },
   footer: { paddingHorizontal: 20, marginTop: 30 },
   
   // NUEVOS ESTILOS PARA LOS CHIPS DE EXPERIENCIA

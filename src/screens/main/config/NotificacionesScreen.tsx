@@ -60,6 +60,7 @@ export const NotificacionesScreen = ({ navigation }: any) => {
     loading,
     toggleCheckIn,
     toggleLimite,
+    toggleEventos,
     actualizarHoraCheckIn,
   } = useNotificationConfig(userId, completadoHoy);
 
@@ -266,9 +267,9 @@ export const NotificacionesScreen = ({ navigation }: any) => {
         />
       </Section>
 
-      {/* SECCIÓN 3: VEHÍCULO Y MANTENIMIENTO */}
-      <Section title="VEHÍCULO Y MANTENIMIENTO" icon="build-outline" isComingSoon>
-        <SwitchRow 
+      {/* SECCIÓN 3: AGENDA */}
+      <Section title="AGENDA Y VEHÍCULO" icon="calendar-outline">
+        <SwitchRow
           label="Recordatorios de Cambio de Aceite / Frenos" 
           value={false} 
           onValueChange={() => {}} 
@@ -466,6 +467,12 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   },
   sectionBody: {
     paddingHorizontal: 16,
+  },
+  sectionHint: {
+    color: theme.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    paddingBottom: 14,
   },
   row: {
     flexDirection: 'row',

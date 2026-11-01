@@ -9,7 +9,10 @@ import {
 } from '../../services/notificationConfigService';
 import { 
   programarNotificacionesRacha, 
-  limpiarNotificacionesRacha 
+  limpiarNotificacionesRacha,
+  limpiarNotificacionesEventos,
+  programarNotificacionesEventos,
+  solicitarPermisosNotificaciones,
 } from '../../services/notificationService';
 
 export const useNotificationConfig = (userId: string | undefined, rachaCompletadaHoy: boolean) => {
@@ -33,12 +36,18 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
         const data = await obtenerConfigNotificaciones(userId);
         if (!mounted) return;
 
-        if (Platform.OS !== 'web' && data.checkInEnabled) {
+        if (Platform.OS !== 'web' && (data.checkInEnabled || data.eventosEnabled)) {
           const permissions = await Notifications.getPermissionsAsync();
+          const permisosConcedidos = permissions.status === 'granted';
           if (mounted) {
-            setConfig(permissions.status === 'granted'
+            setConfig(permisosConcedidos
               ? data
-              : { ...data, checkInEnabled: false });
+              : { ...data, checkInEnabled: false, eventosEnabled: false });
+          }
+          if (permisosConcedidos && data.eventosEnabled) {
+            void programarNotificacionesEventos(userId).catch((error) => {
+              console.error('No se pudieron sincronizar recordatorios de agenda:', error);
+            });
           }
         } else {
           setConfig(data);
@@ -89,6 +98,47 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
       throw error;
     }
   }, [userId, config, rachaCompletadaHoy]);
+
+  const toggleEventos = useCallback(async (enabled: boolean) => {
+    if (!userId) return;
+
+    const nuevaConfig = { ...config, eventosEnabled: enabled };
+    setConfig(nuevaConfig);
+
+    try {
+      if (enabled) {
+        const permisosConcedidos = await solicitarPermisosNotificaciones();
+        if (!permisosConcedidos) {
+          throw new Error(
+            Platform.OS === 'web'
+              ? 'Los recordatorios de agenda están disponibles en iOS y Android.'
+              : 'Concede permisos de notificación en tu dispositivo para activar los recordatorios.',
+          );
+        }
+
+        const programadas = await programarNotificacionesEventos(userId);
+        if (!programadas) throw new Error('No se pudieron programar los recordatorios de agenda.');
+      } else {
+        await limpiarNotificacionesEventos();
+      }
+
+      if (!(await guardarConfigNotificaciones(userId, nuevaConfig))) {
+        throw new Error('No se pudo guardar la configuración de notificaciones.');
+      }
+    } catch (error) {
+      setConfig(config);
+      try {
+        if (config.eventosEnabled) {
+          await programarNotificacionesEventos(userId);
+        } else {
+          await limpiarNotificacionesEventos();
+        }
+      } catch (restoreError) {
+        console.error('No se pudieron restaurar los recordatorios de agenda:', restoreError);
+      }
+      throw error;
+    }
+  }, [userId, config]);
 
   const toggleLimite = useCallback(async (enabled: boolean) => {
     if (!userId) return;
@@ -141,6 +191,7 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
     loading,
     toggleCheckIn,
     toggleLimite,
+    toggleEventos,
     actualizarHoraCheckIn
   };
 };

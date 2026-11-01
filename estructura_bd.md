@@ -288,6 +288,102 @@
 "column_default": null
 },
 {
+"table_name": "eventos",
+"column_name": "serie_id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "recurrencia",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "'none'::text"
+},
+{
+"table_name": "eventos",
+"column_name": "intervalo_recurrencia",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "recurrencia_hasta",
+"data_type": "date",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "rodada_punto_reunion",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "rodada_destino",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "rodada_distancia_km",
+"data_type": "numeric",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "rodada_dificultad",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "mantenimiento_servicio",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "mantenimiento_taller",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "mantenimiento_kilometraje",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "mantenimiento_costo_estimado",
+"data_type": "numeric",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
 "table_name": "faqs",
 "column_name": "id",
 "data_type": "uuid",
@@ -649,14 +745,6 @@
 },
 {
 "table_name": "motocicletas",
-"column_name": "placas",
-"data_type": "text",
-"character_maximum_length": null,
-"is_nullable": "YES",
-"column_default": null
-},
-{
-"table_name": "motocicletas",
 "column_name": "kilometraje_actual",
 "data_type": "integer",
 "character_maximum_length": null,
@@ -673,27 +761,35 @@
 },
 {
 "table_name": "motocicletas",
-"column_name": "aseguradora",
-"data_type": "text",
-"character_maximum_length": null,
-"is_nullable": "YES",
-"column_default": null
-},
-{
-"table_name": "motocicletas",
-"column_name": "numero_poliza",
-"data_type": "text",
-"character_maximum_length": null,
-"is_nullable": "YES",
-"column_default": null
-},
-{
-"table_name": "motocicletas",
 "column_name": "created_at",
 "data_type": "timestamp with time zone",
 "character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "motocicletas_seguros",
+"column_name": "motocicleta_id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "motocicletas_seguros",
+"column_name": "aseguradora_cifrada",
+"data_type": "bytea",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "motocicletas_seguros",
+"column_name": "numero_poliza_cifrada",
+"data_type": "bytea",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
 }
 ]
 
@@ -868,20 +964,6 @@
 },
 {
 "table_name": "perfiles",
-"column_name": "tipo_sangre",
-"data_type": "text",
-"is_nullable": "YES",
-"column_default": null
-},
-{
-"table_name": "perfiles",
-"column_name": "contacto_emergencia",
-"data_type": "text",
-"is_nullable": "YES",
-"column_default": null
-},
-{
-"table_name": "perfiles",
 "column_name": "nivel_experiencia",
 "data_type": "text",
 "is_nullable": "YES",
@@ -900,13 +982,6 @@
 "data_type": "timestamp with time zone",
 "is_nullable": "YES",
 "column_default": "timezone('utc'::text, now())"
-},
-{
-"table_name": "perfiles",
-"column_name": "numero_licencia",
-"data_type": "text",
-"is_nullable": "YES",
-"column_default": null
 },
 {
 "table_name": "perfiles",

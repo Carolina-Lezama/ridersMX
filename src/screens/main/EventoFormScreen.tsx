@@ -7,6 +7,12 @@ import CustomButton from '../../components/CustomButton';
 import Skeleton from '../../components/Skeleton';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import {
+  convertirNumeroOpcional,
+  normalizarNumeroDecimal,
+} from '../../utils/eventoNotifications';
+import { obtenerConfigNotificaciones } from '../../services/notificationConfigService';
+import { programarNotificacionesEventos } from '../../services/notificationService';
 
 interface MotoAsociable {
   id: string;
@@ -17,6 +23,12 @@ interface MotoAsociable {
 
 const OTRO_ACOMPANANTE = 'Otro / Acompañante';
 type Recurrencia = 'none' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
+
+const sincronizarRecordatoriosAgenda = async (userId: string): Promise<boolean> => {
+  const config = await obtenerConfigNotificaciones(userId);
+  if (!config.eventosEnabled) return true;
+  return programarNotificacionesEventos(userId);
+};
 
 const generarIdSerie = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (caracter) => {
   const aleatorio = Math.floor(Math.random() * 16);
@@ -95,6 +107,14 @@ export default function EventoFormScreen({ navigation, route }: any) {
   const [descripcion, setDescripcion] = useState('');
   const [motos, setMotos] = useState<MotoAsociable[]>([]);
   const [motoAsociada, setMotoAsociada] = useState('');
+  const [puntoReunion, setPuntoReunion] = useState('');
+  const [destinoRodada, setDestinoRodada] = useState('');
+  const [distanciaRodada, setDistanciaRodada] = useState('');
+  const [dificultadRodada, setDificultadRodada] = useState('');
+  const [servicioMantenimiento, setServicioMantenimiento] = useState('');
+  const [tallerMantenimiento, setTallerMantenimiento] = useState('');
+  const [kilometrajeMantenimiento, setKilometrajeMantenimiento] = useState('');
+  const [costoMantenimiento, setCostoMantenimiento] = useState('');
   
   // Estado de la actividad
   const [estado, setEstado] = useState('Planeada');
@@ -154,6 +174,14 @@ export default function EventoFormScreen({ navigation, route }: any) {
           setTipo(data.tipo || 'rodada');
           setDescripcion(data.descripcion || '');
           setMotoAsociada(data.moto_asociada || '');
+          setPuntoReunion(data.rodada_punto_reunion || '');
+          setDestinoRodada(data.rodada_destino || '');
+          setDistanciaRodada(data.rodada_distancia_km?.toString() || '');
+          setDificultadRodada(data.rodada_dificultad || '');
+          setServicioMantenimiento(data.mantenimiento_servicio || '');
+          setTallerMantenimiento(data.mantenimiento_taller || '');
+          setKilometrajeMantenimiento(data.mantenimiento_kilometraje?.toString() || '');
+          setCostoMantenimiento(data.mantenimiento_costo_estimado?.toString() || '');
           setEstado(data.estado || 'Planeada');
         }
       } catch (error: unknown) {
@@ -199,11 +227,30 @@ export default function EventoFormScreen({ navigation, route }: any) {
       return;
     }
 
+    if (tipo === 'rodada' && !destinoRodada.trim()) {
+      const mensaje = 'Indica el destino o la ruta de la rodada.';
+      Platform.OS === 'web' ? window.alert(mensaje) : Alert.alert('Falta el destino', mensaje);
+      return;
+    }
+
+    if (tipo === 'mantenimiento' && !servicioMantenimiento.trim()) {
+      const mensaje = 'Describe el servicio que necesita tu motocicleta.';
+      Platform.OS === 'web' ? window.alert(mensaje) : Alert.alert('Falta el servicio', mensaje);
+      return;
+    }
+
     const fechaStr = `${fechaObj.getFullYear()}-${String(fechaObj.getMonth() + 1).padStart(2, '0')}-${String(fechaObj.getDate()).padStart(2, '0')}`;
     const horaStr = formatearHora12h(horaObj);
 
     try {
       setSaving(true);
+      const distanciaNumerica = convertirNumeroOpcional(distanciaRodada, 'La distancia');
+      const kilometrajeNumerico = convertirNumeroOpcional(kilometrajeMantenimiento, 'El kilometraje');
+      const costoNumerico = convertirNumeroOpcional(costoMantenimiento, 'El costo estimado');
+      if (kilometrajeNumerico !== null && !Number.isInteger(kilometrajeNumerico)) {
+        throw new Error('El kilometraje debe ser un número entero.');
+      }
+
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
       if (!session?.user) throw new Error('Inicia sesión para guardar este evento.');
@@ -227,11 +274,26 @@ export default function EventoFormScreen({ navigation, route }: any) {
         descripcion: descripcion.trim(),
         moto_asociada: motoAsociada.trim() || null,
         estado,
+        rodada_punto_reunion: tipo === 'rodada' ? puntoReunion.trim() || null : null,
+        rodada_destino: tipo === 'rodada' ? destinoRodada.trim() || null : null,
+        rodada_distancia_km: tipo === 'rodada' ? distanciaNumerica : null,
+        rodada_dificultad: tipo === 'rodada' ? dificultadRodada || null : null,
+        mantenimiento_servicio: tipo === 'mantenimiento' ? servicioMantenimiento.trim() || null : null,
+        mantenimiento_taller: tipo === 'mantenimiento' ? tallerMantenimiento.trim() || null : null,
+        mantenimiento_kilometraje: tipo === 'mantenimiento' ? kilometrajeNumerico : null,
+        mantenimiento_costo_estimado: tipo === 'mantenimiento' ? costoNumerico : null,
       };
 
+      let recordatoriosActualizados = true;
       if (esEdicion) {
         const { error } = await supabase.from('eventos').update(eventoPayload).eq('id', eventoId);
         if (error) throw error;
+        try {
+          recordatoriosActualizados = await sincronizarRecordatoriosAgenda(session.user.id);
+        } catch (error) {
+          console.error('El evento se guardó, pero no se pudieron actualizar sus recordatorios:', error);
+          recordatoriosActualizados = false;
+        }
         Platform.OS === 'web' ? window.alert('Evento actualizado') : Alert.alert('Éxito', 'Evento actualizado');
       } else {
         const fechas = recurrencia === 'none'
@@ -248,12 +310,25 @@ export default function EventoFormScreen({ navigation, route }: any) {
         }));
         const { error } = await supabase.from('eventos').insert(eventos);
         if (error) throw error;
+        try {
+          recordatoriosActualizados = await sincronizarRecordatoriosAgenda(session.user.id);
+        } catch (error) {
+          console.error('Los eventos se guardaron, pero no se pudieron programar sus recordatorios:', error);
+          recordatoriosActualizados = false;
+        }
         const mensaje = eventos.length > 1
           ? `Se agendaron ${eventos.length} citas.`
           : 'Evento agendado.';
-        Platform.OS === 'web' ? window.alert(mensaje) : Alert.alert('Éxito', mensaje);
+        const mensajeFinal = recordatoriosActualizados
+          ? mensaje
+          : `${mensaje}\n\nNo se pudieron programar los recordatorios. Revisa los permisos en Configuración > Notificaciones.`;
+        Platform.OS === 'web' ? window.alert(mensajeFinal) : Alert.alert('Éxito', mensajeFinal);
       }
 
+      if (esEdicion && !recordatoriosActualizados) {
+        const mensaje = 'El evento se actualizó, pero no se pudieron actualizar sus recordatorios. Revisa los permisos en Configuración > Notificaciones.';
+        Platform.OS === 'web' ? window.alert(mensaje) : Alert.alert('Recordatorio no actualizado', mensaje);
+      }
       navigation.goBack();
     } catch (error: any) {
       Platform.OS === 'web' ? window.alert('Error: ' + error.message) : Alert.alert('Error', error.message);
@@ -268,8 +343,23 @@ export default function EventoFormScreen({ navigation, route }: any) {
       setSaving(true);
       const { error } = await supabase.from('eventos').delete().eq('id', eventoId);
       if (error) throw error;
-      
-      Platform.OS === 'web' ? window.alert('Actividad eliminada.') : Alert.alert('Eliminada', 'La actividad fue borrada.');
+
+      let recordatoriosActualizados = true;
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (session?.user) {
+          recordatoriosActualizados = await sincronizarRecordatoriosAgenda(session.user.id);
+        }
+      } catch (error) {
+        console.error('La actividad se eliminó, pero no se pudieron actualizar los recordatorios:', error);
+        recordatoriosActualizados = false;
+      }
+
+      const mensaje = recordatoriosActualizados
+        ? 'La actividad fue borrada.'
+        : 'La actividad fue borrada, pero no se pudieron actualizar sus recordatorios.';
+      Platform.OS === 'web' ? window.alert(mensaje) : Alert.alert('Eliminada', mensaje);
       navigation.goBack();
     } catch (error: any) {
       Platform.OS === 'web' ? window.alert('Error al eliminar: ' + error.message) : Alert.alert('Error', error.message);
@@ -366,7 +456,83 @@ export default function EventoFormScreen({ navigation, route }: any) {
           </View>
         </View>
 
-        <CustomInput label="Título del Evento" placeholder="Ej. Ruta a Tepoztlán" value={titulo} onChangeText={setTitulo} />
+        <CustomInput
+          label={tipo === 'rodada' ? 'Nombre de la rodada' : 'Nombre de la cita'}
+          placeholder={tipo === 'rodada' ? 'Ej. Amanecer en la Marquesa' : 'Ej. Servicio de los 10,000 km'}
+          value={titulo}
+          onChangeText={setTitulo}
+        />
+
+        {tipo === 'rodada' ? (
+          <View style={styles.seccion}>
+            <Text style={styles.label}>Detalles de la rodada</Text>
+            <CustomInput
+              label="Punto de reunión"
+              placeholder="Ej. Gasolinera de la salida norte"
+              value={puntoReunion}
+              onChangeText={setPuntoReunion}
+            />
+            <CustomInput
+              label="Destino o ruta *"
+              placeholder="Ej. Tepoztlán por la carretera libre"
+              value={destinoRodada}
+              onChangeText={setDestinoRodada}
+            />
+            <CustomInput
+              label="Distancia aproximada (km)"
+              placeholder="Ej. 85"
+              keyboardType="numeric"
+              value={distanciaRodada}
+              onChangeText={(valor) => setDistanciaRodada(normalizarNumeroDecimal(valor))}
+            />
+            <Text style={styles.label}>Nivel de dificultad</Text>
+            <View style={styles.chipsContainer}>
+              {['Tranquila', 'Intermedia', 'Exigente'].map((nivel) => (
+                <TouchableOpacity
+                  key={nivel}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: dificultadRodada === nivel }}
+                  style={[styles.chipBase, dificultadRodada === nivel && styles.chipActive]}
+                  onPress={() => setDificultadRodada(dificultadRodada === nivel ? '' : nivel)}
+                >
+                  <Text style={[styles.chipTextBase, dificultadRodada === nivel && styles.chipTextActive]}>
+                    {nivel}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : (
+          <View style={styles.seccion}>
+            <Text style={styles.label}>Detalles del mantenimiento</Text>
+            <CustomInput
+              label="Servicio requerido *"
+              placeholder="Ej. Cambio de aceite y filtro"
+              value={servicioMantenimiento}
+              onChangeText={setServicioMantenimiento}
+            />
+            <CustomInput
+              label="Taller o mecánico"
+              placeholder="Nombre del taller o persona de contacto"
+              value={tallerMantenimiento}
+              onChangeText={setTallerMantenimiento}
+            />
+            <CustomInput
+              label="Kilometraje al ingresar"
+              placeholder="Ej. 12500"
+              keyboardType="numeric"
+              value={kilometrajeMantenimiento}
+              onChangeText={(valor) => setKilometrajeMantenimiento(valor.replace(/\D/g, ''))}
+            />
+            <CustomInput
+              label="Costo estimado"
+              placeholder="Ej. 1500"
+              keyboardType="numeric"
+              value={costoMantenimiento}
+              onChangeText={(valor) => setCostoMantenimiento(normalizarNumeroDecimal(valor))}
+            />
+          </View>
+        )}
 
 {/* SELECTOR DE FECHA INTERACTIVO */}
         <View style={styles.seccion}>
@@ -536,10 +702,17 @@ export default function EventoFormScreen({ navigation, route }: any) {
           )}
         </View>
 
-        <CustomInput label="Descripción" placeholder="Detalles, punto de reunión..." value={descripcion} onChangeText={setDescripcion} />
+        <CustomInput
+          label={tipo === 'rodada' ? 'Indicaciones para el grupo' : 'Notas adicionales'}
+          placeholder={tipo === 'rodada' ? 'Paradas, equipo recomendado y otros detalles' : 'Piezas, síntomas o indicaciones para el taller'}
+          value={descripcion}
+          onChangeText={setDescripcion}
+        />
 
         <View style={styles.seccion}>
-          <Text style={styles.label}>¿Con qué moto asistirás? (Opcional)</Text>
+          <Text style={styles.label}>
+            {tipo === 'rodada' ? '¿Con qué moto asistirás? (Opcional)' : 'Motocicleta para el servicio (Opcional)'}
+          </Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}

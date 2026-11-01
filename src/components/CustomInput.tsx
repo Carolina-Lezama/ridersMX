@@ -11,6 +11,7 @@ interface Props {
   keyboardType?: 'default' | 'email-address' | 'numeric';
   value?: string;
   onChangeText?: (text: string) => void;
+  maxLength?: number;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   error?: string;
 }
@@ -23,6 +24,7 @@ export default function CustomInput({
   keyboardType, 
   value, 
   onChangeText,
+  maxLength,
   autoCapitalize = 'none',
   error
 }: Props) {
@@ -42,6 +44,7 @@ export default function CustomInput({
           placeholderTextColor={theme.iconSecondary}
           value={value}
           onChangeText={onChangeText}
+          maxLength={maxLength}
           autoCapitalize={autoCapitalize}
         />
         {secureTextEntry && showPasswordToggle && (
