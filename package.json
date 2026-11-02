@@ -71,7 +71,10 @@
       "<rootDir>/src/**/*.test.tsx"
     ],
     "collectCoverageFrom": [
-      "src/utils/eventoNotifications.ts"
+      "src/utils/eventoNotifications.ts",
+      "src/utils/validations.ts",
+      "src/screens/auth/LoginScreen.tsx",
+      "src/screens/auth/RegisterScreen.tsx"
     ]
   },
   "private": true,
