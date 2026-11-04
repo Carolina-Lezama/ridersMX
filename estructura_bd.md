@@ -765,31 +765,7 @@
 "data_type": "timestamp with time zone",
 "character_maximum_length": null,
 "is_nullable": "YES",
-"column_default": "timezone('utc'::text, now())"
-},
-{
-"table_name": "motocicletas_seguros",
-"column_name": "motocicleta_id",
-"data_type": "uuid",
-"character_maximum_length": null,
-"is_nullable": "NO",
-"column_default": null
-},
-{
-"table_name": "motocicletas_seguros",
-"column_name": "aseguradora_cifrada",
-"data_type": "bytea",
-"character_maximum_length": null,
-"is_nullable": "YES",
-"column_default": null
-},
-{
-"table_name": "motocicletas_seguros",
-"column_name": "numero_poliza_cifrada",
-"data_type": "bytea",
-"character_maximum_length": null,
-"is_nullable": "YES",
-"column_default": null
+    "column_default": "timezone('utc'::text, now())"
 }
 ]
 
@@ -1010,6 +986,13 @@
 "data_type": "jsonb",
 "is_nullable": "NO",
 "column_default": "'{\"checkInTime\": \"19:00\", \"limiteEnabled\": true, \"checkInEnabled\": true}'::jsonb"
+},
+{
+"table_name": "perfiles",
+"column_name": "insignia_favorita_id",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
 },
 {
 "table_name": "perfiles_publicos",
@@ -1285,17 +1268,3 @@
 "column_default": "timezone('utc'::text, now())"
 }
 ]
-
-## Cambios de esquema de RidersMX
-
-La migración `20261031000000_add_badge_favorite_and_event_recurrence.sql` agrega:
-
-- `perfiles.insignia_favorita_id` (`text`): identificador de la insignia desbloqueada que se muestra como favorita.
-- `eventos.serie_id` (`uuid`): agrupa las citas generadas por una misma programación recurrente.
-- `eventos.recurrencia` (`text`, predeterminado `none`): `none`, `weekly`, `biweekly`, `monthly` o `custom`.
-- `eventos.intervalo_recurrencia` (`integer`): intervalo en días de las series `custom` (entre 1 y 365).
-- `eventos.recurrencia_hasta` (`date`): fecha final inclusiva de la serie.
-
-La migración `20261031000001_add_profile_avatar_storage.sql` crea el bucket público `avatars`.
-La escritura y eliminación de objetos se restringe a la carpeta cuyo primer segmento coincide
-con el ID del usuario autenticado.
