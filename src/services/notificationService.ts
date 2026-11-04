@@ -32,7 +32,6 @@ const configurarCanalNotificaciones = async () => {
     name: 'RidersMX · Recordatorios',
     description: 'Avisos para cuidar tu racha diaria.',
     importance: Notifications.AndroidImportance.HIGH,
-    sound: 'default',
     vibrationPattern: [0, 250, 150, 250],
     lightColor: '#3B82F6',
   });
