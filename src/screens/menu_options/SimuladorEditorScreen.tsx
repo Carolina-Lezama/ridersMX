@@ -4,7 +4,7 @@ import {
   Modal, TextInput, useWindowDimensions, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import Svg, { Defs, LinearGradient, Stop, Rect, Ellipse, Path, Circle, G, Line } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, RadialGradient, Stop, Rect, Ellipse, Path, Circle, G, Line } from 'react-native-svg';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import type { Theme } from '../../../assets/theme/theme';
 
@@ -677,6 +677,16 @@ function Accion({
   );
 }
 
+function Chip({
+  texto, activo, onPress, styles, color,
+}: { texto: string; activo: boolean; onPress: () => void; styles: EditorStyles; color: string }) {
+  return (
+    <TouchableOpacity style={[styles.chip, activo && styles.chipActivo]} onPress={onPress}>
+      <Text style={[styles.chipTexto, activo && { color, fontWeight: 'bold' }]}>{texto}</Text>
+    </TouchableOpacity>
+  );
+}
+
 export default function SimuladorEditorScreen({ navigation, route }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
@@ -1107,20 +1117,31 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
           <>
             <Text style={styles.etiqueta}>Tu moto</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fila}>
-              {d.fotoUri && (
+                {d.fotoUri ? (
                 <TouchableOpacity
                   style={[styles.tarjeta, d.fuente === 'foto' && styles.tarjetaActiva]}
                   onPress={() => setEstado({ fuente: 'foto' })}
                 >
                   <Image source={{ uri: d.fotoUri }} style={{ width: 140, height: 84, borderRadius: 8 }} resizeMode="cover" />
+                    <Text style={styles.tarjetaTitulo}>Mi moto</Text>
+                    <Text style={styles.tarjetaSub}>Toca para cambiar la foto</Text>
+                  </TouchableOpacity>
                 ) : (
-                  <View style={styles.tarjetaFoto}>
+                  <TouchableOpacity
+                    style={[styles.tarjeta, styles.tarjetaFoto]}
+                    onPress={() => {
+                      void pedirFotoMoto().catch((error: unknown) => {
+                        Alert.alert('No se pudo seleccionar la foto', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
+                      });
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Subir una foto de mi moto"
+                  >
                     <Ionicons name="camera" size={34} color={theme.primary} />
-                  </View>
+                    <Text style={styles.tarjetaTitulo}>Mi moto</Text>
+                    <Text style={styles.tarjetaSub}>Sube una foto</Text>
+                  </TouchableOpacity>
                 )}
-                <Text style={styles.tarjetaTitulo}>Mi moto</Text>
-                <Text style={styles.tarjetaSub}>{d.fotoUri ? 'Toca para cambiar la foto' : 'Sube una foto'}</Text>
-              </TouchableOpacity>
             </ScrollView>
             {d.fotoUri && (
               <View style={styles.fila}>
@@ -1417,6 +1438,9 @@ return StyleSheet.create({
   accion: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: theme.cardHeader },
   accionDestacada: { backgroundColor: theme.primary },
   accionTexto: { fontSize: 13, fontWeight: '600', color: theme.textPrimary },
+  barraEl: { backgroundColor: theme.card, borderBottomWidth: 1, borderBottomColor: theme.border, paddingVertical: 8 },
+  barraElFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap', gap: 6, paddingHorizontal: 8 },
+  barraElTexto: { flexShrink: 1, color: theme.textPrimary, fontSize: 13, fontWeight: '700', paddingHorizontal: 8 },
 
   tabs: { flexDirection: 'row', backgroundColor: theme.card, borderBottomWidth: 1, borderBottomColor: theme.border },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 10 },

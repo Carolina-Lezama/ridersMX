@@ -33,6 +33,26 @@ const CODIGOS_PAIS = [
   { nombre: 'Reino Unido', codigo: '+44', digitos: '44' },
 ] as const;
 
+interface MotocicletaSeguroPerfil {
+  id: string;
+  alias: string | null;
+  marca: string;
+  modelo: string;
+}
+
+interface DatosSeguroMotocicleta {
+  aseguradora: string | null;
+  numero_poliza: string | null;
+}
+
+const esDatosSeguroMotocicleta = (valor: unknown): valor is DatosSeguroMotocicleta =>
+  typeof valor === 'object'
+  && valor !== null
+  && 'aseguradora' in valor
+  && (typeof valor.aseguradora === 'string' || valor.aseguradora === null)
+  && 'numero_poliza' in valor
+  && (typeof valor.numero_poliza === 'string' || valor.numero_poliza === null);
+
 const separarTelefono = (telefonoGuardado: string) => {
   const digitos = telefonoGuardado.replace(/\D/g, '');
   if (digitos.length === 10) return { codigo: '+52', numero: digitos };
@@ -68,6 +88,14 @@ export default function PerfilScreen({ navigation }: any) {
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [mostrarSelectorFecha, setMostrarSelectorFecha] = useState(false);
   const [nivelExperiencia, setNivelExperiencia] = useState('');
+  const [motocicletas, setMotocicletas] = useState<MotocicletaSeguroPerfil[]>([]);
+  const [motocicletaSeleccionada, setMotocicletaSeleccionada] = useState<string | null>(null);
+  const [mostrarSelectorMoto, setMostrarSelectorMoto] = useState(false);
+  const [aseguradora, setAseguradora] = useState('');
+  const [numeroPoliza, setNumeroPoliza] = useState('');
+  const [loadingSeguro, setLoadingSeguro] = useState(false);
+  const [savingSeguro, setSavingSeguro] = useState(false);
+  const motoSeguroSeleccionada = motocicletas.find(({ id }) => id === motocicletaSeleccionada);
 
   // Opciones válidas para la base de datos
   const nivelesValidos = ['Novato', 'Intermedio', 'Experto', 'Profesional'];
@@ -98,6 +126,76 @@ export default function PerfilScreen({ navigation }: any) {
     cargarPerfil();
   }, []);
 
+  const cargarMotocicletasSeguro = async (idUsuario: string) => {
+    const { data: motos, error } = await supabase
+      .from('motocicletas')
+      .select('id, alias, marca, modelo')
+      .eq('perfil_id', idUsuario)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+
+    const motosPerfil = (motos || []) as MotocicletaSeguroPerfil[];
+    setMotocicletas(motosPerfil);
+    setMotocicletaSeleccionada((actual) =>
+      motosPerfil.some(({ id }) => id === actual) ? actual : motosPerfil[0]?.id || null,
+    );
+  };
+
+  useEffect(() => {
+    if (!userId) return;
+    const unsubscribe = navigation.addListener('focus', () => {
+      void cargarMotocicletasSeguro(userId).catch((error: unknown) => {
+        console.error('Error al actualizar motocicletas del perfil:', error);
+        Alert.alert(
+          'Error al cargar motocicletas',
+          error instanceof Error ? error.message : 'Inténtalo de nuevo más tarde.',
+        );
+      });
+    });
+    return unsubscribe;
+  }, [navigation, userId]);
+
+  useEffect(() => {
+    let cancelada = false;
+
+    const cargarSeguro = async () => {
+      if (!motocicletaSeleccionada) {
+        setAseguradora('');
+        setNumeroPoliza('');
+        setLoadingSeguro(false);
+        return;
+      }
+
+      try {
+        setLoadingSeguro(true);
+        setAseguradora('');
+        setNumeroPoliza('');
+        const { data, error } = await supabase
+          .rpc('obtener_seguro_motocicleta', { p_motocicleta_id: motocicletaSeleccionada })
+          .single();
+        if (error) throw error;
+        if (!esDatosSeguroMotocicleta(data)) {
+          throw new Error('No se pudieron cargar los datos del seguro.');
+        }
+        if (!cancelada) {
+          setAseguradora(data.aseguradora || '');
+          setNumeroPoliza(data.numero_poliza || '');
+        }
+      } catch (error: any) {
+        if (!cancelada) {
+          Alert.alert('Error al cargar seguro', error.message);
+        }
+      } finally {
+        if (!cancelada) setLoadingSeguro(false);
+      }
+    };
+
+    void cargarSeguro();
+    return () => {
+      cancelada = true;
+    };
+  }, [motocicletaSeleccionada]);
+
   const cargarPerfil = async () => {
     try {
       setLoading(true);
@@ -105,6 +203,8 @@ export default function PerfilScreen({ navigation }: any) {
 
       if (session?.user) {
         setUserId(session.user.id);
+
+        await cargarMotocicletasSeguro(session.user.id);
 
         const { data, error } = await supabase
           .from('perfiles')
@@ -270,6 +370,32 @@ const guardarPerfil = async () => {
       Platform.OS === 'web' ? window.alert(errorMsg) : Alert.alert('Error al guardar', errorMsg);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const guardarSeguro = async () => {
+    if (!motocicletaSeleccionada) {
+      Alert.alert('Selecciona una motocicleta', 'Agrega o selecciona una motocicleta para guardar su seguro.');
+      return;
+    }
+
+    try {
+      setSavingSeguro(true);
+      const { error } = await supabase.rpc('guardar_seguro_motocicleta', {
+        p_motocicleta_id: motocicletaSeleccionada,
+        p_aseguradora: aseguradora.trim(),
+        p_numero_poliza: numeroPoliza.trim(),
+      });
+      if (error) throw error;
+
+      const mensaje = 'Los datos del seguro se guardaron de forma segura.';
+      Platform.OS === 'web' ? window.alert(mensaje) : Alert.alert('¡Éxito!', mensaje);
+    } catch (error: any) {
+      console.error('Error al guardar seguro de motocicleta:', error);
+      const mensaje = error.message || 'Ocurrió un error al guardar los datos del seguro.';
+      Platform.OS === 'web' ? window.alert(mensaje) : Alert.alert('Error al guardar seguro', mensaje);
+    } finally {
+      setSavingSeguro(false);
     }
   };
 
@@ -496,6 +622,104 @@ const guardarPerfil = async () => {
         </View>
       </TouchableOpacity>
 
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Ionicons name="shield-checkmark-outline" size={20} color={theme.warningText} />
+          <Text style={styles.cardTitle}>Seguro de motocicleta</Text>
+        </View>
+        <Text style={styles.helpText}>
+          Estos datos son opcionales, se cifran y solo puedes consultarlos tú.
+        </Text>
+
+        {motocicletas.length === 0 ? (
+          <TouchableOpacity
+            style={styles.datePickerButton}
+            onPress={() => navigation.navigate('MisMotos')}
+            accessibilityRole="button"
+          >
+            <Text style={styles.datePickerText}>Agrega una motocicleta para registrar su seguro</Text>
+            <Ionicons name="chevron-forward" size={18} color={theme.iconSecondary} />
+          </TouchableOpacity>
+        ) : (
+          <>
+            <Text style={styles.label}>Motocicleta</Text>
+            <TouchableOpacity
+              style={styles.datePickerButton}
+              onPress={() => setMostrarSelectorMoto(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Motocicleta seleccionada: ${motoSeguroSeleccionada?.alias || `${motoSeguroSeleccionada?.marca} ${motoSeguroSeleccionada?.modelo}`}`}
+            >
+              <Text style={styles.datePickerText}>
+                {motoSeguroSeleccionada?.alias || `${motoSeguroSeleccionada?.marca} ${motoSeguroSeleccionada?.modelo}`}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={theme.iconSecondary} />
+            </TouchableOpacity>
+
+            {loadingSeguro ? (
+              <ActivityIndicator size="small" color={theme.primary} />
+            ) : (
+              <>
+                <CustomInput
+                  label="Compañía aseguradora (opcional)"
+                  placeholder="Ej. Quálitas, Mapfre"
+                  value={aseguradora}
+                  onChangeText={setAseguradora}
+                />
+                <CustomInput
+                  label="Número de póliza (opcional)"
+                  placeholder="Número de contrato"
+                  value={numeroPoliza}
+                  onChangeText={setNumeroPoliza}
+                />
+                {savingSeguro ? (
+                  <ActivityIndicator size="large" color={theme.primary} />
+                ) : (
+                  <CustomButton title="Guardar seguro" onPress={guardarSeguro} />
+                )}
+              </>
+            )}
+
+            <Modal
+              visible={mostrarSelectorMoto}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setMostrarSelectorMoto(false)}
+            >
+              <View style={styles.motoSelectorOverlay}>
+                <TouchableOpacity
+                  style={StyleSheet.absoluteFill}
+                  onPress={() => setMostrarSelectorMoto(false)}
+                  accessibilityLabel="Cerrar selección de motocicleta"
+                />
+                <View style={styles.motoSelectorModal}>
+                  <Text style={styles.codigoPaisTitulo}>Selecciona una motocicleta</Text>
+                  <ScrollView>
+                    {motocicletas.map((moto) => (
+                      <TouchableOpacity
+                        key={moto.id}
+                        style={styles.codigoPaisOpcion}
+                        onPress={() => {
+                          setMotocicletaSeleccionada(moto.id);
+                          setMostrarSelectorMoto(false);
+                        }}
+                        accessibilityRole="button"
+                      >
+                        <Text style={styles.codigoPaisOpcionTexto}>
+                          {moto.alias || `${moto.marca} ${moto.modelo}`}
+                        </Text>
+                        {moto.id === motocicletaSeleccionada && (
+                          <Ionicons name="checkmark" size={18} color={theme.primary} />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+            </Modal>
+          </>
+        )}
+      </View>
+
       <View style={{ height: 40 }} />
     </ScrollView>
   );
@@ -525,11 +749,14 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   telefonoInput: { flex: 1 },
   codigoPaisOverlay: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: theme.overlay },
   codigoPaisModal: { maxHeight: '75%', backgroundColor: theme.card, borderRadius: 16, paddingHorizontal: 18, paddingTop: 18, paddingBottom: 8, borderWidth: 1, borderColor: theme.border },
+  motoSelectorOverlay: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: theme.overlay },
+  motoSelectorModal: { maxHeight: '75%', backgroundColor: theme.card, borderRadius: 16, paddingHorizontal: 18, paddingTop: 18, paddingBottom: 8, borderWidth: 1, borderColor: theme.border },
   codigoPaisTitulo: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 8 },
   codigoPaisOpcion: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: theme.divider },
   codigoPaisOpcionTexto: { color: theme.textPrimary, fontSize: 15 },
   codigoPaisOpcionCodigo: { color: theme.textSecondary, fontSize: 15, fontWeight: '600' },
   footer: { paddingHorizontal: 20, marginTop: 30 },
+  helpText: { color: theme.textSecondary, fontSize: 13, lineHeight: 18, marginBottom: 16 },
   
   // NUEVOS ESTILOS PARA LOS CHIPS DE EXPERIENCIA
   chipsContainer: { flexDirection: 'row', flexWrap: 'wrap' },

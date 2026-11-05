@@ -190,17 +190,21 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
           }
           renderItem={({ item }) => {
             return (
-              <TouchableOpacity style={styles.card} onPress={() => abrir(item)} activeOpacity={0.85}>
-                <LienzoEstatico diseno={item.diseno} width={108} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.nombre} numberOfLines={1}>{item.nombre}</Text>
-                  <Text style={styles.itemSubText}>{nombreDeMoto(item.diseno)} · {item.diseno.elementos.length} elementos · {item.diseno.trazos.length} trazos</Text>
-                  <Text style={styles.itemSubText}>Editado {fecha(item.actualizado)}</Text>
-                </View>
-                <TouchableOpacity onPress={() => borrar(item)} style={styles.backButton}>
-                  <Ionicons name="trash-outline" size={22} color={theme.dangerText} />
+              <View style={styles.card}>
+                <TouchableOpacity style={styles.cardContent} onPress={() => abrir(item)} activeOpacity={0.85}>
+                  <LienzoEstatico diseno={item.diseno} width={108} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.nombre} numberOfLines={1}>{item.nombre}</Text>
+                    <Text style={styles.itemSubText}>{nombreDeMoto(item.diseno)} · {item.diseno.elementos.length} elementos · {item.diseno.trazos.length} trazos</Text>
+                    <Text style={styles.itemSubText}>Editado {fecha(item.actualizado)}</Text>
+                  </View>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setDisenoPorBorrar(item)} style={styles.backButton} accessibilityRole="button" accessibilityLabel={`Eliminar ${item.nombre}`}>
+                <TouchableOpacity
+                  onPress={() => setDisenoPorBorrar(item)}
+                  style={styles.backButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Eliminar ${item.nombre}`}
+                >
                   <Ionicons name="trash-outline" size={22} color={theme.dangerText} />
                 </TouchableOpacity>
               </View>
@@ -264,6 +268,16 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   chipTexto: { fontSize: 15, fontWeight: 'bold', color: theme.textPrimary },
 
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, padding: 12, borderRadius: 14, marginBottom: 12, borderWidth: 1, borderColor: theme.border, gap: 12 },
+  cardContent: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  modalFondo: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'center', padding: 24 },
+  modalCaja: { backgroundColor: theme.card, borderRadius: 16, padding: 20 },
+  modalTitulo: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 12 },
+  modalTexto: { color: theme.textSecondary, fontSize: 15, lineHeight: 22 },
+  modalBotones: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16, gap: 8 },
+  botonCancelar: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.cardHeader },
+  textoCancelar: { color: theme.textSecondary, fontWeight: '600' },
+  botonEliminar: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.dangerText },
+  textoEliminar: { color: theme.onPrimary, fontWeight: 'bold' },
   nombre: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 2 },
   aviso: { fontSize: 12, color: theme.warningText, backgroundColor: theme.warningBg, padding: 10, borderRadius: 8, marginBottom: 12 },
   vacio: { alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
