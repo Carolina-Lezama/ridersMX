@@ -37,22 +37,18 @@ import type { Theme } from '../../../assets/theme/theme';
 const EMAILJS = {
   serviceId: process.env.EXPO_PUBLIC_EMAILJS_SERVICE_ID ?? '',
   templateId: process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID ?? '',
+  templateId2: process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID_2 ?? '',
   publicKey: process.env.EXPO_PUBLIC_EMAILJS_PUBLIC_KEY ?? '',
 };
 const EMAILJS_CONFIGURADO = Object.values(EMAILJS).every((v) => v.length > 0);
 
-// ─── CONFIGURACIÓN DE BASE DE DATOS ──────────────────────────────────────────
+const EMAILJS_ALERTA_TEMPLATE_ID = process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ALERTA_ID_2 ?? '';
+const EMAILJS_ALERTA_CONFIGURADO = !!(EMAILJS.serviceId && EMAILJS.publicKey && EMAILJS_ALERTA_TEMPLATE_ID);
 
-// Tabla de la que se lee el nombre de quien escribió cada reseña.
-// Si ves "Usuario" en vez del nombre real en reseñas de OTRAS personas, es porque la política RLS
-// de `perfiles` solo deja leer tu propia fila. Solución: crear la vista `perfiles_publicos`
-// (está en el .sql, opcional) y cambiar este valor a 'perfiles_publicos'.
+const LIMITE_ELIMINACIONES_DUENO = 2;
+
 const TABLA_PERFILES = 'perfiles';
 
-// Valor que se guarda en resenas.tipo_entidad para las reseñas de motos.
-// ⚠️ La restricción `resenas_tipo_entidad_check` de la BD solo aceptaba
-// 'Taller', 'Accesorio', 'Ruta' y 'Refaccionaria': hay que agregar 'Moto' (ver el .sql, bloque 3).
-// Respeta las mayúsculas: 'moto' en minúscula sería rechazado.
 const TIPO_ENTIDAD_MOTO = 'Moto';
 
 // ─── TIPOS ───────────────────────────────────────────────────────────────────
@@ -62,7 +58,9 @@ interface Comentario {
   texto: string;
   puntuacion?: number;
   esPropia?: boolean;
-  deBD?: boolean; // true si viene de la tabla `resenas`
+  deBD?: boolean; 
+  id?: string; 
+  perfilId?: string; 
 }
 
 interface Moto {
@@ -75,17 +73,11 @@ interface Moto {
   precio: number; 
   puntuacion: number;
   descripcion: string;
-  /**
-   * Aquí pones tu imagen. Acepta:
-   *  - una URL:            'https://mi-sitio.com/moto.png'
-   *  - un archivo local:   require('../../assets/motos/rt250.png')
-   * Si la dejas vacía se muestra un ícono de moto como marcador.
-   */
+
   imagen?: ImageSourcePropType | string;
   comentarios: Comentario[];
-  propietario?: string; // quién publicó la moto
-  esPropia?: boolean; // true si la subió el usuario desde el formulario
-}
+  propietario?: string; 
+  esPropia?: boolean; }
 
 type FiltroKey = 'marca' | 'precio' | 'cilindrada' | 'modelo';
 type Filtros = Record<FiltroKey, string | null>;
@@ -1083,6 +1075,10 @@ function DetalleResena({
   onPublicar,
   onEditar,
   onEliminar,
+  onEditarResena,
+  onEliminarResena,
+  onModerarResena,
+  eliminadasPorDueno = 0,
 }: {
   moto: Moto;
   onBack: () => void;
@@ -1091,6 +1087,13 @@ function DetalleResena({
   // Solo se pasan cuando la moto es del usuario que la está viendo
   onEditar?: () => void;
   onEliminar?: () => void;
+  // Editar la reseña propia (devuelve true si se guardó)
+  onEditarResena: (resenaId: string, cambios: { texto: string; puntuacion: number }) => Promise<boolean>;
+  // Eliminar la reseña propia
+  onEliminarResena: (resena: Comentario) => void;
+  // Solo para el dueño de la moto: eliminar la opinión de otra persona (con límite)
+  onModerarResena?: (resena: Comentario) => void;
+  eliminadasPorDueno?: number;
 }) {
   const { C, styles } = useResenasTheme();
   const yaResene = moto.comentarios.some((c) => c.esPropia);
@@ -1098,12 +1101,27 @@ function DetalleResena({
   const [textoResena, setTextoResena] = useState('');
   const [estrellaSeleccionada, setEstrellaSeleccionada] = useState(0);
   const [enviando, setEnviando] = useState(false);
+  const [editandoId, setEditandoId] = useState<string | null>(null); // reseña propia que se está editando
+  const scrollRef = useRef<ScrollView>(null);
 
   const limpiarFormulario = () => {
     setMostrarFormulario(false);
     setTextoResena('');
     setEstrellaSeleccionada(0);
+    setEditandoId(null);
   };
+
+  // Carga la reseña propia en el formulario y baja hasta él
+  const iniciarEdicionResena = (c: Comentario) => {
+    if (!c.id) return;
+    setEditandoId(c.id);
+    setTextoResena(c.texto);
+    setEstrellaSeleccionada(c.puntuacion ?? 0);
+    setMostrarFormulario(true);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+  };
+
+  const hayOpinionesModerables = !!onModerarResena && moto.comentarios.some((c) => c.deBD && !!c.id && !c.esPropia);
 
   const enviarResena = async () => {
     if (enviando) return;
@@ -1117,12 +1135,14 @@ function DetalleResena({
     }
     setEnviando(true);
     // El nombre que se muestra sale de `perfiles.username`; la pantalla principal lo completa.
-    const guardada = await onPublicar({
-      usuario: '',
-      texto: textoResena.trim(),
-      puntuacion: estrellaSeleccionada,
-      esPropia: true,
-    });
+    const guardada = editandoId
+      ? await onEditarResena(editandoId, { texto: textoResena.trim(), puntuacion: estrellaSeleccionada })
+      : await onPublicar({
+          usuario: '',
+          texto: textoResena.trim(),
+          puntuacion: estrellaSeleccionada,
+          esPropia: true,
+        });
     setEnviando(false);
     if (guardada) limpiarFormulario();
   };
@@ -1152,7 +1172,7 @@ function DetalleResena({
         <BotonTema />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <ImagenMoto imagen={moto.imagen} style={styles.imagenDetalle} />
 
         <View style={styles.detalleContent}>
@@ -1224,9 +1244,19 @@ function DetalleResena({
           {moto.comentarios.length === 0 && (
             <Text style={styles.comentariosVacio}>Todavía no hay opiniones. ¡Sé la primera persona en escribir una!</Text>
           )}
+          {hayOpinionesModerables && (
+            <View style={styles.avisoModeracion}>
+              <Ionicons name="shield-checkmark-outline" size={18} color={C.textSec} />
+              <Text style={styles.avisoModeracionText}>
+                Eres el dueño de esta publicación: puedes eliminar hasta {LIMITE_ELIMINACIONES_DUENO} opiniones de otras
+                personas ({Math.min(eliminadasPorDueno, LIMITE_ELIMINACIONES_DUENO)} usadas). Pasar ese límite se reporta
+                al equipo como actividad sospechosa.
+              </Text>
+            </View>
+          )}
           {moto.comentarios.map((c, idx) => (
             <View
-              key={idx}
+              key={c.id ?? idx}
               style={[styles.comentarioCard, c.esPropia && styles.comentarioPropio]}
             >
               <View style={styles.comentarioHeader}>
@@ -1240,6 +1270,42 @@ function DetalleResena({
                 {c.puntuacion ? <Estrellas puntuacion={c.puntuacion} size={14} /> : null}
               </View>
               <Text style={styles.comentarioTexto}>{c.texto}</Text>
+
+              {/* Tu propia reseña: editar o eliminar */}
+              {c.esPropia && c.deBD && !!c.id && (
+                <View style={styles.comentarioAcciones}>
+                  <TouchableOpacity
+                    style={styles.btnComentarioAccion}
+                    onPress={() => iniciarEdicionResena(c)}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="create-outline" size={15} color={C.textPri} />
+                    <Text style={styles.btnComentarioAccionText}>Editar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.btnComentarioAccion, styles.btnComentarioAccionPeligro]}
+                    onPress={() => onEliminarResena(c)}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="trash-outline" size={15} color={C.danger} />
+                    <Text style={[styles.btnComentarioAccionText, { color: C.danger }]}>Eliminar</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Dueño de la moto: eliminar la opinión de otra persona (con límite) */}
+              {onModerarResena && c.deBD && !!c.id && !c.esPropia && (
+                <View style={styles.comentarioAcciones}>
+                  <TouchableOpacity
+                    style={[styles.btnComentarioAccion, styles.btnComentarioAccionPeligro]}
+                    onPress={() => onModerarResena(c)}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="trash-outline" size={15} color={C.danger} />
+                    <Text style={[styles.btnComentarioAccionText, { color: C.danger }]}>Eliminar opinión</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           ))}
 
@@ -1255,9 +1321,9 @@ function DetalleResena({
             </TouchableOpacity>
           )}
 
-          {!yaResene && mostrarFormulario && (
+          {(!yaResene || !!editandoId) && mostrarFormulario && (
             <View style={styles.formularioResena}>
-              <Text style={styles.formularioTitulo}>Tu reseña</Text>
+              <Text style={styles.formularioTitulo}>{editandoId ? 'Editar tu reseña' : 'Tu reseña'}</Text>
 
               <Text style={styles.formularioLabel}>Calificación</Text>
               <CalificacionInteractiva valor={estrellaSeleccionada} onChange={setEstrellaSeleccionada} />
@@ -1284,13 +1350,15 @@ function DetalleResena({
                   disabled={enviando}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.btnEnviarText}>{enviando ? 'Publicando…' : 'Publicar reseña'}</Text>
+                  <Text style={styles.btnEnviarText}>
+                    {enviando ? (editandoId ? 'Guardando…' : 'Publicando…') : editandoId ? 'Guardar cambios' : 'Publicar reseña'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
 
-          {yaResene && (
+          {yaResene && !editandoId && (
             <View style={styles.yaReseneBadge}>
               <Ionicons name="checkmark-circle" size={18} color={C.success} />
               <Text style={styles.yaReseneText}>Ya escribiste una reseña para esta moto</Text>
@@ -2189,6 +2257,8 @@ export default function ResenasScreen({ navigation }: any) {
   // Reseñas guardadas en la tabla `resenas` (de todos los usuarios), agrupadas por moto
   const [resenasBD, setResenasBD] = useState<Record<string, Comentario[]>>({});
   const [usuarioActual, setUsuarioActual] = useState<{ id: string; username: string } | null>(null);
+  // Cuántas opiniones ajenas ha eliminado el usuario (como dueño) en cada una de sus motos
+  const [eliminadasPorMoto, setEliminadasPorMoto] = useState<Record<string, number>>({});
 
   // Carga el usuario logueado y todas las reseñas de motos al abrir la pantalla
   useEffect(() => {
@@ -2214,10 +2284,28 @@ export default function ResenasScreen({ navigation }: any) {
           setCatalogo([...filasMotos.map((f: any) => filaAMoto(f, uid)), ...MOTOS]);
         }
 
+        // Cuántas opiniones ajenas ya eliminó este usuario en sus motos (tabla `resenas_eliminadas`)
+        if (uid) {
+          const { data: filasElim, error: errorElim } = await supabase
+            .from('resenas_eliminadas')
+            .select('moto_id')
+            .eq('propietario_id', uid)
+            .eq('bloqueada', false);
+          // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+          console.log('[Moderación] eliminadas leídas:', filasElim?.length, '| error:', errorElim?.message ?? null);
+          if (!errorElim && filasElim && activo) {
+            const conteo: Record<string, number> = {};
+            filasElim.forEach((f: any) => {
+              conteo[f.moto_id] = (conteo[f.moto_id] ?? 0) + 1;
+            });
+            setEliminadasPorMoto(conteo);
+          }
+        }
+
         // Tabla `resenas`: una fila por reseña. La moto se identifica con entidad_evaluada (id de la moto).
         const { data: filas, error } = await supabase
           .from('resenas')
-          .select('perfil_id, entidad_evaluada, calificacion, comentario, created_at')
+          .select('id, perfil_id, entidad_evaluada, calificacion, comentario, created_at')
           .eq('tipo_entidad', TIPO_ENTIDAD_MOTO)
           .order('created_at', { ascending: true });
         // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
@@ -2248,6 +2336,8 @@ export default function ResenasScreen({ navigation }: any) {
             puntuacion: f.calificacion ?? undefined,
             esPropia: !!uid && f.perfil_id === uid,
             deBD: true,
+            id: f.id,
+            perfilId: f.perfil_id,
           });
         });
         if (activo) setResenasBD(agrupadas);
@@ -2393,10 +2483,185 @@ export default function ResenasScreen({ navigation }: any) {
       ...prev,
       [id]: [
         ...(prev[id] ?? []),
-        { usuario: usuarioActual.username, texto: nueva.texto, puntuacion: nueva.puntuacion, esPropia: true, deBD: true },
+        {
+          usuario: usuarioActual.username,
+          texto: nueva.texto,
+          puntuacion: nueva.puntuacion,
+          esPropia: true,
+          deBD: true,
+          id: data?.[0]?.id,
+          perfilId: usuarioActual.id,
+        },
       ],
     }));
     return true;
+  };
+
+  // Edita la reseña propia en la tabla `resenas`. Devuelve true si se guardó.
+  const editarResena = async (
+    motoId: string,
+    resenaId: string,
+    cambios: { texto: string; puntuacion: number }
+  ): Promise<boolean> => {
+    if (!usuarioActual) {
+      avisar('Inicia sesión', 'Necesitas una sesión iniciada para editar tu reseña.', 'alerta');
+      return false;
+    }
+    const { data, error } = await supabase
+      .from('resenas')
+      .update({ calificacion: cambios.puntuacion, comentario: cambios.texto })
+      .eq('id', resenaId)
+      .eq('perfil_id', usuarioActual.id)
+      .select();
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Reseñas] update → filas:', data?.length, '| error:', error?.message ?? null);
+    if (error) {
+      avisar('No se pudo guardar tu cambio', error.message);
+      return false;
+    }
+    if (!data || data.length === 0) {
+      // Sin error y sin filas: la política de seguridad (RLS) no permite actualizar, o la reseña ya no existe
+      avisar('No se pudo guardar tu cambio', 'No tienes permiso para editar esta reseña o ya no existe.');
+      return false;
+    }
+    setResenasBD((prev) => ({
+      ...prev,
+      [motoId]: (prev[motoId] ?? []).map((c) =>
+        c.id === resenaId ? { ...c, texto: cambios.texto, puntuacion: cambios.puntuacion } : c
+      ),
+    }));
+    avisar('Reseña actualizada', 'Tu opinión se guardó con los cambios.', 'exito');
+    return true;
+  };
+
+  // Elimina la reseña propia. Después la persona puede escribir otra.
+  const eliminarResenaPropia = async (motoId: string, resena: Comentario) => {
+    if (!usuarioActual || !resena.id) return;
+    const confirmado = await preguntar<boolean>({
+      icono: 'trash-outline',
+      tono: 'error',
+      titulo: '¿Eliminar tu reseña?',
+      mensaje: 'Se borrará tu opinión y tu calificación de esta moto. Después podrás escribir una nueva.',
+      opciones: [
+        { texto: 'Sí, eliminar', valor: true, tipo: 'peligro' },
+        { texto: 'Cancelar', valor: false, tipo: 'neutro' },
+      ],
+      valorAlCerrar: false,
+    });
+    if (!confirmado) return;
+
+    const { data, error } = await supabase
+      .from('resenas')
+      .delete()
+      .eq('id', resena.id)
+      .eq('perfil_id', usuarioActual.id)
+      .select();
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Reseñas] delete → filas:', data?.length, '| error:', error?.message ?? null);
+    if (error) {
+      avisar('No se pudo eliminar tu reseña', error.message);
+      return;
+    }
+    if (!data || data.length === 0) {
+      avisar('No se pudo eliminar tu reseña', 'No tienes permiso para borrar esta reseña o ya no existe.');
+      return;
+    }
+    setResenasBD((prev) => ({ ...prev, [motoId]: (prev[motoId] ?? []).filter((c) => c.id !== resena.id) }));
+    avisar('Reseña eliminada', 'Ya puedes escribir una nueva opinión de esta moto.', 'exito');
+  };
+
+  // Aviso por correo (plantilla de EmailJS) al equipo: un dueño superó el límite de opiniones eliminadas.
+  // El correo es "lo mejor posible": el registro confiable es la tabla `resenas_eliminadas` de la BD.
+  const enviarAlertaActividadSospechosa = async (moto: Moto, eliminadas: number, limite: number) => {
+    if (!EMAILJS_ALERTA_CONFIGURADO || !usuarioActual) {
+      console.log('[Alerta] La plantilla de EmailJS para alertas no está configurada: se omite el correo.');
+      return;
+    }
+    try {
+      await emailjs.send(
+        EMAILJS.serviceId,
+        EMAILJS_ALERTA_TEMPLATE_ID,
+        {
+          usuario: usuarioActual.username,
+          usuario_id: usuarioActual.id,
+          moto: `${moto.marca} ${moto.nombre} ${moto.modelo}`,
+          moto_id: moto.id,
+          eliminadas: String(eliminadas),
+          limite: String(limite),
+          plataforma: `${Platform.OS} ${Platform.Version}`,
+          fecha: new Date().toLocaleString('es-MX'),
+        },
+        { publicKey: EMAILJS.publicKey }
+      );
+      console.log('[Alerta] correo de actividad sospechosa enviado');
+    } catch (e: any) {
+      console.warn('[Alerta] no se pudo enviar el correo:', e?.text ?? e?.message);
+    }
+  };
+
+  // El dueño de una moto elimina la opinión de otra persona. El límite lo aplica la BD (función RPC).
+  const moderarResena = async (moto: Moto, resena: Comentario) => {
+    if (!usuarioActual || !resena.id) return;
+    const usadas = eliminadasPorMoto[moto.id] ?? 0;
+    const restantes = LIMITE_ELIMINACIONES_DUENO - usadas;
+
+    const continuar = await preguntar<boolean>({
+      icono: restantes > 0 ? 'trash-outline' : 'alert-circle-outline',
+      tono: restantes > 0 ? 'error' : 'alerta',
+      titulo: restantes > 0 ? '¿Eliminar esta opinión?' : 'Ya usaste todas tus eliminaciones',
+      mensaje:
+        restantes > 0
+          ? `Eliminarás la opinión de ${resena.usuario}. Como dueño puedes quitar hasta ${LIMITE_ELIMINACIONES_DUENO} opiniones de esta moto; te quedan ${restantes}.`
+          : `Ya eliminaste ${LIMITE_ELIMINACIONES_DUENO} opiniones de esta moto. Si continúas, esta no se eliminará y el intento se reportará al equipo como actividad sospechosa.`,
+      opciones: [
+        { texto: restantes > 0 ? 'Sí, eliminar' : 'Continuar y reportar', valor: true, tipo: restantes > 0 ? 'peligro' : 'secundario' },
+        { texto: 'Cancelar', valor: false, tipo: 'neutro' },
+      ],
+      valorAlCerrar: false,
+    });
+    if (!continuar) return;
+
+    const { data, error } = await supabase.rpc('eliminar_resena_como_dueno', { p_resena_id: resena.id });
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Moderación] rpc → data:', JSON.stringify(data), '| error:', error?.message ?? null);
+
+    if (error) {
+      // PGRST202 = la función aún no existe en la BD
+      avisar(
+        'No se pudo eliminar la opinión',
+        error.code === 'PGRST202'
+          ? 'Falta crear la función de moderación en la base de datos. Pide al equipo ejecutar el SQL de moderación.'
+          : error.message
+      );
+      return;
+    }
+
+    const r: any = data ?? {};
+    if (r.ok) {
+      setResenasBD((prev) => ({ ...prev, [moto.id]: (prev[moto.id] ?? []).filter((c) => c.id !== resena.id) }));
+      setEliminadasPorMoto((prev) => ({ ...prev, [moto.id]: Number(r.eliminadas ?? usadas + 1) }));
+      avisar('Opinión eliminada', `Te quedan ${r.restantes} de ${r.limite} eliminaciones en esta moto.`, 'exito');
+      return;
+    }
+
+    if (r.motivo === 'limite') {
+      setEliminadasPorMoto((prev) => ({ ...prev, [moto.id]: Number(r.eliminadas ?? LIMITE_ELIMINACIONES_DUENO) }));
+      // Solo el primer intento por moto envía correo, para no llenar la bandeja del equipo
+      if (r.primer_intento) await enviarAlertaActividadSospechosa(moto, Number(r.eliminadas), Number(r.limite));
+      avisar(
+        'Límite alcanzado',
+        'No se eliminó la opinión. Ya usaste todas tus eliminaciones de esta moto y el intento quedó registrado para que el equipo lo revise.',
+        'alerta'
+      );
+      return;
+    }
+
+    if (r.motivo === 'no_existe') {
+      setResenasBD((prev) => ({ ...prev, [moto.id]: (prev[moto.id] ?? []).filter((c) => c.id !== resena.id) }));
+      avisar('Esa opinión ya no existe', 'Alguien más ya la eliminó.', 'info');
+      return;
+    }
+    avisar('No se pudo eliminar la opinión', 'Solo el dueño de la publicación puede eliminar opiniones de otras personas.');
   };
 
   // Crea o edita una moto en `motos_catalogo` (con su foto en Storage)
@@ -2598,6 +2863,10 @@ export default function ResenasScreen({ navigation }: any) {
             onPublicar={(c) => publicarResena(motoActual.id, c)}
             onEditar={motoActual.esPropia ? () => iniciarEdicion(motoActual) : undefined}
             onEliminar={motoActual.esPropia ? () => eliminarMoto(motoActual) : undefined}
+            onEditarResena={(resenaId, cambios) => editarResena(motoActual.id, resenaId, cambios)}
+            onEliminarResena={(r) => eliminarResenaPropia(motoActual.id, r)}
+            onModerarResena={motoActual.esPropia ? (r) => moderarResena(motoActual, r) : undefined}
+            eliminadasPorDueno={eliminadasPorMoto[motoActual.id] ?? 0}
           />
         </View>
       )}
@@ -3027,6 +3296,34 @@ const crearEstilos = (C: Paleta) =>
   avisoAcciones: { marginTop: 14, gap: 8 },
   avisoBtn: { paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   avisoBtnText: { fontSize: 14.5, fontWeight: '800' },
+
+  // Acciones sobre cada opinión (editar / eliminar / moderar)
+  comentarioAcciones: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 10 },
+  btnComentarioAccion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.surfaceAlt,
+  },
+  btnComentarioAccionPeligro: { borderColor: C.danger, backgroundColor: C.dangerSoft },
+  btnComentarioAccionText: { fontSize: 12.5, fontWeight: '700', color: C.textPri },
+  avisoModeracion: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: C.surfaceAlt,
+    borderWidth: 1,
+    borderColor: C.border,
+    marginBottom: 10,
+  },
+  avisoModeracionText: { flex: 1, fontSize: 12.5, color: C.textSec, lineHeight: 18 },
 
   // Acciones del dueño de la moto (editar / eliminar)
   accionesPropias: { flexDirection: 'row', gap: 10, marginTop: 12 },
