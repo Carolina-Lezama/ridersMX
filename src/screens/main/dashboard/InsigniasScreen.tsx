@@ -7,6 +7,8 @@ import {
   FlatList,
   Modal,
   Pressable,
+  Share,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../../assets/theme/ThemeContext'; 
@@ -114,6 +116,19 @@ export default function InsigniasScreen() {
     setInsigniaSeleccionada(null);
   };
 
+  const compartirInsignia = async (insignia: Insignia) => {
+    try {
+      await Share.share({
+        message: `¡Desbloqueé la insignia "${insignia.nombre}" en RidersMX! ${insignia.descripcion}`,
+      });
+    } catch (error) {
+      Alert.alert(
+        'No se pudo compartir',
+        error instanceof Error ? error.message : 'Inténtalo de nuevo más tarde.',
+      );
+    }
+  };
+
   const renderInsigniaCard = ({ item }: { item: Insignia }) => {
     const porcentajeProgreso = Math.min(
       (item.progresoActual / item.progresoTotal) * 100,
@@ -132,7 +147,7 @@ export default function InsigniasScreen() {
         {/* Ícono de Candado para Bloqueadas */}
         {!item.desbloqueada && (
           <View style={styles.lockBadge}>
-            <Ionicons name="lock-closed" size={12} color="#fff" />
+            <Ionicons name="lock-closed" size={12} color={theme.onPrimary} />
           </View>
         )}
 
@@ -150,7 +165,7 @@ export default function InsigniasScreen() {
           <Ionicons
             name={item.icono}
             size={32}
-            color={item.desbloqueada ? item.color : '#9ca3af'}
+            color={item.desbloqueada ? item.color : theme.iconSecondary}
           />
         </View>
 
@@ -246,7 +261,7 @@ export default function InsigniasScreen() {
                     color={
                       insigniaSeleccionada.desbloqueada
                         ? insigniaSeleccionada.color
-                        : '#9ca3af'
+                        : theme.iconSecondary
                     }
                   />
                 </View>
@@ -263,7 +278,7 @@ export default function InsigniasScreen() {
                     }
                     size={14}
                     color={
-                      insigniaSeleccionada.desbloqueada ? '#10b981' : '#f59e0b'
+                      insigniaSeleccionada.desbloqueada ? theme.successText : theme.warningText
                     }
                   />
                   <Text
@@ -271,8 +286,8 @@ export default function InsigniasScreen() {
                       styles.modalStatusText,
                       {
                         color: insigniaSeleccionada.desbloqueada
-                          ? '#10b981'
-                          : '#f59e0b',
+                          ? theme.successText
+                          : theme.warningText,
                       },
                     ]}
                   >
@@ -301,9 +316,9 @@ export default function InsigniasScreen() {
                       styles.btnPrimary,
                       { backgroundColor: theme.primary },
                     ]}
-                    onPress={() => console.log('Compartir logro')}
+                    onPress={() => void compartirInsignia(insigniaSeleccionada)}
                   >
-                    <Ionicons name="share-social-outline" size={18} color="#fff" />
+                    <Ionicons name="share-social-outline" size={18} color={theme.onPrimary} />
                     <Text style={styles.btnPrimaryText}>Compartir Logro</Text>
                   </TouchableOpacity>
                 ) : (
@@ -365,8 +380,8 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       borderWidth: 1.5,
     },
     cardUnlocked: {
-      borderColor: '#f59e0b', // Borde destacado dorado
-      shadowColor: '#f59e0b',
+      borderColor: theme.warningText,
+      shadowColor: theme.warningText,
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.15,
       shadowRadius: 6,
@@ -381,7 +396,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       position: 'absolute',
       top: 10,
       right: 10,
-      backgroundColor: '#6b7280',
+      backgroundColor: theme.textSecondary,
       width: 20,
       height: 20,
       borderRadius: 10,
@@ -407,7 +422,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
     unlockedText: {
       fontSize: 11,
       fontWeight: '600',
-      color: '#f59e0b',
+      color: theme.warningText,
       textAlign: 'center',
     },
 
@@ -438,7 +453,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
     // Modal
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.65)',
+      backgroundColor: theme.overlay,
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 24,
@@ -523,7 +538,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       borderRadius: 14,
     },
     btnPrimaryText: {
-      color: '#fff',
+      color: theme.onPrimary,
       fontSize: 15,
       fontWeight: '700',
     },

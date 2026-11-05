@@ -74,7 +74,10 @@ export default function DiagnosticoScreen({ navigation }: any) {
         ...prev,
         {
           id: (Date.now() + 2).toString(),
-          text: 'No se pudo obtener una respuesta. Inténtalo nuevamente.',
+          text:
+            error instanceof Error
+              ? error.message
+              : 'No se pudo obtener una respuesta. Inténtalo nuevamente.',
           sender: 'ai',
         },
       ]);
@@ -277,7 +280,7 @@ const createStyles = (
 
     userBubble: {
       alignSelf: 'flex-end',
-      backgroundColor: '#2563eb',
+      backgroundColor: theme.primary,
     },
 
     aiBubble: {
@@ -288,7 +291,7 @@ const createStyles = (
     },
 
     userText: {
-      color: '#ffffff',
+      color: theme.onPrimary,
     },
 
     aiText: {

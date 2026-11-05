@@ -130,29 +130,50 @@ export const obtenerEstadoRachaDB = async (userId: string): Promise<StreakState>
 };
 
 export const ejecutarCheckInDB = async (userId: string, estadoOptimista: StreakState): Promise<StreakState> => {
+  let data: {
+    racha_actual: number;
+    comodines_disponibles: number;
+    comodin_usado_hoy?: boolean;
+  } | null = null;
+
   try {
-    const { data, error } = await supabase.rpc('procesar_checkin_diario', {
+    const result = await supabase.rpc('procesar_checkin_diario', {
       p_user_id: userId,
     });
 
-    if (error) throw error;
-
-    // Adaptamos la respuesta del backend a nuestro estado local
-    const nuevoEstado: StreakState = {
-      ...estadoOptimista,
-      diasRacha: data.racha_actual,
-      comodines: data.comodines_disponibles,
-      ultimoCheckIn: obtenerFechaISO(),
-      rachaSalvadaRecientemente: data.comodin_usado_hoy || estadoOptimista.rachaSalvadaRecientemente,
-    };
-
-    await AsyncStorage.setItem(getStorageKey(userId), JSON.stringify(nuevoEstado));
-    return nuevoEstado;
-    
+    if (result.error) throw result.error;
+    data = result.data;
   } catch (error) {
     console.error('Error procesando checkin en backend, guardando offline', error);
-    // Si falla el backend (sin internet), guardamos el estado optimista (local) para subirlo luego
     await AsyncStorage.setItem(getStorageKey(userId), JSON.stringify(estadoOptimista));
     return estadoOptimista;
   }
+
+  if (!data) {
+    throw new Error('El servidor no devolvió el estado actualizado de la racha.');
+  }
+
+  const fecha = obtenerFechaISO();
+  const { error: errorHistorial } = await supabase
+    .from('historial_checkins')
+    .insert({
+      perfil_id: userId,
+      fecha,
+      tipo: 'quiz',
+    });
+
+  if (errorHistorial && errorHistorial.code !== '23505') {
+    throw errorHistorial;
+  }
+
+  const nuevoEstado: StreakState = {
+    ...estadoOptimista,
+    diasRacha: data.racha_actual,
+    comodines: data.comodines_disponibles,
+    ultimoCheckIn: fecha,
+    rachaSalvadaRecientemente: data.comodin_usado_hoy || estadoOptimista.rachaSalvadaRecientemente,
+  };
+
+  await AsyncStorage.setItem(getStorageKey(userId), JSON.stringify(nuevoEstado));
+  return nuevoEstado;
 };

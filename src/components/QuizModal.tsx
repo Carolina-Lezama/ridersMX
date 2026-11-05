@@ -55,6 +55,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
 
   const [opcionSeleccionada, setOpcionSeleccionada] = useState<number | null>(null);
   const [respondido, setRespondido] = useState<boolean>(false);
+  const esRespuestaCorrecta = opcionSeleccionada === preguntaData.respuestaCorrecta;
 
   // Reiniciar estado cada vez que se abre el modal
   useEffect(() => {
@@ -81,9 +82,15 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   };
 
   const handleReclamarRacha = () => {
-    const esCorrecto = opcionSeleccionada === preguntaData.respuestaCorrecta;
-    onCompletarCheckIn(esCorrecto);
+    if (!respondido || !esRespuestaCorrecta) return;
+
+    onCompletarCheckIn(true);
     onClose();
+  };
+
+  const handleReintentar = () => {
+    setOpcionSeleccionada(null);
+    setRespondido(false);
   };
 
   return (
@@ -127,12 +134,12 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                     buttonStyle = styles.opcionBtnCorrecta;
                     textStyle = styles.opcionTextoCorrecta;
                     iconName = 'checkmark-circle';
-                    iconColor = '#10b981';
+                    iconColor = theme.successText;
                   } else if (fueSeleccionada) {
                     buttonStyle = styles.opcionBtnIncorrecta;
                     textStyle = styles.opcionTextoIncorrecta;
                     iconName = 'close-circle';
-                    iconColor = '#ef4444';
+                    iconColor = theme.dangerText;
                   } else {
                     buttonStyle = styles.opcionBtnAtenuada;
                   }
@@ -164,7 +171,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
             {respondido && (
               <View style={styles.explicacionCard}>
                 <View style={styles.explicacionHeader}>
-                  <Ionicons name="bulb-outline" size={20} color="#f59e0b" />
+                  <Ionicons name="bulb-outline" size={20} color={theme.warningText} />
                   <Text style={styles.explicacionTitulo}>Explicación Técnica</Text>
                 </View>
                 <Text style={styles.explicacionTexto}>
@@ -175,7 +182,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
           </ScrollView>
 
           {/* 5. BOTÓN DE CIERRE / RECOMPENSA */}
-          {respondido && (
+          {respondido && esRespuestaCorrecta && (
             <TouchableOpacity
               activeOpacity={0.85}
               style={styles.btnReclamar}
@@ -183,6 +190,20 @@ export const QuizModal: React.FC<QuizModalProps> = ({
             >
               <Text style={styles.btnReclamarTexto}>Reclamar mi día de racha 🔥</Text>
             </TouchableOpacity>
+          )}
+          {respondido && !esRespuestaCorrecta && (
+            <View style={styles.errorRespuesta}>
+              <Text style={styles.errorRespuestaTexto}>
+                Respuesta incorrecta. ¡Sigue intentando!
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={styles.btnReintentar}
+                onPress={handleReintentar}
+              >
+                <Text style={styles.btnReintentarTexto}>Intentar de nuevo</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </View>
@@ -194,7 +215,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
   StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.65)',
+      backgroundColor: theme.overlay,
       justifyContent: 'flex-end',
     },
     modalCard: {
@@ -272,21 +293,21 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
 
     // Estado 2: Seleccionada Correcta
     opcionBtnCorrecta: {
-      backgroundColor: '#10b98115',
-      borderColor: '#10b981',
+      backgroundColor: theme.successBg,
+      borderColor: theme.successText,
     },
     opcionTextoCorrecta: {
-      color: '#10b981',
+      color: theme.successText,
       fontWeight: '700',
     },
 
     // Estado 3: Seleccionada Incorrecta
     opcionBtnIncorrecta: {
-      backgroundColor: '#ef444415',
-      borderColor: '#ef4444',
+      backgroundColor: theme.dangerBg,
+      borderColor: theme.dangerText,
     },
     opcionTextoIncorrecta: {
-      color: '#ef4444',
+      color: theme.dangerText,
       fontWeight: '700',
     },
 
@@ -332,20 +353,46 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
 
     // Botón Reclamar
     btnReclamar: {
-      backgroundColor: '#ff5722',
+      backgroundColor: theme.accent,
       paddingVertical: 16,
       borderRadius: 16,
       alignItems: 'center',
       marginTop: 8,
-      shadowColor: '#ff5722',
+      shadowColor: theme.accent,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 8,
       elevation: 4,
     },
     btnReclamarTexto: {
-      color: '#ffffff',
+      color: theme.onPrimary,
       fontSize: 16,
       fontWeight: '800',
+    },
+    errorRespuesta: {
+      marginTop: 8,
+      padding: 12,
+      borderRadius: 16,
+      backgroundColor: theme.dangerBg,
+      alignItems: 'center',
+      gap: 10,
+    },
+    errorRespuestaTexto: {
+      color: theme.dangerText,
+      fontSize: 15,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    btnReintentar: {
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.dangerBorder,
+    },
+    btnReintentarTexto: {
+      color: theme.dangerText,
+      fontSize: 15,
+      fontWeight: '700',
     },
   });

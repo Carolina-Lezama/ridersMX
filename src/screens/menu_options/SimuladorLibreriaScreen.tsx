@@ -142,7 +142,7 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
               maxLength={12}
             />
             <TouchableOpacity style={styles.botonAgregar} onPress={() => agregarTexto()}>
-              <Ionicons name="add" size={26} color="#ffffff" />
+              <Ionicons name="add" size={26} color={theme.onPrimary} />
             </TouchableOpacity>
           </View>
 
@@ -190,14 +190,15 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
           }
           renderItem={({ item }) => {
             return (
-              <View style={styles.card}>
-                <TouchableOpacity style={styles.cardContenido} onPress={() => abrir(item)} activeOpacity={0.85}>
-                  <LienzoEstatico diseno={item.diseno} width={108} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.nombre} numberOfLines={1}>{item.nombre}</Text>
-                    <Text style={styles.itemSubText}>{nombreDeMoto(item.diseno)} · {item.diseno.elementos.length} elementos · {item.diseno.trazos.length} trazos</Text>
-                    <Text style={styles.itemSubText}>Editado {fecha(item.actualizado)}</Text>
-                  </View>
+              <TouchableOpacity style={styles.card} onPress={() => abrir(item)} activeOpacity={0.85}>
+                <LienzoEstatico diseno={item.diseno} width={108} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.nombre} numberOfLines={1}>{item.nombre}</Text>
+                  <Text style={styles.itemSubText}>{nombreDeMoto(item.diseno)} · {item.diseno.elementos.length} elementos · {item.diseno.trazos.length} trazos</Text>
+                  <Text style={styles.itemSubText}>Editado {fecha(item.actualizado)}</Text>
+                </View>
+                <TouchableOpacity onPress={() => borrar(item)} style={styles.backButton}>
+                  <Ionicons name="trash-outline" size={22} color={theme.dangerText} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setDisenoPorBorrar(item)} style={styles.backButton} accessibilityRole="button" accessibilityLabel={`Eliminar ${item.nombre}`}>
                   <Ionicons name="trash-outline" size={22} color={theme.dangerText} />
@@ -236,9 +237,9 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   backButton: { padding: 5 },
   titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   listoButton: { backgroundColor: theme.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
-  listoText: { color: '#ffffff', fontWeight: 'bold', fontSize: 14 },
+  listoText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 14 },
   searchContainer: { backgroundColor: theme.card, paddingHorizontal: 20, paddingBottom: 15, paddingTop: 12, borderBottomWidth: 1, borderBottomColor: theme.border },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.background, borderRadius: 10, paddingHorizontal: 15, height: 45 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.cardHeader, borderRadius: 10, paddingHorizontal: 15, height: 45 },
   searchInput: { flex: 1, marginLeft: 10, color: theme.textPrimary, fontSize: 16 },
   tabContainer: { flexDirection: 'row', backgroundColor: theme.card, borderBottomWidth: 1, borderBottomColor: theme.border },
   tab: { flex: 1, paddingVertical: 15, alignItems: 'center' },
@@ -247,7 +248,7 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   activeTabText: { color: theme.primary },
   listContainer: { flex: 1, padding: 20 },
   listItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, padding: 15, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: theme.border },
-  stickerPreview: { width: 50, height: 50, backgroundColor: theme.background, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  stickerPreview: { width: 50, height: 50, backgroundColor: theme.cardHeader, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   listTextInfo: { flex: 1 },
   itemName: { color: theme.textPrimary, fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
   itemSubText: { color: theme.textSecondary, fontSize: 12 },
@@ -263,19 +264,9 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   chipTexto: { fontSize: 15, fontWeight: 'bold', color: theme.textPrimary },
 
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, padding: 12, borderRadius: 14, marginBottom: 12, borderWidth: 1, borderColor: theme.border, gap: 12 },
-  cardContenido: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   nombre: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 2 },
-  aviso: { fontSize: 12, color: theme.dangerText, backgroundColor: theme.dangerBg, padding: 10, borderRadius: 8, marginBottom: 12 },
+  aviso: { fontSize: 12, color: theme.warningText, backgroundColor: theme.warningBg, padding: 10, borderRadius: 8, marginBottom: 12 },
   vacio: { alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
   vacioTitulo: { fontSize: 18, fontWeight: 'bold', color: theme.textSecondary, marginTop: 12 },
   vacioTexto: { fontSize: 14, color: theme.textSecondary, marginTop: 4, textAlign: 'center' },
-  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', padding: 24 },
-  modalCaja: { backgroundColor: theme.card, borderRadius: 16, padding: 20 },
-  modalTitulo: { color: theme.textPrimary, fontSize: 18, fontWeight: '700' },
-  modalTexto: { color: theme.textSecondary, fontSize: 14, marginTop: 8, lineHeight: 20 },
-  modalBotones: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 20 },
-  botonCancelar: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.background },
-  textoCancelar: { color: theme.textPrimary, fontWeight: '600' },
-  botonEliminar: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.dangerText },
-  textoEliminar: { color: '#ffffff', fontWeight: '700' },
 });

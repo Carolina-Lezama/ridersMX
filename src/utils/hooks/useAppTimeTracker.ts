@@ -174,13 +174,15 @@ export const useAppTimeTracker = () => {
         estadoDelDia.current.notificacionEvaluada = true;
         void AsyncStorage.setItem(`@notificacion_tiempo_evaluada_${userId}_${hoy}`, 'true')
           .catch((error) => console.error('No se pudo guardar el estado de la alerta de tiempo:', error));
-        try {
-          const enviada = await notificarLimiteTiempoUso(limites.limite_notificacion);
-          if (!enviada) {
-            console.warn('No se envió la alerta: los permisos de notificación no están concedidos.');
+        if (Platform.OS !== 'web') {
+          try {
+            const enviada = await notificarLimiteTiempoUso(limites.limite_notificacion);
+            if (!enviada) {
+              console.warn('No se envió la alerta: los permisos de notificación no están concedidos.');
+            }
+          } catch (error) {
+            console.error('No se pudo enviar la notificación de límite de uso:', error);
           }
-        } catch (error) {
-          console.error('No se pudo enviar la notificación de límite de uso:', error);
         }
       }
 

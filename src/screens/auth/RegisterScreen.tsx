@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator } from 're
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import { supabase } from '../../services/supabase';
+import { MultiAccountService } from '../../services/MultiAccountService';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import { isValidEmail, isValidPassword, MIN_PASSWORD_LENGTH } from '../../utils/validations';
 
-export default function RegisterScreen({ navigation }: any) {
+export default function RegisterScreen({ navigation, route }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
@@ -14,51 +16,92 @@ export default function RegisterScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
-const handleRegister = async () => {
-    if (!email || !password || !username) {
-      alert('El correo, contraseña y nombre de usuario son obligatorios.'); // Usamos alert nativo web por si acaso
+  const usernameError = username.trim().length === 0 && submitted
+    ? 'El nombre de usuario es obligatorio.'
+    : undefined;
+  const emailError = email.length > 0 && !isValidEmail(email)
+    ? 'Ingresa un correo electrónico válido.'
+    : submitted && !email
+      ? 'El correo electrónico es obligatorio.'
+      : undefined;
+  const passwordError = password.length > 0 && !isValidPassword(password)
+    ? `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`
+    : submitted && !password
+      ? 'La contraseña es obligatoria.'
+      : undefined;
+
+  const handleRegister = async () => {
+    setSubmitted(true);
+    if (!email || !password || !username.trim() || !isValidEmail(email) || !isValidPassword(password)) {
       return;
     }
 
     setLoading(true);
+    let previousSession = null;
 
     try {
-      console.log("PASO 1: Contactando a Supabase Auth...");
+      const { data: previousSessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      previousSession = previousSessionData.session;
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
+        email,
+        password,
+        options: {
+          data: {
+            username: username.trim().toLowerCase(),
+            full_name: nombre.trim(),
+          },
+        },
       });
 
-      if (authError) {
-        console.error(" ERROR EN PASO 1 (Auth):", authError);
-        throw authError;
+      if (authError) throw authError;
+
+      if (authData.user && authData.session) {
+        const { error: profileError } = await supabase.from('perfiles').insert([{
+          id: authData.user.id,
+          username: username.trim().toLowerCase(),
+          nombre_completo: nombre.trim(),
+        }]);
+        if (profileError) throw profileError;
       }
 
-      console.log("PASO 2: Usuario creado en secreto. ID:", authData.user?.id);
-
-      if (authData.user) {
-        console.log("PASO 3: Intentando guardar en tu tabla 'perfiles'...");
-        const { error: profileError } = await supabase.from('perfiles').insert([
-          { 
-            id: authData.user.id, 
-            username: username.toLowerCase(), 
-            nombre_completo: nombre 
-          }
-        ]);
-
-        if (profileError) {
-          console.error(" ERROR EN PASO 3 (Tabla Perfiles):", profileError);
-          throw profileError;
+      if (authData.session) {
+        await MultiAccountService.saveSession(authData.session);
+        navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
+      } else {
+        if (previousSession) {
+          const { error: restoreError } = await supabase.auth.setSession({
+            access_token: previousSession.access_token,
+            refresh_token: previousSession.refresh_token,
+          });
+          if (restoreError) throw restoreError;
         }
 
-        console.log("✅ PASO 4: ¡Registro 100% exitoso!");
-        alert('¡Éxito! Tu cuenta ha sido creada.'); 
-        navigation.goBack();
+        Alert.alert('Cuenta creada', 'Revisa tu correo para confirmar la cuenta.');
+        if (previousSession || route?.params?.returnToMain) {
+          navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
+        } else {
+          navigation.goBack();
+        }
       }
-    } catch (error: any) {
-      console.error(" ERROR GENERAL CAPTURADO:", error);
-      alert(`Error: ${error?.message || 'Algo salió mal'}`);
+    } catch (error: unknown) {
+      console.error('Error al crear la cuenta:', error);
+      if (previousSession) {
+        const { error: restoreError } = await supabase.auth.setSession({
+          access_token: previousSession.access_token,
+          refresh_token: previousSession.refresh_token,
+        });
+        if (restoreError) console.error('No se pudo restaurar la sesión anterior:', restoreError);
+      } else {
+        const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+        if (signOutError) console.error('No se pudo cerrar la sesión incompleta del registro:', signOutError);
+      }
+
+      const message = error instanceof Error ? error.message : 'Algo salió mal.';
+      Alert.alert('Error al crear la cuenta', message);
     } finally {
       setLoading(false);
     }
@@ -81,6 +124,7 @@ const handleRegister = async () => {
         placeholder="ej. rider_pro" 
         value={username} 
         onChangeText={setUsername} 
+        error={usernameError}
       />
       <CustomInput 
         label="Correo Electrónico" 
@@ -88,6 +132,7 @@ const handleRegister = async () => {
         keyboardType="email-address" 
         value={email} 
         onChangeText={setEmail} 
+        error={emailError}
       />
       <CustomInput 
         label="Contraseña" 
@@ -95,6 +140,7 @@ const handleRegister = async () => {
         secureTextEntry 
         value={password} 
         onChangeText={setPassword} 
+        error={passwordError}
       />
 
       {loading ? (

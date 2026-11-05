@@ -77,13 +77,13 @@ export default function MantenimientoScreen({ navigation }: any) {
             <Text style={styles.progressLabel}>{d.fuente === 'vector' ? 'Color Base' : 'Moto real'}</Text>
           </View>
           <View style={styles.progressItem}>
-            <View style={[styles.circle, { borderColor: theme.primary }]}>
+            <View style={[styles.circle, { borderColor: theme.successText }]}>
               <Text style={styles.circleText}>{totalStickers}</Text>
             </View>
             <Text style={styles.progressLabel}>Stickers y rines</Text>
           </View>
           <View style={styles.progressItem}>
-            <View style={[styles.circle, { borderColor: theme.dangerText }]}>
+            <View style={[styles.circle, { borderColor: theme.warningText }]}>
               <Text style={styles.circleText}>{totalTrazos}</Text>
             </View>
             <Text style={styles.progressLabel}>Trazos de brocha</Text>
@@ -101,7 +101,7 @@ export default function MantenimientoScreen({ navigation }: any) {
             style={styles.gridItem}
             onPress={() => navigation.navigate('SimuladorLibreria', { tab: 'stickers' })}
           >
-            <Ionicons name="pricetag-outline" size={28} color={theme.primary} />
+            <Ionicons name="pricetag-outline" size={28} color={theme.successText} />
             <Text style={styles.gridText}>Añadir Sticker</Text>
           </TouchableOpacity>
 
@@ -117,7 +117,7 @@ export default function MantenimientoScreen({ navigation }: any) {
             style={styles.gridItem}
             onPress={() => navigation.navigate('SimuladorLibreria', { tab: 'garaje' })}
           >
-            <Ionicons name="images-outline" size={28} color={theme.primary} />
+            <Ionicons name="images-outline" size={28} color={theme.violet} />
             <Text style={styles.gridText}>Mis Diseños ({d.garaje.length})</Text>
           </TouchableOpacity>
 
@@ -160,7 +160,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   backButton: { padding: 5 },
   titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   content: { padding: 20, paddingBottom: 40 },
-  mainButton: { backgroundColor: theme.card, height: 160, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 25, borderWidth: 1, borderColor: theme.border, elevation: 2, shadowColor: '#000000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3 },
+  mainButton: { backgroundColor: theme.card, height: 160, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 25, borderWidth: 1, borderColor: theme.border, elevation: 2, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3 },
   mainButtonText: { color: theme.textPrimary, fontSize: 18, fontWeight: 'bold', marginTop: 10 },
   subButtonText: { color: theme.textSecondary, fontSize: 14, marginTop: 5 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 15 },
