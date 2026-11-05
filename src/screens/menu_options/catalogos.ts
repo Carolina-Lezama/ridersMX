@@ -152,18 +152,21 @@ export const catalogoColores: ColorPintura[] = [
 ];
 
 // ---------- fondos ----------
+export type Decoracion = 'taller' | 'atardecer' | 'neon' | 'ciudad' | 'montana' | 'desierto';
+
 export type Fondo = {
   id: string;
   nombre: string;
   cielo: [string, string]; // degradado arriba -> abajo
   suelo: string;
+  decoracion: Decoracion;
 };
 
 export const catalogoFondos: Fondo[] = [
-  { id: 'taller', nombre: 'Taller', cielo: ['#f1f5f9', '#cbd5e1'], suelo: '#94a3b8' },
-  { id: 'atardecer', nombre: 'Atardecer', cielo: ['#7c3aed', '#fb923c'], suelo: '#3b0764' },
-  { id: 'neon', nombre: 'Noche neón', cielo: ['#020617', '#4c1d95'], suelo: '#0f172a' },
-  { id: 'ciudad', nombre: 'Ciudad', cielo: ['#0ea5e9', '#e0f2fe'], suelo: '#475569' },
+  { id: 'taller', nombre: 'Taller', cielo: ['#f1f5f9', '#cbd5e1'], suelo: '#94a3b8', decoracion: 'taller' },
+  { id: 'atardecer', nombre: 'Atardecer', cielo: ['#7c3aed', '#fb923c'], suelo: '#3b0764', decoracion: 'atardecer' },
+  { id: 'neon', nombre: 'Noche neón', cielo: ['#020617', '#4c1d95'], suelo: '#0f172a', decoracion: 'neon' },
+  { id: 'ciudad', nombre: 'Ciudad', cielo: ['#0ea5e9', '#e0f2fe'], suelo: '#475569', decoracion: 'ciudad' },
 ];
 
 // ---------- stickers y texto ----------
@@ -211,8 +214,10 @@ export type MotoReal = {
   id: string;
   nombre: string;
   descripcion: string;
-  imagen: any; // resultado de require('...')
+  imagen: any; // asset local de require(...) o fuente remota { uri }
   tintable: boolean; // true solo si el PNG tiene fondo transparente
 };
 
+// Se mantiene vacío para no incluir fotos de terceros sin autorización expresa.
+// Aquí solo deben agregarse imágenes propias o con permiso/licencia documentados.
 export const catalogoMotosReales: MotoReal[] = [];
