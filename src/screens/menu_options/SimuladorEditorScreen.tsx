@@ -4,16 +4,19 @@ import {
   Modal, TextInput, useWindowDimensions, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import Svg, { Defs, LinearGradient, Stop, Rect, Ellipse, Path, Circle, G, Line } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, RadialGradient, Stop, Rect, Ellipse, Path, Circle, G, Line } from 'react-native-svg';
+import { useTheme } from '../../../assets/theme/ThemeContext';
+import type { Theme } from '../../../assets/theme/theme';
 
 import {
-  Acabado, EstiloRin, RolParte, GROSORES, OPACIDADES, acabados, catalogoColores, catalogoFondos, catalogoMotos,
-  catalogoMotosReales, catalogoRines, coloresRin,
+  Acabado, Decoracion, EstiloRin, RolParte, GROSORES, OPACIDADES, acabados, catalogoColores, catalogoFondos,
+  catalogoMotos, catalogoMotosReales, catalogoRines, coloresRin, coloresTexto,
 } from './catalogos';
 import {
-  useDiseno, setEstado, actualizarElemento, eliminarElemento, agregarElemento, nuevoDiseno, guardarEnGaraje,
-  cargarAlmacen, agregarTrazo, deshacerTrazo, borrarTrazos, agregarColorPaleta, quitarColorPaleta, pedirFotoMoto,
-  nombreDeMoto, describirDiseno, Diseno, ElementoDiseno, Trazo,
+  useDiseno, getEstado, setEstado, actualizarElemento, eliminarElemento, agregarElemento, duplicarElemento,
+  traerAlFrente, nuevoDiseno, guardarEnGaraje, cargarAlmacen, agregarTrazo, eliminarTrazo, deshacerTrazo,
+  borrarTrazos, agregarColorPaleta, quitarColorPaleta, pedirFotoMoto, quitarFoto, nombreDeMoto, describirDiseno,
+  Diseno, ElementoDiseno, Mezcla, Trazo,
 } from './diseñostore';
 
 // Módulos opcionales: si no están instalados, solo se desactiva esa función (la app no se rompe)
@@ -28,7 +31,7 @@ try { MediaLibrary = require('expo-media-library'); } catch { MediaLibrary = nul
 const INTENSIDAD_TINTE = 0.7;
 
 // =====================================================================
-//  DIBUJO DE LA MOTO (SVG)
+//  UTILIDADES DE COLOR / GEOMETRÍA
 // =====================================================================
 const mezclar = (hex: string, hacia: string, t: number) => {
   const a = parseInt(hex.slice(1), 16);
@@ -37,10 +40,73 @@ const mezclar = (hex: string, hacia: string, t: number) => {
   return `#${[c(16), c(8), c(0)].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
 };
 
+const luminancia = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+};
+
+// Modo de mezcla para que la pintura se vea "sobre" la moto y no pegada encima
+const mezclaPara = (hex: string, realista: boolean): Mezcla => {
+  if (!realista) return 'normal';
+  const l = luminancia(hex);
+  if (l < 0.12) return 'multiply'; // negros: oscurecen conservando detalles
+  if (l > 0.85) return 'screen'; // blancos: aclaran conservando detalles
+  return 'color'; // resto: tinte que conserva brillos y sombras
+};
+
 const pol = (cx: number, cy: number, radio: number, grados: number) => {
   const rad = (grados * Math.PI) / 180;
   return { x: cx + radio * Math.cos(rad), y: cy + radio * Math.sin(rad) };
 };
+
+type Pt = { x: number; y: number };
+
+const puntosDe = (d: string): Pt[] => {
+  const n = (d.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
+  const r: Pt[] = [];
+  for (let i = 0; i + 1 < n.length; i += 2) r.push({ x: n[i], y: n[i + 1] });
+  return r;
+};
+
+const distSegmento = (p: Pt, a: Pt, b: Pt) => {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const l2 = dx * dx + dy * dy;
+  const t = l2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2));
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+};
+
+const dentroDePoligono = (p: Pt, poly: Pt[]) => {
+  let dentro = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i];
+    const b = poly[j];
+    if (a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) dentro = !dentro;
+  }
+  return dentro;
+};
+
+// Devuelve el trazo (el de más arriba) que está bajo el dedo, para el borrador
+const trazoEnPunto = (trazos: Trazo[], p: Pt): string | null => {
+  for (let i = trazos.length - 1; i >= 0; i--) {
+    const t = trazos[i];
+    const pts = puntosDe(t.d);
+    if (t.relleno && pts.length > 2) {
+      if (dentroDePoligono(p, pts)) return t.id;
+    } else {
+      const tol = t.ancho / 2 + 6;
+      if (pts.length === 1 && Math.hypot(pts[0].x - p.x, pts[0].y - p.y) <= tol) return t.id;
+      for (let k = 0; k + 1 < pts.length; k++) {
+        if (distSegmento(p, pts[k], pts[k + 1]) <= tol) return t.id;
+      }
+    }
+  }
+  return null;
+};
+
+// =====================================================================
+//  DIBUJO DE LA MOTO (SVG)
+// =====================================================================
 
 // overlay = solo el rin (sin llanta): sirve para ponerlo encima de la rueda de una foto
 function Rueda({
@@ -84,14 +150,30 @@ function Rueda({
     }
   }
 
+  // dibujo de la llanta: banda de rodamiento con "tacos"
+  const tacos: React.ReactNode[] = [];
+  if (!overlay) {
+    for (let i = 0; i < 44; i++) {
+      const a = (360 / 44) * i;
+      const p1 = pol(cx, cy, r * 0.91, a);
+      const p2 = pol(cx, cy, r * 0.995, a);
+      tacos.push(<Line key={`t${i}`} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#030712" strokeWidth={1.6} />);
+    }
+  }
+
   return (
     <G>
-      {!overlay && <Circle cx={cx} cy={cy} r={r} fill="#111827" />}
-      {!overlay && <Circle cx={cx} cy={cy} r={r * 0.93} fill="none" stroke="#374151" strokeWidth={1.5} />}
+      {!overlay && <Circle cx={cx} cy={cy} r={r} fill="#0b0f19" />}
+      {tacos}
+      {!overlay && <Circle cx={cx} cy={cy} r={r * 0.88} fill="none" stroke="#1f2937" strokeWidth={r * 0.09} />}
+      {!overlay && <Circle cx={cx} cy={cy} r={r * 0.97} fill="none" stroke="#ffffff" strokeOpacity={0.07} strokeWidth={1.5} />}
       <Circle cx={cx} cy={cy} r={rr} fill="#0b1220" />
+      {!overlay && <Circle cx={cx} cy={cy} r={rr * 0.6} fill="none" stroke="#94a3b8" strokeOpacity={0.8} strokeWidth={r * 0.06} />}
       <Circle cx={cx} cy={cy} r={rr} fill="none" stroke={color} strokeWidth={r * 0.09} />
+      <Circle cx={cx} cy={cy} r={rr * 1.04} fill="none" stroke="#ffffff" strokeOpacity={0.3} strokeWidth={r * 0.02} />
       {piezas}
       <Circle cx={cx} cy={cy} r={hub} fill={color} stroke="#0b1220" strokeWidth={2} />
+      <Circle cx={cx} cy={cy} r={hub * 0.4} fill="#0b1220" />
     </G>
   );
 }
@@ -104,6 +186,95 @@ export const RinPreview = React.memo(function RinPreview({
       <Rueda cx={52} cy={52} r={50} estilo={estilo} color={color} overlay={overlay} />
     </Svg>
   );
+});
+
+// ---------- decoración de los fondos ----------
+const EDIFICIOS: [number, number, number][] = [
+  [8, 38, 90], [52, 30, 120], [88, 44, 80], [138, 34, 132], [178, 50, 100],
+  [234, 30, 140], [270, 44, 96], [318, 34, 126], [358, 40, 86],
+];
+
+function Edificios({ y, cuerpo, v1, v2 }: { y: number; cuerpo: string; v1: string; v2: string }) {
+  const piezas: React.ReactNode[] = [];
+  EDIFICIOS.forEach(([x, w, h], i) => {
+    piezas.push(<Rect key={`e${i}`} x={x} y={y - h} width={w} height={h} fill={cuerpo} />);
+    for (let j = 0; j < Math.floor(h / 16); j++) {
+      for (let k = 0; k < Math.floor(w / 12); k++) {
+        if ((i + j + k) % 3 === 0) continue;
+        piezas.push(
+          <Rect key={`v${i}-${j}-${k}`} x={x + 5 + k * 12} y={y - h + 6 + j * 16} width={5} height={7} fill={(i + j + k) % 2 === 0 ? v1 : v2} opacity={0.85} />
+        );
+      }
+    }
+  });
+  return <G>{piezas}</G>;
+}
+
+const ESTRELLAS: [number, number][] = [[20, 20], [60, 50], [95, 18], [140, 40], [190, 15], [230, 55], [270, 25], [320, 45], [360, 18], [385, 60], [45, 80], [210, 30]];
+
+const FondoDecor = React.memo(function FondoDecor({ tipo, suelo }: { tipo: Decoracion; suelo: number }) {
+  const y = suelo;
+  switch (tipo) {
+    case 'taller':
+      return (
+        <G>
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+            <Rect key={i} x={i * 50 + 2} y={0} width={46} height={y} fill="#ffffff" opacity={0.2} />
+          ))}
+          <Rect x={0} y={y - 70} width={400} height={5} fill="#64748b" opacity={0.35} />
+          <Rect x={24} y={28} width={90} height={62} fill="#94a3b8" opacity={0.4} />
+          <Rect x={296} y={24} width={72} height={66} fill="#38bdf8" opacity={0.25} />
+          <Line x1={332} y1={24} x2={332} y2={90} stroke="#f8fafc" strokeWidth={3} opacity={0.6} />
+        </G>
+      );
+    case 'atardecer':
+      return (
+        <G>
+          <Circle cx={300} cy={y - 34} r={64} fill="#fde68a" opacity={0.25} />
+          <Circle cx={300} cy={y - 34} r={38} fill="#fde68a" opacity={0.95} />
+          <Path d={`M 0 ${y} L 0 ${y - 42} L 70 ${y - 88} L 130 ${y - 52} L 200 ${y - 98} L 280 ${y - 46} L 340 ${y - 78} L 400 ${y - 42} L 400 ${y} Z`} fill="#4c1d95" opacity={0.85} />
+        </G>
+      );
+    case 'neon':
+      return (
+        <G>
+          {ESTRELLAS.map(([sx, sy], i) => (
+            <Circle key={i} cx={sx} cy={sy} r={1.3} fill="#ffffff" opacity={0.85} />
+          ))}
+          <Circle cx={330} cy={46} r={16} fill="#e9d5ff" opacity={0.9} />
+          <Edificios y={y} cuerpo="#0b1020" v1="#ff2d95" v2="#22d3ee" />
+        </G>
+      );
+    case 'ciudad':
+      return (
+        <G>
+          <Ellipse cx={90} cy={44} rx={38} ry={11} fill="#ffffff" opacity={0.75} />
+          <Ellipse cx={290} cy={64} rx={46} ry={12} fill="#ffffff" opacity={0.65} />
+          <Edificios y={y} cuerpo="#64748b" v1="#e0f2fe" v2="#bae6fd" />
+        </G>
+      );
+    case 'montana':
+      return (
+        <G>
+          <Circle cx={70} cy={46} r={20} fill="#fef9c3" opacity={0.95} />
+          <Path d={`M 0 ${y} L 0 ${y - 60} L 90 ${y - 120} L 170 ${y - 55} L 250 ${y - 130} L 340 ${y - 60} L 400 ${y - 90} L 400 ${y} Z`} fill="#64748b" />
+          <Path d={`M 250 ${y - 130} L 226 ${y - 96} L 244 ${y - 100} L 252 ${y - 92} L 266 ${y - 104} Z`} fill="#f8fafc" />
+          <Path d={`M 90 ${y - 120} L 68 ${y - 88} L 84 ${y - 92} L 92 ${y - 84} L 106 ${y - 96} Z`} fill="#f8fafc" />
+          <Path d={`M 0 ${y} L 0 ${y - 30} Q 120 ${y - 70} 230 ${y - 30} T 400 ${y - 35} L 400 ${y} Z`} fill="#166534" opacity={0.9} />
+        </G>
+      );
+    default: // desierto
+      return (
+        <G>
+          <Circle cx={90} cy={56} r={30} fill="#fff7ed" opacity={0.95} />
+          <Path d={`M 0 ${y} L 0 ${y - 34} Q 100 ${y - 84} 200 ${y - 38} T 400 ${y - 44} L 400 ${y} Z`} fill="#d97706" opacity={0.85} />
+          <Path d={`M 0 ${y} L 0 ${y - 16} Q 130 ${y - 50} 260 ${y - 14} T 400 ${y - 20} L 400 ${y} Z`} fill="#b45309" opacity={0.9} />
+          <Rect x={334} y={y - 62} width={7} height={46} rx={3} fill="#166534" />
+          <Rect x={322} y={y - 48} width={5} height={20} rx={2} fill="#166534" />
+          <Rect x={348} y={y - 52} width={5} height={22} rx={2} fill="#166534" />
+        </G>
+      );
+  }
 });
 
 type MotoProps = {
@@ -144,9 +315,9 @@ function MotoSvgBase({
     switch (rol) {
       case 'principal': return 'url(#pintura)';
       case 'acento': return colorAcento;
-      case 'oscuro': return '#1f2937';
+      case 'oscuro': return 'url(#metal)';
       case 'asiento': return '#0f172a';
-      case 'cromo': return '#cbd5e1';
+      case 'cromo': return 'url(#cromo)';
       default: return '#93c5fd';
     }
   };
@@ -163,30 +334,60 @@ function MotoSvgBase({
             <Stop key={i} offset={String(o)} stopColor={col as string} />
           ))}
         </LinearGradient>
+        <LinearGradient id="brillo" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#ffffff" stopOpacity={0.75} />
+          <Stop offset="0.35" stopColor="#ffffff" stopOpacity={0.12} />
+          <Stop offset="1" stopColor="#ffffff" stopOpacity={0} />
+        </LinearGradient>
+        <LinearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#6b7280" />
+          <Stop offset="0.5" stopColor="#1f2937" />
+          <Stop offset="1" stopColor="#0b1220" />
+        </LinearGradient>
+        <LinearGradient id="cromo" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#ffffff" />
+          <Stop offset="0.45" stopColor="#94a3b8" />
+          <Stop offset="0.55" stopColor="#e2e8f0" />
+          <Stop offset="1" stopColor="#64748b" />
+        </LinearGradient>
+        <RadialGradient id="sombra" cx="0.5" cy="0.5" r="0.5">
+          <Stop offset="0" stopColor="#000000" stopOpacity={0.6} />
+          <Stop offset="1" stopColor="#000000" stopOpacity={0} />
+        </RadialGradient>
       </Defs>
 
       <Rect x={0} y={0} width={400} height={240} fill="url(#cielo)" />
+      <FondoDecor tipo={fondo.decoracion} suelo={modelo.suelo} />
       <Rect x={0} y={modelo.suelo - 1} width={400} height={240 - modelo.suelo + 1} fill={fondo.suelo} />
+      <Rect x={0} y={modelo.suelo - 1} width={400} height={1.5} fill="#ffffff" opacity={0.25} />
 
       {!soloFondo && (
         <>
-          <Ellipse cx={200} cy={modelo.suelo + 2} rx={175} ry={7} fill="#000" opacity={0.25} />
+          <Ellipse cx={200} cy={modelo.suelo + 2} rx={190} ry={11} fill="url(#sombra)" />
           {modelo.ruedas.map((w, i) => (
             <Rueda key={i} cx={w.cx} cy={w.cy} r={w.r} estilo={estiloRin} color={rinColor} />
           ))}
           {modelo.lineas.map((l, i) => (
-            <Line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke={l.rol === 'cromo' ? '#cbd5e1' : '#1f2937'} strokeWidth={l.ancho} strokeLinecap="round" />
+            <G key={i}>
+              <Line x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke={l.rol === 'cromo' ? '#cbd5e1' : '#1f2937'} strokeWidth={l.ancho} strokeLinecap="round" />
+              <Line x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="#ffffff" strokeOpacity={l.rol === 'cromo' ? 0.65 : 0.18} strokeWidth={l.ancho * 0.3} strokeLinecap="round" />
+            </G>
           ))}
           {modelo.partes.map((p, i) => (
-            <Path
-              key={i}
-              d={p.d}
-              fill={relleno(p.rol)}
-              fillOpacity={p.rol === 'cristal' ? 0.5 : 1}
-              stroke={p.rol === 'principal' || p.rol === 'acento' ? 'rgba(0,0,0,0.35)' : 'none'}
-              strokeWidth={1.5}
-            />
+            <G key={i}>
+              <Path
+                d={p.d}
+                fill={relleno(p.rol)}
+                fillOpacity={p.rol === 'cristal' ? 0.5 : 1}
+                stroke={p.rol === 'principal' || p.rol === 'acento' ? 'rgba(0,0,0,0.35)' : 'none'}
+                strokeWidth={1.5}
+              />
+              {p.rol === 'principal' && acabado !== 'mate' && (
+                <Path d={p.d} fill="url(#brillo)" opacity={acabado === 'metalico' ? 0.55 : 0.85} />
+              )}
+            </G>
           ))}
+          <Circle cx={modelo.faro.cx} cy={modelo.faro.cy} r={modelo.faro.r * 2} fill="#fef08a" opacity={0.22} />
           <Circle cx={modelo.faro.cx} cy={modelo.faro.cy} r={modelo.faro.r} fill="#fef9c3" stroke="#94a3b8" strokeWidth={2} />
         </>
       )}
@@ -215,6 +416,19 @@ const pickBase = (d: Diseno) => ({
 
 type BaseProps = ReturnType<typeof pickBase> & { vivo?: Trazo | null; width: number; height: number };
 
+const MEZCLAS: Mezcla[] = ['normal', 'color', 'multiply', 'screen'];
+
+function TrazoSvg({ t }: { t: Trazo }) {
+  if (t.relleno) {
+    return (
+      <Path d={t.d} fill={t.color} fillOpacity={t.opacidad} stroke={t.color} strokeOpacity={t.opacidad} strokeWidth={1.5} strokeLinejoin="round" />
+    );
+  }
+  return (
+    <Path d={t.d} stroke={t.color} strokeWidth={t.ancho} strokeOpacity={t.opacidad} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+  );
+}
+
 const CapaBase = React.memo(function CapaBase(p: BaseProps) {
   const real = p.fuente === 'real' ? catalogoMotosReales.find((m) => m.id === p.realId) ?? null : null;
   const fuenteImg: any = p.fuente === 'foto' && p.fotoUri ? { uri: p.fotoUri } : real ? real.imagen : null;
@@ -222,7 +436,8 @@ const CapaBase = React.memo(function CapaBase(p: BaseProps) {
   const imgStyle = { position: 'absolute' as const, top: 0, left: 0, width: p.width, height: p.height };
 
   return (
-    <View style={{ width: p.width, height: p.height }}>
+    // isolation: la mezcla de la pintura solo afecta a esta capa (moto + fondo)
+    <View style={[{ width: p.width, height: p.height }, { isolation: 'isolate' } as any]}>
       <MotoSvg
         motoId={p.motoId}
         colorPrincipal={p.colorPrincipal}
@@ -240,18 +455,22 @@ const CapaBase = React.memo(function CapaBase(p: BaseProps) {
         // Misma imagen encima, pintada de un color. Respeta la transparencia del PNG
         <Image source={fuenteImg} style={[imgStyle, { tintColor: p.colorPrincipal, opacity: INTENSIDAD_TINTE }]} resizeMode="contain" />
       )}
-      {(p.trazos.length > 0 || p.vivo) && (
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Svg width={p.width} height={p.height} viewBox="0 0 400 240">
-            {p.trazos.map((t) => (
-              <Path key={t.id} d={t.d} stroke={t.color} strokeWidth={t.ancho} strokeOpacity={t.opacidad} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            ))}
-            {p.vivo && (
-              <Path d={p.vivo.d} stroke={p.vivo.color} strokeWidth={p.vivo.ancho} strokeOpacity={p.vivo.opacidad} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            )}
-          </Svg>
-        </View>
-      )}
+      {MEZCLAS.map((m) => {
+        const lista = p.trazos.filter((t) => (t.mezcla ?? 'normal') === m);
+        const hayVivo = !!p.vivo && (p.vivo.mezcla ?? 'normal') === m;
+        if (lista.length === 0 && !hayVivo) return null;
+        return (
+          <View
+            key={m}
+            style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }, m !== 'normal' && ({ mixBlendMode: m } as any)]}
+          >
+            <Svg width={p.width} height={p.height} viewBox="0 0 400 240">
+              {lista.map((t) => <TrazoSvg key={t.id} t={t} />)}
+              {hayVivo && p.vivo && <TrazoSvg t={p.vivo} />}
+            </Svg>
+          </View>
+        );
+      })}
     </View>
   );
 });
@@ -292,11 +511,11 @@ export function LienzoEstatico({ diseno, width }: { diseno: Diseno; width: numbe
       {diseno.elementos.map((el) => (
         <View
           key={el.id}
-          pointerEvents="none"
           style={{
             position: 'absolute',
             left: el.x * W,
             top: el.y * H,
+            pointerEvents: 'none',
             transform: [{ rotate: `${el.rotation}deg` }, { scale: el.scale }],
           }}
         >
@@ -311,6 +530,7 @@ export function LienzoEstatico({ diseno, width }: { diseno: Diseno; width: numbe
 //  EDITOR
 // =====================================================================
 type Tab = 'moto' | 'pintura' | 'rines' | 'brocha' | 'fondo';
+type Herramienta = 'pincel' | 'relleno' | 'borrador';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'moto', label: 'Moto', icon: 'motorbike' },
@@ -320,23 +540,37 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'fondo', label: 'Fondo', icon: 'image-filter-hdr' },
 ];
 
+const HERRAMIENTAS: { id: Herramienta; nombre: string }[] = [
+  { id: 'pincel', nombre: 'Pincel' },
+  { id: 'relleno', nombre: 'Rellenar zona' },
+  { id: 'borrador', nombre: 'Borrar trazo' },
+];
+
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 const PAD = 14; // zona táctil de las manijas (dentro de los límites del elemento, para que funcione en Android)
 const OFFSET = PAD + 3.5; // PAD + borde (1.5) + relleno (2): el contenido queda exactamente en (x, y)
+type EditorStyles = ReturnType<typeof createStyles>;
 
 const normalizarHex = (v: string) => {
   const m = v.trim().match(/^#?([0-9a-fA-F]{6})$/);
   return m ? `#${m[1].toLowerCase()}` : null;
 };
 
-const construirPath = (pts: { x: number; y: number }[]) =>
-  pts.length === 1
-    ? `M ${pts[0].x} ${pts[0].y} l 0.1 0`
-    : pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+const construirPath = (pts: Pt[], cerrar = false) => {
+  if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y} L ${Math.round((pts[0].x + 0.1) * 10) / 10} ${pts[0].y}`;
+  const base = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  return cerrar && pts.length > 2 ? `${base} Z` : base;
+};
+
+// Colores disponibles para stickers / textos / rines ya colocados
+const coloresElemento = [
+  ...coloresRin,
+  ...coloresTexto.filter((h) => !coloresRin.some((c) => c.hex === h)).map((h) => ({ id: `t${h}`, nombre: h, hex: h })),
+];
 
 function ElementoArrastrable({
-  item, activo, onActivar, W, H,
-}: { item: ElementoDiseno; activo: boolean; onActivar: () => void; W: number; H: number }) {
+  item, activo, onActivar, W, H, styles,
+}: { item: ElementoDiseno; activo: boolean; onActivar: () => void; W: number; H: number; styles: EditorStyles }) {
   const itemRef = useRef(item);
   itemRef.current = item;
   const dims = useRef({ W, H });
@@ -397,13 +631,13 @@ function ElementoArrastrable({
       {activo && (
         <>
           <TouchableOpacity style={[styles.manija, styles.manijaEliminar, inv]} onPress={() => eliminarElemento(item.id)}>
-            <Ionicons name="close" size={16} color="#fff" />
+            <Ionicons name="close" size={16} color="#ffffff" />
           </TouchableOpacity>
           <View style={[styles.manija, styles.manijaRotar, inv]} {...rotar.panHandlers}>
-            <Ionicons name="sync" size={14} color="#fff" />
+            <Ionicons name="sync" size={14} color="#ffffff" />
           </View>
           <View style={[styles.manija, styles.manijaEscalar, inv]} {...escalar.panHandlers}>
-            <Ionicons name="resize" size={14} color="#fff" />
+            <Ionicons name="resize" size={14} color="#ffffff" />
           </View>
         </>
       )}
@@ -412,12 +646,13 @@ function ElementoArrastrable({
 }
 
 function FilaColores({
-  colores, valor, onElegir, onBorrar,
+  colores, valor, onElegir, onBorrar, styles,
 }: {
   colores: { id: string; hex: string }[];
   valor: string;
   onElegir: (hex: string) => void;
   onBorrar?: (hex: string) => void;
+  styles: EditorStyles;
 }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fila}>
@@ -434,17 +669,30 @@ function FilaColores({
 }
 
 function Accion({
-  icono, texto, onPress, destacado,
-}: { icono: string; texto: string; onPress: () => void; destacado?: boolean }) {
+  icono, texto, onPress, destacado, styles,
+}: { icono: string; texto: string; onPress: () => void; destacado?: boolean; styles: EditorStyles }) {
+  const { theme } = useTheme();
   return (
     <TouchableOpacity style={[styles.accion, destacado && styles.accionDestacada]} onPress={onPress}>
-      <Ionicons name={icono as any} size={20} color={destacado ? '#fff' : '#0f172a'} />
-      <Text style={[styles.accionTexto, destacado && { color: '#fff' }]}>{texto}</Text>
+      <Ionicons name={icono as any} size={20} color={destacado ? '#ffffff' : theme.textPrimary} />
+      <Text style={[styles.accionTexto, destacado && { color: '#ffffff' }]}>{texto}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function Chip({
+  texto, activo, onPress, styles, color,
+}: { texto: string; activo: boolean; onPress: () => void; styles: EditorStyles; color: string }) {
+  return (
+    <TouchableOpacity style={[styles.chip, activo && styles.chipActivo]} onPress={onPress}>
+      <Text style={[styles.chipTexto, activo && { color, fontWeight: 'bold' }]}>{texto}</Text>
     </TouchableOpacity>
   );
 }
 
 export default function SimuladorEditorScreen({ navigation, route }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const d = useDiseno();
   const { width } = useWindowDimensions();
   const W = Math.min(width - 24, 560);
@@ -454,6 +702,8 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
   const [tab, setTab] = useState<Tab>((route?.params?.tab as Tab) ?? 'moto');
   const [activeId, setActiveId] = useState<string | null>(null);
   const [modalGuardar, setModalGuardar] = useState(false);
+  const [modalNuevo, setModalNuevo] = useState(false);
+  const [modalCompartirWeb, setModalCompartirWeb] = useState(false);
   const [nombreInput, setNombreInput] = useState('');
   const [hexInput, setHexInput] = useState('');
 
@@ -461,13 +711,18 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
   const [brochaColor, setBrochaColor] = useState(d.colorPrincipal);
   const [grosorId, setGrosorId] = useState('medio');
   const [opacidadId, setOpacidadId] = useState('translucido');
+  const [herramienta, setHerramienta] = useState<Herramienta>('pincel');
+  const [realista, setRealista] = useState(true);
   const [vivo, setVivo] = useState<Trazo | null>(null);
-  const puntos = useRef<{ x: number; y: number }[]>([]);
-  const config = useRef({ color: brochaColor, ancho: 9, opacidad: 0.6 });
+  const puntos = useRef<Pt[]>([]);
+  const config = useRef({ color: brochaColor, ancho: 9, opacidad: 0.6, relleno: false, mezcla: 'normal' as Mezcla, herramienta });
   config.current = {
     color: brochaColor,
     ancho: GROSORES.find((g) => g.id === grosorId)?.ancho ?? 9,
     opacidad: OPACIDADES.find((o) => o.id === opacidadId)?.valor ?? 0.6,
+    relleno: herramienta === 'relleno',
+    mezcla: mezclaPara(brochaColor, realista),
+    herramienta,
   };
   const dims = useRef({ W, H });
   dims.current = { W, H };
@@ -476,6 +731,7 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
   const editando = d.disenoId !== null && d.garaje.some((g) => g.id === d.disenoId);
   const coloresPintura = [...catalogoColores, ...d.paleta.map((hex) => ({ id: `p${hex}`, hex }))];
   const motoReal = d.fuente === 'real' ? catalogoMotosReales.find((m) => m.id === d.realId) : null;
+  const elActivo = d.elementos.find((e) => e.id === activeId) ?? null;
 
   useEffect(() => { cargarAlmacen(); }, []);
 
@@ -497,26 +753,46 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
   // Desde Mantenimiento: botón "Compartir"
   useEffect(() => {
     if (route?.params?.accion === 'compartir') {
-      const id = setTimeout(() => {
-        compartir();
+      if (Platform.OS === 'web') {
+        setModalCompartirWeb(true);
         navigation.setParams({ accion: undefined });
-      }, 600);
-      return () => clearTimeout(id);
+      } else {
+        const id = setTimeout(() => {
+          compartir();
+          navigation.setParams({ accion: undefined });
+        }, 400);
+        return () => clearTimeout(id);
+      }
     }
   }, [route?.params?.accion]);
 
   // ---------- brocha ----------
-  const aVista = (px: number, py: number) => ({
+  const aVista = (px: number, py: number): Pt => ({
     x: Math.round(((px * 400) / dims.current.W) * 10) / 10,
     y: Math.round(((py * 240) / dims.current.H) * 10) / 10,
   });
 
+  const borrarEn = (p: Pt) => {
+    const id = trazoEnPunto(getEstado().trazos, p);
+    if (id) eliminarTrazo(id);
+  };
+
+  const trazoVivo = (): Trazo => {
+    const { color, ancho, opacidad, relleno, mezcla } = config.current;
+    return { id: 'vivo', color, ancho, opacidad, relleno, mezcla, d: construirPath(puntos.current, relleno) };
+  };
+
   const terminarTrazo = () => {
-    if (puntos.current.length > 0) {
-      agregarTrazo({ ...config.current, d: construirPath(puntos.current) });
-    }
+    const c = config.current;
+    const pts = puntos.current;
     puntos.current = [];
     setVivo(null);
+    if (c.herramienta === 'borrador' || pts.length === 0) return;
+    if (c.relleno && pts.length < 3) return; // una zona necesita al menos 3 puntos
+    agregarTrazo({
+      color: c.color, ancho: c.ancho, opacidad: c.opacidad, relleno: c.relleno, mezcla: c.mezcla,
+      d: construirPath(pts, c.relleno),
+    });
   };
 
   const dibujar = useRef(
@@ -524,15 +800,18 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
-        puntos.current = [aVista(e.nativeEvent.locationX, e.nativeEvent.locationY)];
-        setVivo({ id: 'vivo', ...config.current, d: construirPath(puntos.current) });
+        const p = aVista(e.nativeEvent.locationX, e.nativeEvent.locationY);
+        if (config.current.herramienta === 'borrador') { borrarEn(p); return; }
+        puntos.current = [p];
+        setVivo(trazoVivo());
       },
       onPanResponderMove: (e) => {
         const p = aVista(e.nativeEvent.locationX, e.nativeEvent.locationY);
+        if (config.current.herramienta === 'borrador') { borrarEn(p); return; }
         const ult = puntos.current[puntos.current.length - 1];
         if (ult && Math.hypot(p.x - ult.x, p.y - ult.y) < 1.5) return;
         puntos.current.push(p);
-        setVivo({ id: 'vivo', ...config.current, d: construirPath(puntos.current) });
+        setVivo(trazoVivo());
       },
       onPanResponderRelease: terminarTrazo,
       onPanResponderTerminate: terminarTrazo,
@@ -566,6 +845,17 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
     ]);
   };
 
+  const elegirColorPrincipal = (hex: string) => {
+    setEstado({ colorPrincipal: hex });
+    if (d.fuente !== 'vector') setBrochaColor(hex); // en fotos, el color elegido se usa con la brocha
+  };
+
+  const irAPintarFoto = () => {
+    setBrochaColor(d.colorPrincipal);
+    setHerramienta('relleno');
+    setTab('brocha');
+  };
+
   // ---------- compartir / galería ----------
   const capturar = async (opciones: any) => {
     if (!captureRef) throw new Error('view-shot no instalado');
@@ -575,25 +865,115 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
   };
 
   const compartir = async () => {
-    // 1) imagen del diseño (si están instalados view-shot y expo-sharing)
+    const mensaje = describirDiseno(d);
+
+    if (Platform.OS === 'web') {
+      const browser = globalThis as any;
+      const webNavigator = browser.navigator;
+      const archivoPrueba = typeof browser.File === 'function'
+        ? new browser.File([''], 'ridersmx.png', { type: 'image/png' })
+        : null;
+      const puedeCompartirArchivo = !!(
+        webNavigator?.share && archivoPrueba && webNavigator.canShare?.({ files: [archivoPrueba] })
+      );
+      const pestanaWhatsapp = !puedeCompartirArchivo && !webNavigator?.share
+        ? browser.open('about:blank', '_blank')
+        : null;
+
+      try {
+        const uri = await capturar({ format: 'png', quality: 1, result: 'data-uri' });
+        const blob = await (await fetch(uri)).blob();
+        const archivo = new browser.File([blob], 'mi-moto-ridersmx.png', { type: 'image/png' });
+
+        if (webNavigator?.share && webNavigator.canShare?.({ files: [archivo] })) {
+          await webNavigator.share({ files: [archivo], title: `Mi ${nombreMoto} en RidersMX`, text: mensaje });
+          if (pestanaWhatsapp) pestanaWhatsapp.close?.();
+          setModalCompartirWeb(false);
+          return;
+        }
+
+        // Navegador de escritorio: descarga la imagen y abre WhatsApp Web con el texto listo.
+        const enlace = document.createElement('a');
+        enlace.href = uri;
+        enlace.download = 'mi-moto-ridersmx.png';
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+
+        if (webNavigator?.share) {
+          await webNavigator.share({ title: `Mi ${nombreMoto} en RidersMX`, text: mensaje });
+        } else {
+          const urlWhatsapp = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+          if (pestanaWhatsapp) pestanaWhatsapp.location.href = urlWhatsapp;
+          else browser.location.assign(urlWhatsapp);
+        }
+        setModalCompartirWeb(false);
+        return;
+      } catch (error: any) {
+        if (error?.name === 'AbortError') return;
+        if (pestanaWhatsapp) pestanaWhatsapp.close?.();
+        browser.alert?.('No se pudo compartir la imagen automáticamente. Usa “Descargar para Instagram” y adjunta el PNG en la red social.');
+        setModalCompartirWeb(false);
+        return;
+      }
+    }
+
+    // En Android/iOS abre el menú del sistema con las aplicaciones compatibles,
+    // por ejemplo WhatsApp o Instagram si están instaladas.
     if (captureRef && Sharing && (await Sharing.isAvailableAsync())) {
       try {
         const uri = await capturar({ format: 'png', quality: 1, result: 'tmpfile' });
         await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: `Mi ${nombreMoto} en RidersMX` });
         return;
       } catch {
-        // si falla, se comparte como texto
+        // continúa con el envío de texto como alternativa
       }
     }
-    // 2) respaldo: texto con la descripción del diseño
+
     try {
-      await Share.share({ message: describirDiseno(d) });
+      await Share.share({ message: mensaje });
     } catch {
       Alert.alert('Error', 'No se pudo compartir el diseño.');
     }
   };
 
+  const descargarParaInstagramWeb = async () => {
+    const browser = globalThis as any;
+    const pestanaInstagram = browser.open('https://www.instagram.com/', '_blank');
+    try {
+      const uri = await capturar({ format: 'png', quality: 1, result: 'data-uri' });
+      const enlace = document.createElement('a');
+      enlace.href = uri;
+      enlace.download = 'mi-moto-ridersmx.png';
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+      setModalCompartirWeb(false);
+      browser.alert?.('La imagen se descargó. En Instagram, crea una publicación y selecciona mi-moto-ridersmx.png.');
+      if (!pestanaInstagram) browser.open('https://www.instagram.com/', '_blank');
+    } catch {
+      if (pestanaInstagram) pestanaInstagram.close?.();
+      browser.alert?.('No se pudo descargar la imagen. Intenta compartir desde la aplicación móvil.');
+    }
+  };
+
   const descargar = async () => {
+    if (Platform.OS === 'web') {
+      try {
+        const uri = await capturar({ format: 'png', quality: 1, result: 'data-uri' });
+        const enlace = document.createElement('a');
+        enlace.href = uri;
+        enlace.download = 'mi-moto-ridersmx.png';
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        (globalThis as any).alert?.('Se descargó mi-moto-ridersmx.png.');
+      } catch {
+        (globalThis as any).alert?.('No se pudo generar la imagen. Intenta de nuevo.');
+      }
+      return;
+    }
+
     if (!captureRef || !MediaLibrary) {
       Alert.alert(
         'Función no disponible',
@@ -629,32 +1009,47 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
     Alert.alert('¡Guardado!', 'Tu diseño ya está en tu garaje.');
   };
 
-  const confirmarNuevo = () =>
-    Alert.alert('Nuevo diseño', '¿Empezar de cero? El diseño actual no guardado se perderá.', [
+  const confirmarNuevo = () => setModalNuevo(true);
+
+  const empezarNuevoDiseno = () => {
+    setModalNuevo(false);
+    setActiveId(null);
+    nuevoDiseno();
+  };
+
+  const confirmarQuitarFoto = () =>
+    Alert.alert('Quitar foto', '¿Volver a una moto del catálogo? Tus stickers y trazos se conservan.', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Empezar', style: 'destructive', onPress: () => { setActiveId(null); nuevoDiseno(); } },
+      { text: 'Quitar', style: 'destructive', onPress: quitarFoto },
     ]);
 
   // ---------- pantalla ----------
   const avisoPintura =
     d.fuente === 'foto'
-      ? 'Tu foto no cambia de color con estos controles. Para pintarla usa la pestaña Brocha, o elige una moto del catálogo.'
+      ? 'En tu foto el color no cambia solo. Elige un color y usa "Pintar mi moto con este color": rellena la zona que dibujes (tanque, carenado…) con un tinte realista que conserva brillos y sombras.'
       : d.fuente === 'real' && !motoReal?.tintable
-      ? 'Esta imagen no tiene fondo transparente, así que el color base no se aplica. Usa la pestaña Brocha.'
+      ? 'Esta foto real conserva sus colores originales. Usa la brocha en modo "Rellenar zona" para probar tonos, o agrega rines y stickers.'
       : null;
+
+  const notaBrocha =
+    herramienta === 'relleno'
+      ? 'Rodea con el dedo la pieza que quieres pintar (tanque, carenado, etc.). Al soltar, la zona se rellena. Para más precisión haz varias zonas pequeñas.'
+      : herramienta === 'borrador'
+      ? 'Toca o desliza sobre un trazo para borrarlo. Las zonas rellenas se borran al tocar dentro de ellas.'
+      : 'Pinta trazos encima de la imagen. Usa grosor fino para detalles y líneas limpias.';
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <Ionicons name="arrow-back" size={28} color="#0f172a" />
+          <Ionicons name="arrow-back" size={28} color={theme.iconPrimary} />
         </TouchableOpacity>
         <Text style={styles.titulo} numberOfLines={1}>{d.nombre || nombreMoto}</Text>
         <TouchableOpacity onPress={compartir} style={styles.iconBtn}>
-          <Ionicons name="share-social" size={26} color="#3b82f6" />
+          <Ionicons name="share-social" size={26} color={theme.primary} />
         </TouchableOpacity>
         <TouchableOpacity onPress={abrirModalGuardar} style={styles.iconBtn}>
-          <Ionicons name="save" size={28} color="#10b981" />
+          <Ionicons name="save" size={28} color={theme.primary} />
         </TouchableOpacity>
       </View>
 
@@ -671,6 +1066,7 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
               onActivar={() => setActiveId(el.id)}
               W={W}
               H={H}
+              styles={styles}
             />
           ))}
           {tab === 'brocha' && <View style={StyleSheet.absoluteFill} {...dibujar.panHandlers} />}
@@ -678,17 +1074,42 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
       </View>
 
       <View style={styles.acciones}>
-        <Accion icono="add-circle" texto="Stickers" onPress={() => navigation.navigate('SimuladorLibreria', { tab: 'stickers' })} destacado />
-        <Accion icono="albums" texto="Garaje" onPress={() => navigation.navigate('SimuladorLibreria', { tab: 'garaje' })} />
-        <Accion icono="download" texto="Galería" onPress={descargar} />
-        <Accion icono="refresh" texto="Nuevo" onPress={confirmarNuevo} />
+        <Accion icono="add-circle" texto="Stickers" onPress={() => navigation.navigate('SimuladorLibreria', { tab: 'stickers' })} destacado styles={styles} />
+        <Accion icono="albums" texto="Garaje" onPress={() => navigation.navigate('SimuladorLibreria', { tab: 'garaje' })} styles={styles} />
+        <Accion icono="download" texto="Descargar" onPress={descargar} styles={styles} />
+        <Accion icono="refresh" texto="Nuevo" onPress={confirmarNuevo} styles={styles} />
       </View>
+
+      {/* barra del elemento seleccionado */}
+      {elActivo && (
+        <View style={styles.barraEl}>
+          <View style={styles.barraElFila}>
+            <Text style={styles.barraElTexto} numberOfLines={1}>
+              {elActivo.tipo === 'texto' ? `Texto "${elActivo.texto}"` : elActivo.tipo === 'rin' ? 'Rin' : 'Sticker'}
+            </Text>
+            <Accion icono="copy" texto="Duplicar" onPress={() => duplicarElemento(elActivo.id)} styles={styles} />
+            <Accion icono="arrow-up-circle" texto="Al frente" onPress={() => traerAlFrente(elActivo.id)} styles={styles} />
+            <Accion
+              icono="trash"
+              texto="Quitar"
+              onPress={() => { eliminarElemento(elActivo.id); setActiveId(null); }}
+              styles={styles}
+            />
+          </View>
+          <FilaColores
+            colores={coloresElemento}
+            valor={elActivo.color}
+            onElegir={(hex) => actualizarElemento(elActivo.id, { color: hex })}
+            styles={styles}
+          />
+        </View>
+      )}
 
       <View style={styles.tabs}>
         {TABS.map((t) => (
           <TouchableOpacity key={t.key} style={[styles.tab, tab === t.key && styles.tabActivo]} onPress={() => setTab(t.key)}>
-            <MaterialCommunityIcons name={t.icon as any} size={22} color={tab === t.key ? '#3b82f6' : '#64748b'} />
-            <Text style={[styles.tabTexto, tab === t.key && { color: '#3b82f6' }]}>{t.label}</Text>
+            <MaterialCommunityIcons name={t.icon as any} size={22} color={tab === t.key ? theme.primary : theme.textSecondary} />
+            <Text style={[styles.tabTexto, tab === t.key && { color: theme.primary }]}>{t.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -699,21 +1120,39 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
           <>
             <Text style={styles.etiqueta}>Tu moto</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fila}>
-              <TouchableOpacity
-                style={[styles.tarjeta, d.fuente === 'foto' && styles.tarjetaActiva]}
-                onPress={() => pedirFotoMoto(false)}
-              >
-                {d.fotoUri ? (
+              {d.fotoUri && (
+                <TouchableOpacity
+                  style={[styles.tarjeta, d.fuente === 'foto' && styles.tarjetaActiva]}
+                  onPress={() => setEstado({ fuente: 'foto' })}
+                >
                   <Image source={{ uri: d.fotoUri }} style={{ width: 140, height: 84, borderRadius: 8 }} resizeMode="cover" />
-                ) : (
-                  <View style={styles.tarjetaFoto}>
-                    <Ionicons name="camera" size={34} color="#3b82f6" />
-                  </View>
-                )}
-                <Text style={styles.tarjetaTitulo}>Mi moto</Text>
-                <Text style={styles.tarjetaSub}>{d.fotoUri ? 'Toca para cambiar la foto' : 'Sube una foto'}</Text>
+                  <Text style={styles.tarjetaTitulo}>Mi moto</Text>
+                  <Text style={styles.tarjetaSub}>Usar esta foto</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.tarjeta} onPress={() => pedirFotoMoto(false, 'galeria')}>
+                <View style={styles.tarjetaFoto}>
+                  <Ionicons name="images" size={34} color={theme.primary} />
+                </View>
+                <Text style={styles.tarjetaTitulo}>Galería</Text>
+                <Text style={styles.tarjetaSub}>{d.fotoUri ? 'Cambiar la foto' : 'Sube una foto'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.tarjeta} onPress={() => pedirFotoMoto(false, 'camara')}>
+                <View style={styles.tarjetaFoto}>
+                  <Ionicons name="camera" size={34} color={theme.primary} />
+                </View>
+                <Text style={styles.tarjetaTitulo}>Cámara</Text>
+                <Text style={styles.tarjetaSub}>Toma una foto</Text>
               </TouchableOpacity>
             </ScrollView>
+            {d.fotoUri && (
+              <View style={styles.fila}>
+                <Accion icono="close-circle" texto="Quitar mi foto" onPress={confirmarQuitarFoto} styles={styles} />
+              </View>
+            )}
+            <Text style={styles.nota}>
+              Tip: para mejores resultados toma la foto de lado, con la moto completa y buena luz.
+            </Text>
 
             {catalogoMotosReales.length > 0 && (
               <>
@@ -766,37 +1205,36 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
           <>
             {avisoPintura && <Text style={styles.nota}>{avisoPintura}</Text>}
             <Text style={styles.etiqueta}>Color principal</Text>
-            <FilaColores colores={coloresPintura} valor={d.colorPrincipal} onElegir={(hex) => setEstado({ colorPrincipal: hex })} onBorrar={borrarColor} />
+            <FilaColores colores={coloresPintura} valor={d.colorPrincipal} onElegir={elegirColorPrincipal} onBorrar={borrarColor} styles={styles} />
+            {d.fuente !== 'vector' && (
+              <View style={styles.fila}>
+                <Accion icono="brush" texto="Pintar mi moto con este color" onPress={irAPintarFoto} destacado styles={styles} />
+              </View>
+            )}
             <Text style={styles.etiqueta}>Color de acento</Text>
-            <FilaColores colores={coloresPintura} valor={d.colorAcento} onElegir={(hex) => setEstado({ colorAcento: hex })} onBorrar={borrarColor} />
+            <FilaColores colores={coloresPintura} valor={d.colorAcento} onElegir={(hex) => setEstado({ colorAcento: hex })} onBorrar={borrarColor} styles={styles} />
             <Text style={styles.etiqueta}>Acabado</Text>
             <View style={styles.fila}>
               {acabados.map((a) => (
-                <TouchableOpacity
-                  key={a.id}
-                  style={[styles.chip, d.acabado === a.id && styles.chipActivo]}
-                  onPress={() => setEstado({ acabado: a.id })}
-                >
-                  <Text style={[styles.chipTexto, d.acabado === a.id && { color: '#3b82f6', fontWeight: 'bold' }]}>{a.nombre}</Text>
-                </TouchableOpacity>
+                <Chip key={a.id} texto={a.nombre} activo={d.acabado === a.id} onPress={() => setEstado({ acabado: a.id })} styles={styles} color={theme.primary} />
               ))}
             </View>
 
             <Text style={styles.etiqueta}>Crear mi color (hex, ej. #ff8800)</Text>
             <View style={[styles.fila, { alignItems: 'center' }]}>
-              <View style={[styles.colorCircle, { backgroundColor: normalizarHex(hexInput) ?? '#e2e8f0' }]} />
+              <View style={[styles.colorCircle, { backgroundColor: normalizarHex(hexInput) ?? theme.border }]} />
               <TextInput
                 style={styles.input}
                 value={hexInput}
                 onChangeText={setHexInput}
                 placeholder="#ff8800"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={theme.iconSecondary}
                 autoCapitalize="none"
                 autoCorrect={false}
                 maxLength={7}
               />
               <TouchableOpacity style={styles.botonAgregar} onPress={guardarColor}>
-                <Ionicons name="add" size={24} color="#fff" />
+                <Ionicons name="add" size={24} color="#ffffff" />
               </TouchableOpacity>
             </View>
             {d.paleta.length > 0 && (
@@ -810,7 +1248,7 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
           <>
             {d.fuente !== 'vector' && (
               <Text style={styles.nota}>
-                Toca un rin para ponerlo sobre tu moto. Arrástralo hasta la rueda y ajusta el tamaño con la manija verde (agrega uno por rueda).
+                Toca un rin para ponerlo sobre tu moto. Arrástralo hasta la rueda y ajusta el tamaño con la manija inferior (agrega uno por rueda).
               </Text>
             )}
             <Text style={styles.etiqueta}>Modelo de rin</Text>
@@ -831,35 +1269,50 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
               ))}
             </ScrollView>
             <Text style={styles.etiqueta}>Color del rin</Text>
-            <FilaColores colores={coloresRin} valor={d.rinColor} onElegir={(hex) => setEstado({ rinColor: hex })} />
+            <FilaColores colores={coloresRin} valor={d.rinColor} onElegir={(hex) => setEstado({ rinColor: hex })} styles={styles} />
           </>
         )}
 
         {/* ---------- BROCHA ---------- */}
         {tab === 'brocha' && (
           <>
-            <Text style={styles.nota}>Dibuja directo sobre la moto para pintar zonas: carrocería, rines, detalles.</Text>
-            <Text style={styles.etiqueta}>Color de la brocha</Text>
-            <FilaColores colores={coloresPintura} valor={brochaColor} onElegir={setBrochaColor} />
-            <Text style={styles.etiqueta}>Grosor</Text>
+            <Text style={styles.nota}>{notaBrocha}</Text>
+            <Text style={styles.etiqueta}>Herramienta</Text>
             <View style={styles.fila}>
-              {GROSORES.map((g) => (
-                <TouchableOpacity key={g.id} style={[styles.chip, grosorId === g.id && styles.chipActivo]} onPress={() => setGrosorId(g.id)}>
-                  <Text style={[styles.chipTexto, grosorId === g.id && { color: '#3b82f6', fontWeight: 'bold' }]}>{g.nombre}</Text>
-                </TouchableOpacity>
+              {HERRAMIENTAS.map((h) => (
+                <Chip key={h.id} texto={h.nombre} activo={herramienta === h.id} onPress={() => setHerramienta(h.id)} styles={styles} color={theme.primary} />
               ))}
             </View>
-            <Text style={styles.etiqueta}>Intensidad</Text>
-            <View style={styles.fila}>
-              {OPACIDADES.map((o) => (
-                <TouchableOpacity key={o.id} style={[styles.chip, opacidadId === o.id && styles.chipActivo]} onPress={() => setOpacidadId(o.id)}>
-                  <Text style={[styles.chipTexto, opacidadId === o.id && { color: '#3b82f6', fontWeight: 'bold' }]}>{o.nombre}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {herramienta !== 'borrador' && (
+              <>
+                <Text style={styles.etiqueta}>Color de la brocha</Text>
+                <FilaColores colores={coloresPintura} valor={brochaColor} onElegir={setBrochaColor} styles={styles} />
+                <Text style={styles.etiqueta}>Efecto</Text>
+                <View style={styles.fila}>
+                  <Chip texto="Realista (tinte)" activo={realista} onPress={() => setRealista(true)} styles={styles} color={theme.primary} />
+                  <Chip texto="Pintura normal" activo={!realista} onPress={() => setRealista(false)} styles={styles} color={theme.primary} />
+                </View>
+                {herramienta === 'pincel' && (
+                  <>
+                    <Text style={styles.etiqueta}>Grosor</Text>
+                    <View style={styles.fila}>
+                      {GROSORES.map((g) => (
+                        <Chip key={g.id} texto={g.nombre} activo={grosorId === g.id} onPress={() => setGrosorId(g.id)} styles={styles} color={theme.primary} />
+                      ))}
+                    </View>
+                  </>
+                )}
+                <Text style={styles.etiqueta}>Intensidad</Text>
+                <View style={styles.fila}>
+                  {OPACIDADES.map((o) => (
+                    <Chip key={o.id} texto={o.nombre} activo={opacidadId === o.id} onPress={() => setOpacidadId(o.id)} styles={styles} color={theme.primary} />
+                  ))}
+                </View>
+              </>
+            )}
             <View style={[styles.fila, { gap: 10 }]}>
-              <Accion icono="arrow-undo" texto="Deshacer" onPress={deshacerTrazo} />
-              <Accion icono="trash" texto="Borrar todo" onPress={confirmarBorrarTrazos} />
+              <Accion icono="arrow-undo" texto="Deshacer" onPress={deshacerTrazo} styles={styles} />
+              <Accion icono="trash" texto="Borrar todo" onPress={confirmarBorrarTrazos} styles={styles} />
             </View>
           </>
         )}
@@ -892,7 +1345,7 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
               value={nombreInput}
               onChangeText={setNombreInput}
               placeholder="Nombre de tu diseño"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={theme.iconSecondary}
               maxLength={30}
               autoFocus
             />
@@ -912,65 +1365,110 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
           </View>
         </View>
       </Modal>
+
+      <Modal visible={modalNuevo} transparent animationType="fade" onRequestClose={() => setModalNuevo(false)}>
+        <Pressable style={styles.modalFondo} onPress={() => setModalNuevo(false)}>
+          <Pressable style={styles.modalCaja} onPress={(event) => event.stopPropagation()}>
+            <Text style={styles.modalTitulo}>Empezar un diseño nuevo</Text>
+            <Text style={styles.nota}>El diseño actual sin guardar se reemplazará. Si quieres conservarlo, guárdalo primero en tu garaje.</Text>
+            <View style={[styles.modalBotones, { flexDirection: 'column', alignItems: 'stretch' }]}>
+              <TouchableOpacity style={styles.botonGris} onPress={() => setModalNuevo(false)}>
+                <Text style={styles.botonGrisTexto}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.botonAzul} onPress={empezarNuevoDiseno}>
+                <Text style={styles.botonAzulTexto}>Empezar de nuevo</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={modalCompartirWeb} transparent animationType="fade" onRequestClose={() => setModalCompartirWeb(false)}>
+        <Pressable style={styles.modalFondo} onPress={() => setModalCompartirWeb(false)}>
+          <Pressable style={styles.modalCaja} onPress={(event) => event.stopPropagation()}>
+            <Text style={styles.modalTitulo}>Compartir diseño</Text>
+            <Text style={styles.nota}>
+              En móvil se abrirán las aplicaciones compatibles. En computadora puedes enviar por WhatsApp o descargar la imagen para subirla a Instagram.
+            </Text>
+            <View style={[styles.modalBotones, { flexDirection: 'column', alignItems: 'stretch' }]}>
+              <TouchableOpacity style={styles.botonGris} onPress={() => setModalCompartirWeb(false)}>
+                <Text style={styles.botonGrisTexto}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.botonAzul} onPress={descargarParaInstagramWeb}>
+                <Text style={styles.botonAzulTexto}>Preparar Instagram</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.botonAzul} onPress={compartir}>
+                <Text style={styles.botonAzulTexto}>Compartir imagen</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginTop: 50, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#e2e8f0', backgroundColor: '#fff' },
+function createStyles(theme: Theme) {
+return StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginTop: 50, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.card },
   iconBtn: { padding: 5, marginHorizontal: 2 },
-  titulo: { flex: 1, fontSize: 20, fontWeight: 'bold', color: '#0f172a', marginLeft: 8 },
-  canvas: { alignItems: 'center', paddingVertical: 12, backgroundColor: '#e2e8f0' },
+  titulo: { flex: 1, fontSize: 20, fontWeight: 'bold', color: theme.textPrimary, marginLeft: 8 },
+  canvas: { alignItems: 'center', paddingVertical: 12, backgroundColor: theme.background },
 
   elementoBorde: { borderWidth: 1.5, borderColor: 'transparent', padding: 2 },
-  elementoBordeActivo: { borderColor: '#3b82f6', borderStyle: 'dashed', backgroundColor: 'rgba(59,130,246,0.12)' },
-  manija: { position: 'absolute', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff', zIndex: 20 },
-  manijaEliminar: { top: 0, left: 0, backgroundColor: '#ef4444' },
-  manijaRotar: { top: 0, right: 0, backgroundColor: '#3b82f6' },
-  manijaEscalar: { bottom: 0, right: 0, backgroundColor: '#10b981' },
+  elementoBordeActivo: { borderColor: theme.primary, borderStyle: 'dashed', backgroundColor: `${theme.primary}20` },
+  manija: { position: 'absolute', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#ffffff', zIndex: 20 },
+  manijaEliminar: { top: 0, left: 0, backgroundColor: theme.dangerText },
+  manijaRotar: { top: 0, right: 0, backgroundColor: theme.primary },
+  manijaEscalar: { bottom: 0, right: 0, backgroundColor: theme.primary },
 
-  acciones: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10, paddingHorizontal: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
-  accion: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#f1f5f9' },
-  accionDestacada: { backgroundColor: '#3b82f6' },
-  accionTexto: { fontSize: 13, fontWeight: '600', color: '#0f172a' },
+  acciones: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10, paddingHorizontal: 8, backgroundColor: theme.card, borderBottomWidth: 1, borderBottomColor: theme.border },
+  accion: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: theme.background },
+  accionDestacada: { backgroundColor: theme.primary },
+  accionTexto: { fontSize: 13, fontWeight: '600', color: theme.textPrimary },
 
-  tabs: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
+  barraEl: { backgroundColor: theme.card, borderBottomWidth: 1, borderBottomColor: theme.border, paddingTop: 6 },
+  barraElFila: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 6 },
+  barraElTexto: { flex: 1, fontSize: 13, fontWeight: '700', color: theme.textSecondary },
+
+  tabs: { flexDirection: 'row', backgroundColor: theme.card, borderBottomWidth: 1, borderBottomColor: theme.border },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 10 },
-  tabActivo: { borderBottomWidth: 3, borderBottomColor: '#3b82f6' },
-  tabTexto: { fontSize: 11, color: '#64748b', marginTop: 2, fontWeight: '600' },
+  tabActivo: { borderBottomWidth: 3, borderBottomColor: theme.primary },
+  tabTexto: { fontSize: 11, color: theme.textSecondary, marginTop: 2, fontWeight: '600' },
 
-  panel: { flex: 1, backgroundColor: '#fff' },
-  fila: { paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row' },
-  etiqueta: { fontSize: 13, fontWeight: '700', color: '#475569', marginTop: 12, marginLeft: 16 },
-  nota: { fontSize: 12, color: '#475569', backgroundColor: '#f1f5f9', padding: 10, borderRadius: 8, marginHorizontal: 16, marginTop: 12 },
-  colorCircle: { width: 44, height: 44, borderRadius: 22, marginRight: 12, borderWidth: 2, borderColor: '#e2e8f0' },
-  colorSeleccionado: { borderColor: '#3b82f6', borderWidth: 3 },
+  panel: { flex: 1, backgroundColor: theme.card },
+  fila: { paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', flexWrap: 'wrap' },
+  etiqueta: { fontSize: 13, fontWeight: '700', color: theme.textSecondary, marginTop: 12, marginLeft: 16 },
+  nota: { fontSize: 12, color: theme.textSecondary, backgroundColor: theme.background, padding: 10, borderRadius: 8, marginHorizontal: 16, marginTop: 12 },
+  colorCircle: { width: 44, height: 44, borderRadius: 22, marginRight: 12, borderWidth: 2, borderColor: theme.border },
+  colorSeleccionado: { borderColor: theme.primary, borderWidth: 3 },
 
-  tarjeta: { alignItems: 'center', padding: 8, marginRight: 12, borderRadius: 14, borderWidth: 2, borderColor: '#e2e8f0', backgroundColor: '#f8fafc' },
-  tarjetaFoto: { width: 140, height: 84, borderRadius: 8, backgroundColor: '#eff6ff', justifyContent: 'center', alignItems: 'center' },
-  tarjetaRin: { alignItems: 'center', padding: 8, marginRight: 12, borderRadius: 14, borderWidth: 2, borderColor: '#e2e8f0', backgroundColor: '#f8fafc', width: 92 },
-  tarjetaActiva: { borderColor: '#3b82f6', backgroundColor: '#eff6ff' },
-  tarjetaTitulo: { fontSize: 14, fontWeight: 'bold', color: '#0f172a', marginTop: 4 },
-  tarjetaSub: { fontSize: 11, color: '#64748b', textAlign: 'center' },
+  tarjeta: { alignItems: 'center', padding: 8, marginRight: 12, borderRadius: 14, borderWidth: 2, borderColor: theme.border, backgroundColor: theme.background },
+  tarjetaFoto: { width: 140, height: 84, borderRadius: 8, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' },
+  tarjetaRin: { alignItems: 'center', padding: 8, marginRight: 12, borderRadius: 14, borderWidth: 2, borderColor: theme.border, backgroundColor: theme.background, width: 92 },
+  tarjetaActiva: { borderColor: theme.primary, backgroundColor: `${theme.primary}15` },
+  tarjetaTitulo: { fontSize: 14, fontWeight: 'bold', color: theme.textPrimary, marginTop: 4 },
+  tarjetaSub: { fontSize: 11, color: theme.textSecondary, textAlign: 'center' },
 
-  chip: { paddingHorizontal: 18, paddingVertical: 10, marginRight: 10, borderRadius: 20, backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#cbd5e1' },
-  chipActivo: { borderColor: '#3b82f6', backgroundColor: '#eff6ff' },
-  chipTexto: { fontSize: 14, color: '#475569' },
+  chip: { paddingHorizontal: 16, paddingVertical: 10, marginRight: 10, marginBottom: 6, borderRadius: 20, backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border },
+  chipActivo: { borderColor: theme.primary, backgroundColor: `${theme.primary}15` },
+  chipTexto: { fontSize: 14, color: theme.textSecondary },
 
-  input: { flex: 1, height: 44, backgroundColor: '#f1f5f9', borderRadius: 10, paddingHorizontal: 14, fontSize: 16, color: '#0f172a' },
-  botonAgregar: { width: 44, height: 44, marginLeft: 10, borderRadius: 22, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center' },
+  input: { flex: 1, height: 44, backgroundColor: theme.background, borderRadius: 10, paddingHorizontal: 14, fontSize: 16, color: theme.textPrimary },
+  botonAgregar: { width: 44, height: 44, marginLeft: 10, borderRadius: 22, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center' },
 
-  fondoChip: { width: 96, height: 84, marginRight: 12, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: '#e2e8f0' },
-  fondoNombre: { position: 'absolute', bottom: 16, alignSelf: 'center', fontSize: 11, fontWeight: 'bold', color: '#fff', textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 3 },
+  fondoChip: { width: 96, height: 84, marginRight: 12, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: theme.border },
+  fondoNombre: { position: 'absolute', bottom: 16, alignSelf: 'center', fontSize: 11, fontWeight: 'bold', color: '#ffffff', textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 3 },
 
-  modalFondo: { flex: 1, backgroundColor: 'rgba(15,23,42,0.5)', justifyContent: 'center', padding: 24 },
-  modalCaja: { backgroundColor: '#fff', borderRadius: 16, padding: 20 },
-  modalTitulo: { fontSize: 18, fontWeight: 'bold', color: '#0f172a', marginBottom: 12 },
-  modalInput: { height: 46, backgroundColor: '#f1f5f9', borderRadius: 10, paddingHorizontal: 14, fontSize: 16, color: '#0f172a' },
+  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', padding: 24 },
+  modalCaja: { backgroundColor: theme.card, borderRadius: 16, padding: 20 },
+  modalTitulo: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 12 },
+  modalInput: { height: 46, backgroundColor: theme.background, borderRadius: 10, paddingHorizontal: 14, fontSize: 16, color: theme.textPrimary },
   modalBotones: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16, gap: 8 },
-  botonGris: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, backgroundColor: '#f1f5f9' },
-  botonGrisTexto: { color: '#475569', fontWeight: '600' },
-  botonAzul: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: '#3b82f6' },
-  botonAzulTexto: { color: '#fff', fontWeight: 'bold' },
+  botonGris: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.background },
+  botonGrisTexto: { color: theme.textSecondary, fontWeight: '600' },
+  botonAzul: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.primary },
+  botonAzulTexto: { color: '#ffffff', fontWeight: 'bold' },
 });
+}

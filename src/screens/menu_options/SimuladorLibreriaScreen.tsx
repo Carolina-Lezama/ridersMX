@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Modal, Pressable } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { catalogoStickers, coloresTexto, textosRapidos, ItemCatalogo } from './catalogos';
+import { useTheme } from '../../../assets/theme/ThemeContext';
+import type { Theme } from '../../../assets/theme/theme';
 import {
   useDiseno, agregarElemento, abrirDiseno, eliminarDeGaraje, cargarAlmacen, hayPersistencia, nombreDeMoto, DisenoGuardado,
 } from './diseñostore';
@@ -19,10 +21,13 @@ const fecha = (t: number) =>
   new Date(t).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
 
 export default function SimuladorLibreriaScreen({ navigation, route }: any) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const [activeTab, setActiveTab] = useState<Tab>(route?.params?.tab ?? 'stickers');
   const [busqueda, setBusqueda] = useState('');
   const [texto, setTexto] = useState('');
   const [colorTexto, setColorTexto] = useState('#ffffff');
+  const [disenoPorBorrar, setDisenoPorBorrar] = useState<DisenoGuardado | null>(null);
   const { elementos, garaje } = useDiseno();
 
   useEffect(() => { cargarAlmacen(); }, []);
@@ -52,17 +57,17 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
     navigation.goBack(); // vuelve al editor con el diseño cargado
   };
 
-  const borrar = (g: DisenoGuardado) =>
-    Alert.alert('Eliminar diseño', `¿Eliminar "${g.nombre}" de tu garaje?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => eliminarDeGaraje(g.id) },
-    ]);
+  const confirmarBorrar = () => {
+    if (!disenoPorBorrar) return;
+    eliminarDeGaraje(disenoPorBorrar.id);
+    setDisenoPorBorrar(null);
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#0f172a" />
+          <Ionicons name="arrow-back" size={28} color={theme.iconPrimary} />
         </TouchableOpacity>
         <Text style={styles.titulo}>Mi Inventario</Text>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.listoButton}>
@@ -87,11 +92,11 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
         <>
           <View style={styles.searchContainer}>
             <View style={styles.searchBar}>
-              <Ionicons name="search" size={20} color="#94a3b8" />
+              <Ionicons name="search" size={20} color={theme.iconSecondary} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Buscar sticker..."
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={theme.iconSecondary}
                 value={busqueda}
                 onChangeText={setBusqueda}
               />
@@ -114,7 +119,7 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
                       {cantidad > 0 ? `En tu moto: ${cantidad} · toca para agregar otro` : 'Toca para agregarlo a tu moto'}
                     </Text>
                   </View>
-                  <Ionicons name="add-circle" size={26} color="#3b82f6" />
+                  <Ionicons name="add-circle" size={26} color={theme.primary} />
                 </TouchableOpacity>
               );
             }}
@@ -133,11 +138,11 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
               value={texto}
               onChangeText={setTexto}
               placeholder="Ej. 46"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={theme.iconSecondary}
               maxLength={12}
             />
             <TouchableOpacity style={styles.botonAgregar} onPress={() => agregarTexto()}>
-              <Ionicons name="add" size={26} color="#fff" />
+              <Ionicons name="add" size={26} color="#ffffff" />
             </TouchableOpacity>
           </View>
 
@@ -178,68 +183,99 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
           }
           ListEmptyComponent={
             <View style={styles.vacio}>
-              <MaterialCommunityIcons name="garage-open-variant" size={72} color="#cbd5e1" />
+              <MaterialCommunityIcons name="garage-open-variant" size={72} color={theme.iconSecondary} />
               <Text style={styles.vacioTitulo}>Tu garaje está vacío</Text>
               <Text style={styles.vacioTexto}>Diseña una moto y toca el botón de guardar para verla aquí.</Text>
             </View>
           }
           renderItem={({ item }) => {
             return (
-              <TouchableOpacity style={styles.card} onPress={() => abrir(item)} activeOpacity={0.85}>
-                <LienzoEstatico diseno={item.diseno} width={108} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.nombre} numberOfLines={1}>{item.nombre}</Text>
-                  <Text style={styles.itemSubText}>{nombreDeMoto(item.diseno)} · {item.diseno.elementos.length} elementos · {item.diseno.trazos.length} trazos</Text>
-                  <Text style={styles.itemSubText}>Editado {fecha(item.actualizado)}</Text>
-                </View>
-                <TouchableOpacity onPress={() => borrar(item)} style={styles.backButton}>
-                  <Ionicons name="trash-outline" size={22} color="#ef4444" />
+              <View style={styles.card}>
+                <TouchableOpacity style={styles.cardContenido} onPress={() => abrir(item)} activeOpacity={0.85}>
+                  <LienzoEstatico diseno={item.diseno} width={108} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.nombre} numberOfLines={1}>{item.nombre}</Text>
+                    <Text style={styles.itemSubText}>{nombreDeMoto(item.diseno)} · {item.diseno.elementos.length} elementos · {item.diseno.trazos.length} trazos</Text>
+                    <Text style={styles.itemSubText}>Editado {fecha(item.actualizado)}</Text>
+                  </View>
                 </TouchableOpacity>
-              </TouchableOpacity>
+                <TouchableOpacity onPress={() => setDisenoPorBorrar(item)} style={styles.backButton} accessibilityRole="button" accessibilityLabel={`Eliminar ${item.nombre}`}>
+                  <Ionicons name="trash-outline" size={22} color={theme.dangerText} />
+                </TouchableOpacity>
+              </View>
             );
           }}
         />
       )}
+
+      <Modal visible={!!disenoPorBorrar} transparent animationType="fade" onRequestClose={() => setDisenoPorBorrar(null)}>
+        <Pressable style={styles.modalFondo} onPress={() => setDisenoPorBorrar(null)}>
+          <Pressable style={styles.modalCaja} onPress={(event) => event.stopPropagation()}>
+            <Text style={styles.modalTitulo}>Quitar moto del inventario</Text>
+            <Text style={styles.modalTexto}>
+              ¿Eliminar “{disenoPorBorrar?.nombre}” de tu garaje? Esta acción no se puede deshacer.
+            </Text>
+            <View style={styles.modalBotones}>
+              <TouchableOpacity style={styles.botonCancelar} onPress={() => setDisenoPorBorrar(null)}>
+                <Text style={styles.textoCancelar}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.botonEliminar} onPress={confirmarBorrar}>
+                <Text style={styles.textoEliminar}>Eliminar</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 60, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#e2e8f0', backgroundColor: '#fff' },
+const createStyles = (theme: Theme) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 60, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.card },
   backButton: { padding: 5 },
-  titulo: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
-  listoButton: { backgroundColor: '#3b82f6', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
-  listoText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  searchContainer: { backgroundColor: '#fff', paddingHorizontal: 20, paddingBottom: 15, paddingTop: 12, borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: 10, paddingHorizontal: 15, height: 45 },
-  searchInput: { flex: 1, marginLeft: 10, color: '#0f172a', fontSize: 16 },
-  tabContainer: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
+  titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
+  listoButton: { backgroundColor: theme.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  listoText: { color: '#ffffff', fontWeight: 'bold', fontSize: 14 },
+  searchContainer: { backgroundColor: theme.card, paddingHorizontal: 20, paddingBottom: 15, paddingTop: 12, borderBottomWidth: 1, borderBottomColor: theme.border },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.background, borderRadius: 10, paddingHorizontal: 15, height: 45 },
+  searchInput: { flex: 1, marginLeft: 10, color: theme.textPrimary, fontSize: 16 },
+  tabContainer: { flexDirection: 'row', backgroundColor: theme.card, borderBottomWidth: 1, borderBottomColor: theme.border },
   tab: { flex: 1, paddingVertical: 15, alignItems: 'center' },
-  activeTab: { borderBottomWidth: 3, borderBottomColor: '#3b82f6' },
-  tabText: { color: '#64748b', fontSize: 16, fontWeight: '600' },
-  activeTabText: { color: '#3b82f6' },
+  activeTab: { borderBottomWidth: 3, borderBottomColor: theme.primary },
+  tabText: { color: theme.textSecondary, fontSize: 16, fontWeight: '600' },
+  activeTabText: { color: theme.primary },
   listContainer: { flex: 1, padding: 20 },
-  listItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 15, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0' },
-  stickerPreview: { width: 50, height: 50, backgroundColor: '#f1f5f9', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  listItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, padding: 15, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: theme.border },
+  stickerPreview: { width: 50, height: 50, backgroundColor: theme.background, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   listTextInfo: { flex: 1 },
-  itemName: { color: '#0f172a', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  itemSubText: { color: '#64748b', fontSize: 12 },
-  emptyText: { textAlign: 'center', color: '#94a3b8', marginTop: 40 },
+  itemName: { color: theme.textPrimary, fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+  itemSubText: { color: theme.textSecondary, fontSize: 12 },
+  emptyText: { textAlign: 'center', color: theme.textSecondary, marginTop: 40 },
 
-  etiqueta: { fontSize: 13, fontWeight: '700', color: '#475569', marginTop: 8, marginBottom: 8 },
+  etiqueta: { fontSize: 13, fontWeight: '700', color: theme.textSecondary, marginTop: 8, marginBottom: 8 },
   filaTexto: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  inputTexto: { flex: 1, height: 46, backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 14, fontSize: 16, color: '#0f172a', borderWidth: 1, borderColor: '#e2e8f0' },
-  botonAgregar: { width: 46, height: 46, marginLeft: 10, borderRadius: 23, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center' },
-  colorCircle: { width: 40, height: 40, borderRadius: 20, marginRight: 12, borderWidth: 2, borderColor: '#cbd5e1' },
-  colorSeleccionado: { borderColor: '#3b82f6', borderWidth: 3 },
-  chip: { paddingHorizontal: 18, paddingVertical: 10, marginRight: 10, marginBottom: 10, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: '#cbd5e1' },
-  chipTexto: { fontSize: 15, fontWeight: 'bold', color: '#0f172a' },
+  inputTexto: { flex: 1, height: 46, backgroundColor: theme.background, borderRadius: 10, paddingHorizontal: 14, fontSize: 16, color: theme.textPrimary, borderWidth: 1, borderColor: theme.border },
+  botonAgregar: { width: 46, height: 46, marginLeft: 10, borderRadius: 23, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center' },
+  colorCircle: { width: 40, height: 40, borderRadius: 20, marginRight: 12, borderWidth: 2, borderColor: theme.border },
+  colorSeleccionado: { borderColor: theme.primary, borderWidth: 3 },
+  chip: { paddingHorizontal: 18, paddingVertical: 10, marginRight: 10, marginBottom: 10, borderRadius: 20, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.border },
+  chipTexto: { fontSize: 15, fontWeight: 'bold', color: theme.textPrimary },
 
-  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 14, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0', gap: 12 },
-  nombre: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', marginBottom: 2 },
-  aviso: { fontSize: 12, color: '#b45309', backgroundColor: '#fef3c7', padding: 10, borderRadius: 8, marginBottom: 12 },
+  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, padding: 12, borderRadius: 14, marginBottom: 12, borderWidth: 1, borderColor: theme.border, gap: 12 },
+  cardContenido: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  nombre: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 2 },
+  aviso: { fontSize: 12, color: theme.dangerText, backgroundColor: theme.dangerBg, padding: 10, borderRadius: 8, marginBottom: 12 },
   vacio: { alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
-  vacioTitulo: { fontSize: 18, fontWeight: 'bold', color: '#475569', marginTop: 12 },
-  vacioTexto: { fontSize: 14, color: '#94a3b8', marginTop: 4, textAlign: 'center' },
+  vacioTitulo: { fontSize: 18, fontWeight: 'bold', color: theme.textSecondary, marginTop: 12 },
+  vacioTexto: { fontSize: 14, color: theme.textSecondary, marginTop: 4, textAlign: 'center' },
+  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', padding: 24 },
+  modalCaja: { backgroundColor: theme.card, borderRadius: 16, padding: 20 },
+  modalTitulo: { color: theme.textPrimary, fontSize: 18, fontWeight: '700' },
+  modalTexto: { color: theme.textSecondary, fontSize: 14, marginTop: 8, lineHeight: 20 },
+  modalBotones: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 20 },
+  botonCancelar: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.background },
+  textoCancelar: { color: theme.textPrimary, fontWeight: '600' },
+  botonEliminar: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.dangerText },
+  textoEliminar: { color: '#ffffff', fontWeight: '700' },
 });

@@ -41,6 +41,10 @@ export type ElementoDiseno = {
   rotation: number;
 };
 
+// normal = pintura opaca | color = tinte realista (conserva brillos y sombras de la foto)
+// multiply = oscurece (negros) | screen = aclara (blancos)
+export type Mezcla = 'normal' | 'color' | 'multiply' | 'screen';
+
 // Trazo de brocha, en coordenadas del lienzo vectorial (400 x 240)
 export type Trazo = {
   id: string;
@@ -48,6 +52,8 @@ export type Trazo = {
   ancho: number;
   opacidad: number;
   d: string;
+  relleno?: boolean; // true = zona cerrada rellena (para pintar la carrocería completa)
+  mezcla?: Mezcla;
 };
 
 export type FuenteMoto = 'vector' | 'real' | 'foto';
@@ -118,6 +124,8 @@ export const suscribir = (l: () => void) => {
   };
 };
 export const useDiseno = () => useSyncExternalStore(suscribir, getEstado);
+
+const nuevoId = (pref: string) => `${pref}${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 const extraerDiseno = (e: Estado): Diseno => ({
   fuente: e.fuente,
@@ -201,7 +209,7 @@ export function agregarElemento(
 ) {
   const offset = (estado.elementos.length % 4) * 0.04;
   const nuevo: ElementoDiseno = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    id: nuevoId(''),
     ...base,
     x: 0.42 + offset,
     y: 0.28 + offset,
@@ -219,10 +227,31 @@ export function eliminarElemento(id: string) {
   setEstado({ elementos: estado.elementos.filter((e) => e.id !== id) });
 }
 
+export function duplicarElemento(id: string) {
+  const o = estado.elementos.find((e) => e.id === id);
+  if (!o) return;
+  const nuevo: ElementoDiseno = {
+    ...o,
+    id: nuevoId(''),
+    x: Math.min(0.88, o.x + 0.06),
+    y: Math.min(0.85, o.y + 0.06),
+  };
+  setEstado({ elementos: [...estado.elementos, nuevo], ultimoAgregado: nuevo.id });
+}
+
+export function traerAlFrente(id: string) {
+  const o = estado.elementos.find((e) => e.id === id);
+  if (!o) return;
+  setEstado({ elementos: [...estado.elementos.filter((e) => e.id !== id), o] });
+}
+
 // ---------- brocha ----------
 export function agregarTrazo(t: Omit<Trazo, 'id'>) {
-  const nuevo: Trazo = { id: `t-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, ...t };
-  setEstado({ trazos: [...estado.trazos, nuevo] });
+  setEstado({ trazos: [...estado.trazos, { id: nuevoId('t-'), ...t }] });
+}
+
+export function eliminarTrazo(id: string) {
+  setEstado({ trazos: estado.trazos.filter((t) => t.id !== id) });
 }
 
 export function deshacerTrazo() {
@@ -258,24 +287,41 @@ async function guardarFotoPermanente(uri: string): Promise<string> {
   }
 }
 
-// Abre la galería y usa la foto como moto. Si nuevo = true empieza un diseño en limpio.
-export async function pedirFotoMoto(nuevo = false): Promise<boolean> {
-  const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permiso.granted) {
-    Alert.alert('Permiso requerido', 'Necesitamos acceso a tus fotos para subir tu moto.');
-    return false;
-  }
-  const r = await ImagePicker.launchImageLibraryAsync({
+// Usa una foto como moto (galería o cámara). Si nuevo = true empieza un diseño en limpio.
+export async function pedirFotoMoto(nuevo = false, origen: 'galeria' | 'camara' = 'galeria'): Promise<boolean> {
+  const opciones: ImagePicker.ImagePickerOptions = {
     mediaTypes: ['images'],
     quality: 0.8,
     allowsEditing: true,
     aspect: [5, 3], // mismo formato que el lienzo
-  });
+  };
+
+  let r: ImagePicker.ImagePickerResult;
+  if (origen === 'camara') {
+    const permiso = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permiso.granted) {
+      Alert.alert('Permiso requerido', 'Necesitamos acceso a la cámara para tomarle una foto a tu moto.');
+      return false;
+    }
+    r = await ImagePicker.launchCameraAsync(opciones);
+  } else {
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) {
+      Alert.alert('Permiso requerido', 'Necesitamos acceso a tus fotos para subir tu moto.');
+      return false;
+    }
+    r = await ImagePicker.launchImageLibraryAsync(opciones);
+  }
+
   if (r.canceled || !r.assets?.length) return false;
   const uri = await guardarFotoPermanente(r.assets[0].uri);
   if (nuevo) nuevoDiseno({ fuente: 'foto', fotoUri: uri });
   else setEstado({ fuente: 'foto', fotoUri: uri });
   return true;
+}
+
+export function quitarFoto() {
+  setEstado({ fuente: 'vector', fotoUri: null, realId: null });
 }
 
 // ---------- garaje ----------
