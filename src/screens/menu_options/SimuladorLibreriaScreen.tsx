@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Modal, Pressable } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { catalogoStickers, coloresTexto, textosRapidos, ItemCatalogo } from './catalogos';
 import { useTheme } from '../../../assets/theme/ThemeContext';
@@ -27,6 +27,7 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
   const [busqueda, setBusqueda] = useState('');
   const [texto, setTexto] = useState('');
   const [colorTexto, setColorTexto] = useState('#ffffff');
+  const [disenoPorBorrar, setDisenoPorBorrar] = useState<DisenoGuardado | null>(null);
   const { elementos, garaje } = useDiseno();
 
   useEffect(() => { cargarAlmacen(); }, []);
@@ -56,11 +57,11 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
     navigation.goBack(); // vuelve al editor con el diseño cargado
   };
 
-  const borrar = (g: DisenoGuardado) =>
-    Alert.alert('Eliminar diseño', `¿Eliminar "${g.nombre}" de tu garaje?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => eliminarDeGaraje(g.id) },
-    ]);
+  const confirmarBorrar = () => {
+    if (!disenoPorBorrar) return;
+    eliminarDeGaraje(disenoPorBorrar.id);
+    setDisenoPorBorrar(null);
+  };
 
   return (
     <View style={styles.container}>
@@ -199,11 +200,33 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
                 <TouchableOpacity onPress={() => borrar(item)} style={styles.backButton}>
                   <Ionicons name="trash-outline" size={22} color={theme.dangerText} />
                 </TouchableOpacity>
-              </TouchableOpacity>
+                <TouchableOpacity onPress={() => setDisenoPorBorrar(item)} style={styles.backButton} accessibilityRole="button" accessibilityLabel={`Eliminar ${item.nombre}`}>
+                  <Ionicons name="trash-outline" size={22} color={theme.dangerText} />
+                </TouchableOpacity>
+              </View>
             );
           }}
         />
       )}
+
+      <Modal visible={!!disenoPorBorrar} transparent animationType="fade" onRequestClose={() => setDisenoPorBorrar(null)}>
+        <Pressable style={styles.modalFondo} onPress={() => setDisenoPorBorrar(null)}>
+          <Pressable style={styles.modalCaja} onPress={(event) => event.stopPropagation()}>
+            <Text style={styles.modalTitulo}>Quitar moto del inventario</Text>
+            <Text style={styles.modalTexto}>
+              ¿Eliminar “{disenoPorBorrar?.nombre}” de tu garaje? Esta acción no se puede deshacer.
+            </Text>
+            <View style={styles.modalBotones}>
+              <TouchableOpacity style={styles.botonCancelar} onPress={() => setDisenoPorBorrar(null)}>
+                <Text style={styles.textoCancelar}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.botonEliminar} onPress={confirmarBorrar}>
+                <Text style={styles.textoEliminar}>Eliminar</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
