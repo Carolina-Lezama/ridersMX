@@ -2911,12 +2911,12 @@ function AvisoFlotante({ aviso, onCerrar }: { aviso: AvisoData | null; onCerrar:
 
   const colores =
     aviso.tono === 'exito'
-      ? { bg: C.successBg, fg: C.success }
+      ? { bg: C.successBg, fg: C.success, border: C.successBorder }
       : aviso.tono === 'error'
-      ? { bg: C.dangerSoft, fg: C.danger }
+      ? { bg: C.dangerSoft, fg: C.danger, border: C.dangerBorder }
       : aviso.tono === 'alerta'
-      ? { bg: C.accentSoft, fg: C.accent }
-      : { bg: C.surfaceAlt, fg: C.textSec };
+      ? { bg: C.warningBg, fg: C.warning, border: C.warningBorder }
+      : { bg: C.infoBg, fg: C.info, border: C.infoBorder };
 
   const estiloBoton = (tipo: AccionAviso['tipo']) =>
     tipo === 'primario'
@@ -2931,6 +2931,7 @@ function AvisoFlotante({ aviso, onCerrar }: { aviso: AvisoData | null; onCerrar:
     <Animated.View
       style={[
         styles.avisoCard,
+        { borderColor: colores.border },
         { opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [-24, 0] }) }] },
       ]}
       accessibilityRole="alert"
@@ -3013,6 +3014,14 @@ function crearPaleta(theme: Theme) {
     danger: theme.dangerText,
     dangerSoft: theme.dangerBg,
     successBg: theme.successBg,
+    successBorder: theme.successBorder,
+    warning: theme.warningText,
+    warningBg: theme.warningBg,
+    warningBorder: theme.warningBorder,
+    info: theme.infoText,
+    infoBg: theme.infoBg,
+    infoBorder: theme.infoBorder,
+    dangerBorder: theme.dangerBorder,
     ink: theme.textPrimary,
   };
 }

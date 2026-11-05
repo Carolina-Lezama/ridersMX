@@ -96,6 +96,7 @@ export default function LoginScreen({ navigation, addingAccount = false }: Props
         label="Contraseña" 
         placeholder="********" 
         secureTextEntry 
+        showPasswordToggle
         value={password}
         onChangeText={setPassword}
         error={passwordError}

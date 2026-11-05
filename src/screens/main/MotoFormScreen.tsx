@@ -7,6 +7,19 @@ import Skeleton from '../../components/Skeleton';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 
+interface DatosSeguroMotocicleta {
+  aseguradora: string | null;
+  numero_poliza: string | null;
+}
+
+const esDatosSeguroMotocicleta = (valor: unknown): valor is DatosSeguroMotocicleta =>
+  typeof valor === 'object'
+  && valor !== null
+  && 'aseguradora' in valor
+  && (typeof valor.aseguradora === 'string' || valor.aseguradora === null)
+  && 'numero_poliza' in valor
+  && (typeof valor.numero_poliza === 'string' || valor.numero_poliza === null);
+
 export default function MotoFormScreen({ navigation, route }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
@@ -27,7 +40,6 @@ export default function MotoFormScreen({ navigation, route }: any) {
   const [cilindrada, setCilindrada] = useState('');
   const [anio, setAnio] = useState('');
   const [color, setColor] = useState('');
-  const [placas, setPlacas] = useState('');
   const [kilometraje, setKilometraje] = useState('');
   const [combustible, setCombustible] = useState('');
   const [aseguradora, setAseguradora] = useState('');
@@ -62,12 +74,19 @@ export default function MotoFormScreen({ navigation, route }: any) {
         setCilindrada(data.cilindrada ? data.cilindrada.toString() : '');
         setAnio(data.anio ? data.anio.toString() : '');
         setColor(data.color || '');
-        setPlacas(data.placas || '');
         setKilometraje(data.kilometraje_actual ? data.kilometraje_actual.toString() : '0');
         setCombustible(data.tipo_combustible || '');
-        setAseguradora(data.aseguradora || '');
-        setPoliza(data.numero_poliza || '');
       }
+
+      const { data: seguro, error: errorSeguro } = await supabase
+        .rpc('obtener_seguro_motocicleta', { p_motocicleta_id: motoId })
+        .single();
+      if (errorSeguro) throw errorSeguro;
+      if (!esDatosSeguroMotocicleta(seguro)) {
+        throw new Error('No se pudieron cargar los datos del seguro.');
+      }
+      setAseguradora(seguro.aseguradora || '');
+      setPoliza(seguro.numero_poliza || '');
     } catch (error: any) {
       Alert.alert('Error al cargar vehículo', error.message);
       navigation.goBack();
@@ -92,42 +111,28 @@ export default function MotoFormScreen({ navigation, route }: any) {
         return;
       }
 
-      // Estructuramos el objeto convirtiendo los números correctamente a enteros
-      const motoPayload = {
-        perfil_id: session.user.id,
-        alias: alias.trim(),
-        tipo: tipo.trim(),
-        marca: marca.trim(),
-        modelo: modelo.trim(),
-        cilindrada: cilindrada ? parseInt(cilindrada) : null,
-        anio: anio ? parseInt(anio) : null,
-        color: color.trim(),
-        placas: placas.trim().toUpperCase(),
-        kilometraje_actual: kilometraje ? parseInt(kilometraje) : 0,
-        tipo_combustible: combustible.trim(),
-        aseguradora: aseguradora.trim(),
-        numero_poliza: poliza.trim(),
-      };
+      const { error } = await supabase.rpc('guardar_motocicleta_segura', {
+        p_motocicleta_id: esEdicion ? motoId : null,
+        p_alias: alias.trim(),
+        p_tipo: tipo.trim(),
+        p_marca: marca.trim(),
+        p_modelo: modelo.trim(),
+        p_cilindrada: cilindrada ? parseInt(cilindrada) : null,
+        p_anio: anio ? parseInt(anio) : null,
+        p_color: color.trim(),
+        p_kilometraje_actual: kilometraje ? parseInt(kilometraje) : 0,
+        p_tipo_combustible: combustible.trim(),
+        p_aseguradora: aseguradora.trim(),
+        p_numero_poliza: poliza.trim(),
+      });
+      if (error) throw error;
 
-      if (esEdicion) {
-        // MODO ACTUALIZAR (UPDATE)
-        const { error } = await supabase
-          .from('motocicletas')
-          .update(motoPayload)
-          .eq('id', motoId);
-
-        if (error) throw error;
-        Alert.alert('¡Actualizado!', 'Los datos del vehículo se guardaron correctamente.');
-      } else {
-        // MODO CREAR (INSERT)
-        const { error } = await supabase
-          .from('motocicletas')
-          .insert([motoPayload]);
-
-        if (error) throw error;
-        Alert.alert('¡Añadida!', 'Tu nueva motocicleta está lista en el garaje.');
-      }
-
+      Alert.alert(
+        esEdicion ? '¡Actualizado!' : '¡Añadida!',
+        esEdicion
+          ? 'Los datos del vehículo se guardaron correctamente.'
+          : 'Tu nueva motocicleta está lista en el garaje.',
+      );
       navigation.goBack(); // Regresamos a la lista de motos automáticamente
     } catch (error: any) {
       Alert.alert('Error al guardar', error.message);
@@ -248,7 +253,6 @@ export default function MotoFormScreen({ navigation, route }: any) {
           <CustomInput label="Cilindrada (cc)" placeholder="Ej. 300, 600, 1000" keyboardType="numeric" value={cilindrada} onChangeText={setCilindrada} />
           <CustomInput label="Año" placeholder="Ej. 2024" keyboardType="numeric" value={anio} onChangeText={setAnio} />
           <CustomInput label="Color" placeholder="Ej. Negro Mate, Rojo" value={color} onChangeText={setColor} />
-          <CustomInput label="Placas" placeholder="Ej. 12ABC3" value={placas} onChangeText={setPlacas} autoCapitalize="characters" />
         </View>
 
         {/* SECCIÓN 2: Estado operativo */}
