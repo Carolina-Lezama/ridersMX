@@ -4,12 +4,14 @@ import { supabase } from './supabase';
 export interface NotificacionesConfig {
   checkInEnabled: boolean;
   limiteEnabled: boolean;
+  eventosEnabled: boolean;
   checkInTime: string; // ej: "19:00"
 }
 
 export const DEFAULT_NOTIF_CONFIG: NotificacionesConfig = {
   checkInEnabled: true,
   limiteEnabled: true,
+  eventosEnabled: false,
   checkInTime: '19:00',
 };
 
@@ -28,6 +30,10 @@ const normalizarConfig = (value: unknown): NotificacionesConfig => {
       typeof candidate.limiteEnabled === 'boolean'
         ? candidate.limiteEnabled
         : DEFAULT_NOTIF_CONFIG.limiteEnabled,
+    eventosEnabled:
+      typeof candidate.eventosEnabled === 'boolean'
+        ? candidate.eventosEnabled
+        : DEFAULT_NOTIF_CONFIG.eventosEnabled,
     checkInTime:
       typeof candidate.checkInTime === 'string' &&
       /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(candidate.checkInTime)

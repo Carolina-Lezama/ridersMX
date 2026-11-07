@@ -1,15 +1,32 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import { ThemeProvider } from './assets/theme/ThemeContext';
 import { useAppTimeTracker } from './src/utils/hooks/useAppTimeTracker';
 import { AvisoTiempoModal } from './src/components/AvisoTiempoModal';
 import RootNavigator from './src/navigation/RootNavigator';
 import { supabase } from './src/services/supabase';
 import { MultiAccountService } from './src/services/MultiAccountService';
+import { navigate } from './src/utils/helper/navigationRef';
 
 function AppContent({ isFirstLaunch, hasSession }: { isFirstLaunch: boolean; hasSession: boolean }) {
   const { mostrarModalAviso, minutosAvisoActual, cerrarModalAviso } = useAppTimeTracker();
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const eventId = response.notification.request.content.data?.eventId;
+      if (typeof eventId === 'string') {
+        navigate('EventoForm', { eventoId: eventId });
+      } else {
+        navigate('Notificaciones');
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {

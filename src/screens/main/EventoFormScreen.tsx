@@ -7,6 +7,12 @@ import CustomButton from '../../components/CustomButton';
 import Skeleton from '../../components/Skeleton';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import {
+  convertirNumeroOpcional,
+  normalizarNumeroDecimal,
+} from '../../utils/eventoNotifications';
+import { obtenerConfigNotificaciones } from '../../services/notificationConfigService';
+import { programarNotificacionesEventos } from '../../services/notificationService';
 
 interface MotoAsociable {
   id: string;
@@ -16,6 +22,62 @@ interface MotoAsociable {
 }
 
 const OTRO_ACOMPANANTE = 'Otro / Acompañante';
+type Recurrencia = 'none' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
+
+const sincronizarRecordatoriosAgenda = async (userId: string): Promise<boolean> => {
+  const config = await obtenerConfigNotificaciones(userId);
+  if (!config.eventosEnabled) return true;
+  return programarNotificacionesEventos(userId);
+};
+
+const generarIdSerie = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (caracter) => {
+  const aleatorio = Math.floor(Math.random() * 16);
+  return (caracter === 'x' ? aleatorio : (aleatorio & 0x3) | 0x8).toString(16);
+});
+
+const agregarMeses = (fecha: Date, meses: number, diaPreferido = fecha.getDate()) => {
+  const siguiente = new Date(fecha);
+  siguiente.setDate(1);
+  siguiente.setMonth(siguiente.getMonth() + meses);
+  const ultimoDiaDelMes = new Date(siguiente.getFullYear(), siguiente.getMonth() + 1, 0).getDate();
+  siguiente.setDate(Math.min(diaPreferido, ultimoDiaDelMes));
+  return siguiente;
+};
+
+const obtenerFechasRecurrentes = (
+  inicio: Date,
+  fin: Date,
+  recurrencia: Recurrencia,
+  intervaloDias: number,
+) => {
+  const fechas: Date[] = [];
+  let actual = new Date(inicio);
+  actual.setHours(0, 0, 0, 0);
+  const finNormalizado = new Date(fin);
+  finNormalizado.setHours(0, 0, 0, 0);
+  const diaPreferido = actual.getDate();
+
+  while (actual <= finNormalizado) {
+    fechas.push(new Date(actual));
+    if (fechas.length > 100) {
+      throw new Error('Elige un periodo menor: puedes programar hasta 100 citas por serie.');
+    }
+
+    if (recurrencia === 'weekly') {
+      actual.setDate(actual.getDate() + 7);
+    } else if (recurrencia === 'biweekly') {
+      actual.setDate(actual.getDate() + 14);
+    } else if (recurrencia === 'monthly') {
+      actual = agregarMeses(actual, 1, diaPreferido);
+    } else if (recurrencia === 'custom') {
+      actual.setDate(actual.getDate() + intervaloDias);
+    } else {
+      break;
+    }
+  }
+
+  return fechas;
+};
 
 export default function EventoFormScreen({ navigation, route }: any) {
   const { theme } = useTheme();
@@ -39,15 +101,31 @@ export default function EventoFormScreen({ navigation, route }: any) {
   // Visibilidad de los pickers nativos
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showRecurrenceEndPicker, setShowRecurrenceEndPicker] = useState(false);
 
   const [tipo, setTipo] = useState(route.params?.tipo === 'mantenimiento' ? 'mantenimiento' : 'rodada');
   const [descripcion, setDescripcion] = useState('');
   const [motos, setMotos] = useState<MotoAsociable[]>([]);
   const [motoAsociada, setMotoAsociada] = useState('');
+  const [puntoReunion, setPuntoReunion] = useState('');
+  const [destinoRodada, setDestinoRodada] = useState('');
+  const [distanciaRodada, setDistanciaRodada] = useState('');
+  const [dificultadRodada, setDificultadRodada] = useState('');
+  const [servicioMantenimiento, setServicioMantenimiento] = useState('');
+  const [tallerMantenimiento, setTallerMantenimiento] = useState('');
+  const [kilometrajeMantenimiento, setKilometrajeMantenimiento] = useState('');
+  const [costoMantenimiento, setCostoMantenimiento] = useState('');
   
   // Estado de la actividad
   const [estado, setEstado] = useState('Planeada');
   const estadosValidos = ['Planeada', 'Completada', 'Reprogramada', 'Cancelada'];
+  const [recurrencia, setRecurrencia] = useState<Recurrencia>('none');
+  const [intervaloDias, setIntervaloDias] = useState('7');
+  const [fechaFinRecurrencia, setFechaFinRecurrencia] = useState(() => {
+    const fecha = new Date(fechaBase + 'T00:00:00');
+    fecha.setMonth(fecha.getMonth() + 3);
+    return fecha;
+  });
 
   useEffect(() => {
     let activo = true;
@@ -96,6 +174,14 @@ export default function EventoFormScreen({ navigation, route }: any) {
           setTipo(data.tipo || 'rodada');
           setDescripcion(data.descripcion || '');
           setMotoAsociada(data.moto_asociada || '');
+          setPuntoReunion(data.rodada_punto_reunion || '');
+          setDestinoRodada(data.rodada_destino || '');
+          setDistanciaRodada(data.rodada_distancia_km?.toString() || '');
+          setDificultadRodada(data.rodada_dificultad || '');
+          setServicioMantenimiento(data.mantenimiento_servicio || '');
+          setTallerMantenimiento(data.mantenimiento_taller || '');
+          setKilometrajeMantenimiento(data.mantenimiento_kilometraje?.toString() || '');
+          setCostoMantenimiento(data.mantenimiento_costo_estimado?.toString() || '');
           setEstado(data.estado || 'Planeada');
         }
       } catch (error: unknown) {
@@ -141,14 +227,43 @@ export default function EventoFormScreen({ navigation, route }: any) {
       return;
     }
 
+    if (tipo === 'rodada' && !destinoRodada.trim()) {
+      const mensaje = 'Indica el destino o la ruta de la rodada.';
+      Platform.OS === 'web' ? window.alert(mensaje) : Alert.alert('Falta el destino', mensaje);
+      return;
+    }
+
+    if (tipo === 'mantenimiento' && !servicioMantenimiento.trim()) {
+      const mensaje = 'Describe el servicio que necesita tu motocicleta.';
+      Platform.OS === 'web' ? window.alert(mensaje) : Alert.alert('Falta el servicio', mensaje);
+      return;
+    }
+
     const fechaStr = `${fechaObj.getFullYear()}-${String(fechaObj.getMonth() + 1).padStart(2, '0')}-${String(fechaObj.getDate()).padStart(2, '0')}`;
     const horaStr = formatearHora12h(horaObj);
 
     try {
       setSaving(true);
+      const distanciaNumerica = convertirNumeroOpcional(distanciaRodada, 'La distancia');
+      const kilometrajeNumerico = convertirNumeroOpcional(kilometrajeMantenimiento, 'El kilometraje');
+      const costoNumerico = convertirNumeroOpcional(costoMantenimiento, 'El costo estimado');
+      if (kilometrajeNumerico !== null && !Number.isInteger(kilometrajeNumerico)) {
+        throw new Error('El kilometraje debe ser un número entero.');
+      }
+
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
       if (!session?.user) throw new Error('Inicia sesión para guardar este evento.');
+
+      const intervaloNumerico = Number(intervaloDias);
+      if (recurrencia === 'custom' && (!Number.isInteger(intervaloNumerico) || intervaloNumerico < 1 || intervaloNumerico > 365)) {
+        throw new Error('El intervalo personalizado debe ser de 1 a 365 días.');
+      }
+
+      const fechaFinStr = recurrencia === 'none' ? null : formatearFechaYMD(fechaFinRecurrencia);
+      if (fechaFinStr !== null && fechaFinStr < fechaStr) {
+        throw new Error('La fecha final debe ser igual o posterior a la primera cita.');
+      }
 
       const eventoPayload = {
         perfil_id: session.user.id,
@@ -158,19 +273,62 @@ export default function EventoFormScreen({ navigation, route }: any) {
         tipo: tipo,
         descripcion: descripcion.trim(),
         moto_asociada: motoAsociada.trim() || null,
-        estado: estado
+        estado,
+        rodada_punto_reunion: tipo === 'rodada' ? puntoReunion.trim() || null : null,
+        rodada_destino: tipo === 'rodada' ? destinoRodada.trim() || null : null,
+        rodada_distancia_km: tipo === 'rodada' ? distanciaNumerica : null,
+        rodada_dificultad: tipo === 'rodada' ? dificultadRodada || null : null,
+        mantenimiento_servicio: tipo === 'mantenimiento' ? servicioMantenimiento.trim() || null : null,
+        mantenimiento_taller: tipo === 'mantenimiento' ? tallerMantenimiento.trim() || null : null,
+        mantenimiento_kilometraje: tipo === 'mantenimiento' ? kilometrajeNumerico : null,
+        mantenimiento_costo_estimado: tipo === 'mantenimiento' ? costoNumerico : null,
       };
 
+      let recordatoriosActualizados = true;
       if (esEdicion) {
         const { error } = await supabase.from('eventos').update(eventoPayload).eq('id', eventoId);
         if (error) throw error;
+        try {
+          recordatoriosActualizados = await sincronizarRecordatoriosAgenda(session.user.id);
+        } catch (error) {
+          console.error('El evento se guardó, pero no se pudieron actualizar sus recordatorios:', error);
+          recordatoriosActualizados = false;
+        }
         Platform.OS === 'web' ? window.alert('Evento actualizado') : Alert.alert('Éxito', 'Evento actualizado');
       } else {
-        const { error } = await supabase.from('eventos').insert([eventoPayload]);
+        const fechas = recurrencia === 'none'
+          ? [fechaObj]
+          : obtenerFechasRecurrentes(fechaObj, fechaFinRecurrencia, recurrencia, intervaloNumerico);
+        const serieId = recurrencia === 'none' ? null : generarIdSerie();
+        const eventos = fechas.map((fecha) => ({
+          ...eventoPayload,
+          fecha: formatearFechaYMD(fecha),
+          serie_id: serieId,
+          recurrencia,
+          intervalo_recurrencia: recurrencia === 'custom' ? intervaloNumerico : null,
+          recurrencia_hasta: fechaFinStr,
+        }));
+        const { error } = await supabase.from('eventos').insert(eventos);
         if (error) throw error;
-        Platform.OS === 'web' ? window.alert('Evento agendado') : Alert.alert('Éxito', 'Evento agendado');
+        try {
+          recordatoriosActualizados = await sincronizarRecordatoriosAgenda(session.user.id);
+        } catch (error) {
+          console.error('Los eventos se guardaron, pero no se pudieron programar sus recordatorios:', error);
+          recordatoriosActualizados = false;
+        }
+        const mensaje = eventos.length > 1
+          ? `Se agendaron ${eventos.length} citas.`
+          : 'Evento agendado.';
+        const mensajeFinal = recordatoriosActualizados
+          ? mensaje
+          : `${mensaje}\n\nNo se pudieron programar los recordatorios. Revisa los permisos en Configuración > Notificaciones.`;
+        Platform.OS === 'web' ? window.alert(mensajeFinal) : Alert.alert('Éxito', mensajeFinal);
       }
 
+      if (esEdicion && !recordatoriosActualizados) {
+        const mensaje = 'El evento se actualizó, pero no se pudieron actualizar sus recordatorios. Revisa los permisos en Configuración > Notificaciones.';
+        Platform.OS === 'web' ? window.alert(mensaje) : Alert.alert('Recordatorio no actualizado', mensaje);
+      }
       navigation.goBack();
     } catch (error: any) {
       Platform.OS === 'web' ? window.alert('Error: ' + error.message) : Alert.alert('Error', error.message);
@@ -185,8 +343,23 @@ export default function EventoFormScreen({ navigation, route }: any) {
       setSaving(true);
       const { error } = await supabase.from('eventos').delete().eq('id', eventoId);
       if (error) throw error;
-      
-      Platform.OS === 'web' ? window.alert('Actividad eliminada.') : Alert.alert('Eliminada', 'La actividad fue borrada.');
+
+      let recordatoriosActualizados = true;
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (session?.user) {
+          recordatoriosActualizados = await sincronizarRecordatoriosAgenda(session.user.id);
+        }
+      } catch (error) {
+        console.error('La actividad se eliminó, pero no se pudieron actualizar los recordatorios:', error);
+        recordatoriosActualizados = false;
+      }
+
+      const mensaje = recordatoriosActualizados
+        ? 'La actividad fue borrada.'
+        : 'La actividad fue borrada, pero no se pudieron actualizar sus recordatorios.';
+      Platform.OS === 'web' ? window.alert(mensaje) : Alert.alert('Eliminada', mensaje);
       navigation.goBack();
     } catch (error: any) {
       Platform.OS === 'web' ? window.alert('Error al eliminar: ' + error.message) : Alert.alert('Error', error.message);
@@ -283,7 +456,83 @@ export default function EventoFormScreen({ navigation, route }: any) {
           </View>
         </View>
 
-        <CustomInput label="Título del Evento" placeholder="Ej. Ruta a Tepoztlán" value={titulo} onChangeText={setTitulo} />
+        <CustomInput
+          label={tipo === 'rodada' ? 'Nombre de la rodada' : 'Nombre de la cita'}
+          placeholder={tipo === 'rodada' ? 'Ej. Amanecer en la Marquesa' : 'Ej. Servicio de los 10,000 km'}
+          value={titulo}
+          onChangeText={setTitulo}
+        />
+
+        {tipo === 'rodada' ? (
+          <View style={styles.seccion}>
+            <Text style={styles.label}>Detalles de la rodada</Text>
+            <CustomInput
+              label="Punto de reunión"
+              placeholder="Ej. Gasolinera de la salida norte"
+              value={puntoReunion}
+              onChangeText={setPuntoReunion}
+            />
+            <CustomInput
+              label="Destino o ruta *"
+              placeholder="Ej. Tepoztlán por la carretera libre"
+              value={destinoRodada}
+              onChangeText={setDestinoRodada}
+            />
+            <CustomInput
+              label="Distancia aproximada (km)"
+              placeholder="Ej. 85"
+              keyboardType="numeric"
+              value={distanciaRodada}
+              onChangeText={(valor) => setDistanciaRodada(normalizarNumeroDecimal(valor))}
+            />
+            <Text style={styles.label}>Nivel de dificultad</Text>
+            <View style={styles.chipsContainer}>
+              {['Tranquila', 'Intermedia', 'Exigente'].map((nivel) => (
+                <TouchableOpacity
+                  key={nivel}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: dificultadRodada === nivel }}
+                  style={[styles.chipBase, dificultadRodada === nivel && styles.chipActive]}
+                  onPress={() => setDificultadRodada(dificultadRodada === nivel ? '' : nivel)}
+                >
+                  <Text style={[styles.chipTextBase, dificultadRodada === nivel && styles.chipTextActive]}>
+                    {nivel}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : (
+          <View style={styles.seccion}>
+            <Text style={styles.label}>Detalles del mantenimiento</Text>
+            <CustomInput
+              label="Servicio requerido *"
+              placeholder="Ej. Cambio de aceite y filtro"
+              value={servicioMantenimiento}
+              onChangeText={setServicioMantenimiento}
+            />
+            <CustomInput
+              label="Taller o mecánico"
+              placeholder="Nombre del taller o persona de contacto"
+              value={tallerMantenimiento}
+              onChangeText={setTallerMantenimiento}
+            />
+            <CustomInput
+              label="Kilometraje al ingresar"
+              placeholder="Ej. 12500"
+              keyboardType="numeric"
+              value={kilometrajeMantenimiento}
+              onChangeText={(valor) => setKilometrajeMantenimiento(valor.replace(/\D/g, ''))}
+            />
+            <CustomInput
+              label="Costo estimado"
+              placeholder="Ej. 1500"
+              keyboardType="numeric"
+              value={costoMantenimiento}
+              onChangeText={(valor) => setCostoMantenimiento(normalizarNumeroDecimal(valor))}
+            />
+          </View>
+        )}
 
 {/* SELECTOR DE FECHA INTERACTIVO */}
         <View style={styles.seccion}>
@@ -322,6 +571,92 @@ export default function EventoFormScreen({ navigation, route }: any) {
             </>
           )}
         </View>
+
+        {!esEdicion && (
+          <View style={styles.seccion}>
+            <Text style={styles.label}>Repetir cita</Text>
+            <View style={styles.chipsContainer}>
+              {([
+                ['none', 'No repetir'],
+                ['weekly', 'Semanal'],
+                ['biweekly', 'Quincenal'],
+                ['monthly', 'Mensual'],
+                ['custom', 'Personalizado'],
+              ] as const).map(([valor, etiqueta]) => {
+                const seleccionada = recurrencia === valor;
+                return (
+                  <TouchableOpacity
+                    key={valor}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: seleccionada }}
+                    style={[styles.chipBase, seleccionada && styles.chipActive]}
+                    onPress={() => setRecurrencia(valor)}
+                  >
+                    <Text style={[styles.chipTextBase, seleccionada && styles.chipTextActive]}>
+                      {etiqueta}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {recurrencia !== 'none' && (
+              <>
+                {recurrencia === 'custom' && (
+                  <CustomInput
+                    label="Repetir cada cuántos días"
+                    placeholder="Ej. 10"
+                    keyboardType="numeric"
+                    value={intervaloDias}
+                    onChangeText={(value) => setIntervaloDias(value.replace(/\D/g, ''))}
+                  />
+                )}
+                <Text style={styles.label}>Última fecha de la serie</Text>
+                {Platform.OS === 'web' ? (
+                  <input
+                    type="date"
+                    min={formatearFechaYMD(fechaObj)}
+                    value={formatearFechaYMD(fechaFinRecurrencia)}
+                    onChange={(event) => {
+                      if (event.target.value) {
+                        setFechaFinRecurrencia(new Date(`${event.target.value}T00:00:00`));
+                      }
+                    }}
+                    style={styles.webInput}
+                  />
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => setShowRecurrenceEndPicker(true)}
+                    >
+                      <Ionicons name="calendar-outline" size={20} color={theme.primary} />
+                      <Text style={styles.pickerButtonText}>
+                        {formatearFechaLegible(fechaFinRecurrencia)}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                    {showRecurrenceEndPicker && (
+                      <DateTimePicker
+                        value={fechaFinRecurrencia}
+                        mode="date"
+                        minimumDate={fechaObj}
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
+                          setShowRecurrenceEndPicker(Platform.OS === 'ios');
+                          if (selectedDate) setFechaFinRecurrencia(selectedDate);
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+                <Text style={styles.motosVacias}>
+                  Se crearán citas para {tipo === 'mantenimiento' ? 'taller' : 'rodadas'} hasta esta fecha.
+                </Text>
+              </>
+            )}
+          </View>
+        )}
 
 {/* SELECTOR DE HORA INTERACTIVO */}
         <View style={styles.seccion}>
@@ -367,10 +702,17 @@ export default function EventoFormScreen({ navigation, route }: any) {
           )}
         </View>
 
-        <CustomInput label="Descripción" placeholder="Detalles, punto de reunión..." value={descripcion} onChangeText={setDescripcion} />
+        <CustomInput
+          label={tipo === 'rodada' ? 'Indicaciones para el grupo' : 'Notas adicionales'}
+          placeholder={tipo === 'rodada' ? 'Paradas, equipo recomendado y otros detalles' : 'Piezas, síntomas o indicaciones para el taller'}
+          value={descripcion}
+          onChangeText={setDescripcion}
+        />
 
         <View style={styles.seccion}>
-          <Text style={styles.label}>¿Con qué moto asistirás? (Opcional)</Text>
+          <Text style={styles.label}>
+            {tipo === 'rodada' ? '¿Con qué moto asistirás? (Opcional)' : 'Motocicleta para el servicio (Opcional)'}
+          </Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}

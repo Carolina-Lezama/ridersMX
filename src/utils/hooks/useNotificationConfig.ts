@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { 
   obtenerConfigNotificaciones, 
   guardarConfigNotificaciones, 
@@ -7,7 +9,10 @@ import {
 } from '../../services/notificationConfigService';
 import { 
   programarNotificacionesRacha, 
-  limpiarNotificacionesRacha 
+  limpiarNotificacionesRacha,
+  limpiarNotificacionesEventos,
+  programarNotificacionesEventos,
+  solicitarPermisosNotificaciones,
 } from '../../services/notificationService';
 
 export const useNotificationConfig = (userId: string | undefined, rachaCompletadaHoy: boolean) => {
@@ -29,7 +34,24 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
       setLoading(true);
       try {
         const data = await obtenerConfigNotificaciones(userId);
-        if (mounted) setConfig(data);
+        if (!mounted) return;
+
+        if (Platform.OS !== 'web' && (data.checkInEnabled || data.eventosEnabled)) {
+          const permissions = await Notifications.getPermissionsAsync();
+          const permisosConcedidos = permissions.status === 'granted';
+          if (mounted) {
+            setConfig(permisosConcedidos
+              ? data
+              : { ...data, checkInEnabled: false, eventosEnabled: false });
+          }
+          if (permisosConcedidos && data.eventosEnabled) {
+            void programarNotificacionesEventos(userId).catch((error) => {
+              console.error('No se pudieron sincronizar recordatorios de agenda:', error);
+            });
+          }
+        } else {
+          setConfig(data);
+        }
       } catch (error) {
         console.error('No se pudo cargar la configuración de notificaciones:', error);
       } finally {
@@ -51,7 +73,7 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
 
     try {
       if (enabled) {
-        const programadas = await programarNotificacionesRacha(rachaCompletadaHoy, config.checkInTime);
+        const programadas = await programarNotificacionesRacha(rachaCompletadaHoy, config.checkInTime, true);
         if (!programadas) {
           throw new Error('Concede permisos de notificación en tu dispositivo para activar los recordatorios.');
         }
@@ -77,6 +99,47 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
     }
   }, [userId, config, rachaCompletadaHoy]);
 
+  const toggleEventos = useCallback(async (enabled: boolean) => {
+    if (!userId) return;
+
+    const nuevaConfig = { ...config, eventosEnabled: enabled };
+    setConfig(nuevaConfig);
+
+    try {
+      if (enabled) {
+        const permisosConcedidos = await solicitarPermisosNotificaciones();
+        if (!permisosConcedidos) {
+          throw new Error(
+            Platform.OS === 'web'
+              ? 'Los recordatorios de agenda están disponibles en iOS y Android.'
+              : 'Concede permisos de notificación en tu dispositivo para activar los recordatorios.',
+          );
+        }
+
+        const programadas = await programarNotificacionesEventos(userId);
+        if (!programadas) throw new Error('No se pudieron programar los recordatorios de agenda.');
+      } else {
+        await limpiarNotificacionesEventos();
+      }
+
+      if (!(await guardarConfigNotificaciones(userId, nuevaConfig))) {
+        throw new Error('No se pudo guardar la configuración de notificaciones.');
+      }
+    } catch (error) {
+      setConfig(config);
+      try {
+        if (config.eventosEnabled) {
+          await programarNotificacionesEventos(userId);
+        } else {
+          await limpiarNotificacionesEventos();
+        }
+      } catch (restoreError) {
+        console.error('No se pudieron restaurar los recordatorios de agenda:', restoreError);
+      }
+      throw error;
+    }
+  }, [userId, config]);
+
   const toggleLimite = useCallback(async (enabled: boolean) => {
     if (!userId) return;
     
@@ -101,7 +164,7 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
     setConfig(nuevaConfig);
     try {
       if (config.checkInEnabled) {
-        const programadas = await programarNotificacionesRacha(rachaCompletadaHoy, nuevaHora);
+        const programadas = await programarNotificacionesRacha(rachaCompletadaHoy, nuevaHora, true);
         if (!programadas) {
           throw new Error('Concede permisos de notificación en tu dispositivo para cambiar la hora.');
         }
@@ -128,6 +191,7 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
     loading,
     toggleCheckIn,
     toggleLimite,
+    toggleEventos,
     actualizarHoraCheckIn
   };
 };

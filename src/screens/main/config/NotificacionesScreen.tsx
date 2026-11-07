@@ -60,6 +60,7 @@ export const NotificacionesScreen = ({ navigation }: any) => {
     loading,
     toggleCheckIn,
     toggleLimite,
+    toggleEventos,
     actualizarHoraCheckIn,
   } = useNotificationConfig(userId, completadoHoy);
 
@@ -218,7 +219,18 @@ export const NotificacionesScreen = ({ navigation }: any) => {
     <View style={styles.container}>
       <ScreenHeader />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.mainHeader}>PREFERENCIAS DE NOTIFICACIONES</Text>
+        <View style={styles.hero}>
+          <View style={styles.heroIcon}>
+            <Ionicons name="notifications" size={25} color={theme.primary} />
+          </View>
+          <View style={styles.heroText}>
+            <Text style={styles.heroTitle}>Avisos a tu ritmo</Text>
+            <Text style={styles.heroCopy}>
+              Recibe recordatorios útiles de RidersMX directamente en tu dispositivo.
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.mainHeader}>TUS RECORDATORIOS</Text>
 
         {/* SECCIÓN 1: RACHA Y HÁBITOS */}
         <Section title="RACHA Y HÁBITOS" icon="flame-outline">
@@ -255,9 +267,9 @@ export const NotificacionesScreen = ({ navigation }: any) => {
         />
       </Section>
 
-      {/* SECCIÓN 3: VEHÍCULO Y MANTENIMIENTO */}
-      <Section title="VEHÍCULO Y MANTENIMIENTO" icon="build-outline" isComingSoon>
-        <SwitchRow 
+      {/* SECCIÓN 3: AGENDA */}
+      <Section title="AGENDA Y VEHÍCULO" icon="calendar-outline">
+        <SwitchRow
           label="Recordatorios de Cambio de Aceite / Frenos" 
           value={false} 
           onValueChange={() => {}} 
@@ -392,6 +404,28 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
+  hero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.cardHeader,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 24,
+  },
+  heroIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: theme.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 13,
+  },
+  heroText: { flex: 1 },
+  heroTitle: { color: theme.textPrimary, fontSize: 17, fontWeight: '700', marginBottom: 4 },
+  heroCopy: { color: theme.textSecondary, fontSize: 13, lineHeight: 18 },
   mainHeader: {
     fontSize: 14,
     fontWeight: 'bold',
@@ -433,6 +467,12 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   },
   sectionBody: {
     paddingHorizontal: 16,
+  },
+  sectionHint: {
+    color: theme.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    paddingBottom: 14,
   },
   row: {
     flexDirection: 'row',

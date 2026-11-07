@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Modal, Pressable } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { catalogoStickers, coloresTexto, textosRapidos, ItemCatalogo } from './catalogos';
 import { useTheme } from '../../../assets/theme/ThemeContext';
@@ -27,6 +27,7 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
   const [busqueda, setBusqueda] = useState('');
   const [texto, setTexto] = useState('');
   const [colorTexto, setColorTexto] = useState('#ffffff');
+  const [disenoPorBorrar, setDisenoPorBorrar] = useState<DisenoGuardado | null>(null);
   const { elementos, garaje } = useDiseno();
 
   useEffect(() => { cargarAlmacen(); }, []);
@@ -56,11 +57,11 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
     navigation.goBack(); // vuelve al editor con el diseño cargado
   };
 
-  const borrar = (g: DisenoGuardado) =>
-    Alert.alert('Eliminar diseño', `¿Eliminar "${g.nombre}" de tu garaje?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => eliminarDeGaraje(g.id) },
-    ]);
+  const confirmarBorrar = () => {
+    if (!disenoPorBorrar) return;
+    eliminarDeGaraje(disenoPorBorrar.id);
+    setDisenoPorBorrar(null);
+  };
 
   return (
     <View style={styles.container}>
@@ -189,21 +190,47 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
           }
           renderItem={({ item }) => {
             return (
-              <TouchableOpacity style={styles.card} onPress={() => abrir(item)} activeOpacity={0.85}>
-                <LienzoEstatico diseno={item.diseno} width={108} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.nombre} numberOfLines={1}>{item.nombre}</Text>
-                  <Text style={styles.itemSubText}>{nombreDeMoto(item.diseno)} · {item.diseno.elementos.length} elementos · {item.diseno.trazos.length} trazos</Text>
-                  <Text style={styles.itemSubText}>Editado {fecha(item.actualizado)}</Text>
-                </View>
-                <TouchableOpacity onPress={() => borrar(item)} style={styles.backButton}>
+              <View style={styles.card}>
+                <TouchableOpacity style={styles.cardContent} onPress={() => abrir(item)} activeOpacity={0.85}>
+                  <LienzoEstatico diseno={item.diseno} width={108} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.nombre} numberOfLines={1}>{item.nombre}</Text>
+                    <Text style={styles.itemSubText}>{nombreDeMoto(item.diseno)} · {item.diseno.elementos.length} elementos · {item.diseno.trazos.length} trazos</Text>
+                    <Text style={styles.itemSubText}>Editado {fecha(item.actualizado)}</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setDisenoPorBorrar(item)}
+                  style={styles.backButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Eliminar ${item.nombre}`}
+                >
                   <Ionicons name="trash-outline" size={22} color={theme.dangerText} />
                 </TouchableOpacity>
-              </TouchableOpacity>
+              </View>
             );
           }}
         />
       )}
+
+      <Modal visible={!!disenoPorBorrar} transparent animationType="fade" onRequestClose={() => setDisenoPorBorrar(null)}>
+        <Pressable style={styles.modalFondo} onPress={() => setDisenoPorBorrar(null)}>
+          <Pressable style={styles.modalCaja} onPress={(event) => event.stopPropagation()}>
+            <Text style={styles.modalTitulo}>Quitar moto del inventario</Text>
+            <Text style={styles.modalTexto}>
+              ¿Eliminar “{disenoPorBorrar?.nombre}” de tu garaje? Esta acción no se puede deshacer.
+            </Text>
+            <View style={styles.modalBotones}>
+              <TouchableOpacity style={styles.botonCancelar} onPress={() => setDisenoPorBorrar(null)}>
+                <Text style={styles.textoCancelar}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.botonEliminar} onPress={confirmarBorrar}>
+                <Text style={styles.textoEliminar}>Eliminar</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -241,6 +268,16 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   chipTexto: { fontSize: 15, fontWeight: 'bold', color: theme.textPrimary },
 
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, padding: 12, borderRadius: 14, marginBottom: 12, borderWidth: 1, borderColor: theme.border, gap: 12 },
+  cardContent: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  modalFondo: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'center', padding: 24 },
+  modalCaja: { backgroundColor: theme.card, borderRadius: 16, padding: 20 },
+  modalTitulo: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 12 },
+  modalTexto: { color: theme.textSecondary, fontSize: 15, lineHeight: 22 },
+  modalBotones: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16, gap: 8 },
+  botonCancelar: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.cardHeader },
+  textoCancelar: { color: theme.textSecondary, fontWeight: '600' },
+  botonEliminar: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.dangerText },
+  textoEliminar: { color: theme.onPrimary, fontWeight: 'bold' },
   nombre: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 2 },
   aviso: { fontSize: 12, color: theme.warningText, backgroundColor: theme.warningBg, padding: 10, borderRadius: 8, marginBottom: 12 },
   vacio: { alignItems: 'center', justifyContent: 'center', paddingTop: 60 },

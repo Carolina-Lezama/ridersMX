@@ -4,8 +4,8 @@ import { Platform } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
-const ACCOUNTS_KEY = '@multi_accounts_ids';
-const ACTIVE_ACCOUNT_KEY = '@active_account_id';
+const ACCOUNTS_KEY = Platform.OS === 'web' ? '@multi_accounts_ids' : 'riders_multi_accounts_ids';
+const ACTIVE_ACCOUNT_KEY = Platform.OS === 'web' ? '@active_account_id' : 'riders_active_account_id';
 
 export interface StoredAccount {
   id: string;
@@ -33,7 +33,9 @@ const storage = {
 };
 
 const accountKey = (id: string, field: 'metadata' | 'access_token' | 'refresh_token') =>
-  `@multi_account:${id}:${field}`;
+  Platform.OS === 'web'
+    ? `@multi_account:${id}:${field}`
+    : `riders_multi_account_${id}_${field}`;
 
 async function readAccountIds(): Promise<string[]> {
   const storedIds = await storage.getItem(ACCOUNTS_KEY);
