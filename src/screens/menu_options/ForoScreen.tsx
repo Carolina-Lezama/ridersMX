@@ -773,84 +773,10 @@ const createStyles = (theme: any) =>
       borderRadius: 16,
       padding: 16,
       marginBottom: 15,
-<<<<<<< HEAD
       borderWidth: 1,
       borderColor: theme.border,
     },
     cardHeader: {
-=======
-    },
-    input: { flex: 1, fontSize: 15, color: theme.textPrimary },
-
-    locationContainer: {
-      marginBottom: 20,
-    },
-    resultadosCard: {
-      backgroundColor: theme.card,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: theme.border,
-      marginTop: -8,
-      marginBottom: 15,
-      elevation: 5,
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-    },
-    resultadoItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.divider,
-    },
-    resultadoTexto: { fontSize: 13, color: theme.textPrimary, flex: 1 },
-
-    chipsScroll: { flexDirection: 'row', marginBottom: 15 },
-    chip: {
-      backgroundColor: theme.card,
-      borderWidth: 1,
-      borderColor: theme.border,
-      paddingHorizontal: 18,
-      paddingVertical: 10,
-      borderRadius: 20,
-      marginRight: 10,
-    },
-    chipSelected: { backgroundColor: theme.primary, borderColor: theme.primary },
-    chipText: { fontSize: 14, fontWeight: '600', color: theme.textSecondary },
-    chipTextSelected: { color: theme.onPrimary },
-
-    row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
-    selectCard: {
-      width: '48%',
-      backgroundColor: theme.card,
-      borderRadius: 16,
-      padding: 14,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    selectCardSub: { fontSize: 11, fontWeight: '700', color: theme.textSecondary, textTransform: 'uppercase' },
-    selectCardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-    selectCardValue: { fontSize: 15, fontWeight: '600', color: theme.textPrimary },
-
-    footerButton: {
-      marginTop: 20,
-    },
-
-    modalOverlay: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'flex-end' },
-    modalContent: {
-      backgroundColor: theme.card,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      padding: 20,
-      maxHeight: '50%',
-    },
-    modalBar: { width: 40, height: 4, backgroundColor: theme.border, borderRadius: 2, alignSelf: 'center', marginBottom: 15 },
-    modalTitle: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 15, textAlign: 'center' },
-    modalOption: {
->>>>>>> 5e2354414d9e85eeda657258986131ce5171f695
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
