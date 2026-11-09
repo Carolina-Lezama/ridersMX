@@ -1,128 +1,161 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../../assets/theme/ThemeContext';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { catalogoStickers, catalogoRines, catalogoColores, ItemCatalogo } from './catalogos';
+import { useDiseno, agregarElemento, setEstado } from './diseñostore';
+
+type Tab = 'stickers' | 'rines' | 'colores';
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'stickers', label: 'Stickers' },
+  { key: 'rines', label: 'Rines' },
+  { key: 'colores', label: 'Colores' },
+];
 
 export default function SimuladorLibreriaScreen({ navigation }: any) {
-  const { theme } = useTheme();
-  const styles = createStyles(theme);
+  const [activeTab, setActiveTab] = useState<Tab>('stickers');
+  const [busqueda, setBusqueda] = useState('');
+  const { elementos, colorMoto } = useDiseno();
 
-  const [activeTab, setActiveTab] = useState<'stickers' | 'paletas'>('stickers');
+  const q = busqueda.toLowerCase();
 
-  const dummyStickers = [
-    { id: '1', nombre: 'Logo Racing Flamas', usos: 3 },
-    { id: '2', nombre: 'Emblema Depósito Honda', usos: 1 },
-    { id: '3', nombre: 'Número 46 Estilo GP', usos: 0 },
-  ];
+  const stickersFiltrados = catalogoStickers.filter((i) => i.nombre.toLowerCase().includes(q));
+  const rinesFiltrados = catalogoRines.filter((i) => i.nombre.toLowerCase().includes(q));
+  const coloresFiltrados = catalogoColores.filter(
+    (c) => c.nombre.toLowerCase().includes(q) || c.grupo.toLowerCase().includes(q)
+  );
 
-  const dummyPaletas = [
-    { id: '1', nombre: 'Paleta Deportiva Rojo/Negro', colores: ['#ef4444', '#0f172a', '#ffffff'] },
-    { id: '2', nombre: 'Paleta Clásica Azul', colores: ['#3b82f6', '#94a3b8', '#1e293b'] },
-  ];
+  // Agrega el sticker y te QUEDAS en la librería para poder agregar más
+  const seleccionarElemento = (item: ItemCatalogo, tipo: 'sticker' | 'rin') => {
+    agregarElemento({ icono: item.icono, color: item.color, tipo });
+  };
+
+  // Pinta la moto y regresa al editor para ver el resultado
+  const seleccionarColor = (hex: string) => {
+    setEstado({ colorMoto: hex });
+    navigation.goBack();
+  };
+
+  const renderLista = (data: ItemCatalogo[], tipo: 'sticker' | 'rin') => (
+    <FlatList
+      key={tipo}
+      data={data}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => {
+        const cantidad = elementos.filter((e) => e.icono === item.icono && e.color === item.color).length;
+        return (
+          <TouchableOpacity style={styles.listItem} onPress={() => seleccionarElemento(item, tipo)}>
+            <View style={styles.stickerPreview}>
+              <MaterialCommunityIcons name={item.icono as any} size={30} color={item.color} />
+            </View>
+            <View style={styles.listTextInfo}>
+              <Text style={styles.itemName}>{item.nombre}</Text>
+              <Text style={styles.itemSubText}>
+                {cantidad > 0 ? `En tu moto: ${cantidad} · toca para agregar otro` : 'Toca para agregarlo a tu moto'}
+              </Text>
+            </View>
+            <Ionicons name="add-circle" size={26} color="#3b82f6" />
+          </TouchableOpacity>
+        );
+      }}
+      ListEmptyComponent={<Text style={styles.emptyText}>No se encontraron resultados</Text>}
+    />
+  );
 
   return (
     <View style={styles.container}>
-      
-      {/* HEADER CON BOTÓN DE REGRESO */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#0f172a" />
         </TouchableOpacity>
         <Text style={styles.titulo}>Mi Inventario</Text>
-        <View style={{ width: 28 }} />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.listoButton}>
+          <Text style={styles.listoText}>Listo ({elementos.length})</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* BUSCADOR */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Ionicons name="search" size={20} color="#94a3b8" />
-          <TextInput 
-            style={styles.searchInput} 
-            placeholder="Buscar sticker o paleta..." 
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar sticker, rin o color..."
             placeholderTextColor="#94a3b8"
+            value={busqueda}
+            onChangeText={setBusqueda}
           />
         </View>
       </View>
 
-      {/* PESTAÑAS (TABS) */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity style={[styles.tab, activeTab === 'stickers' && styles.activeTab]} onPress={() => setActiveTab('stickers')}>
-          <Text style={[styles.tabText, activeTab === 'stickers' && styles.activeTabText]}>Mis Stickers</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, activeTab === 'paletas' && styles.activeTab]} onPress={() => setActiveTab('paletas')}>
-          <Text style={[styles.tabText, activeTab === 'paletas' && styles.activeTabText]}>Paletas de Color</Text>
-        </TouchableOpacity>
+        {TABS.map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tab, activeTab === tab.key && styles.activeTab]}
+            onPress={() => setActiveTab(tab.key)}
+          >
+            <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      {/* CONTENIDO DE LA LISTA */}
       <View style={styles.listContainer}>
-        {activeTab === 'stickers' ? (
+        {activeTab === 'stickers' && renderLista(stickersFiltrados, 'sticker')}
+        {activeTab === 'rines' && renderLista(rinesFiltrados, 'rin')}
+        {activeTab === 'colores' && (
           <FlatList
-            data={dummyStickers}
-            keyExtractor={item => item.id}
+            key="colores"
+            data={coloresFiltrados}
+            keyExtractor={(item) => item.id}
+            numColumns={3}
             renderItem={({ item }) => (
-              <View style={styles.listItem}>
-                <View style={styles.stickerPreview}>
-                  <Ionicons name="image-outline" size={28} color="#94a3b8" />
-                </View>
-                <View style={styles.listTextInfo}>
-                  <Text style={styles.itemName}>{item.nombre}</Text>
-                  <Text style={styles.itemSubText}>{item.usos} diseños usan este sticker</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#cbd5e1" />
-              </View>
+              <TouchableOpacity style={styles.colorItem} onPress={() => seleccionarColor(item.hex)}>
+                <View
+                  style={[
+                    styles.colorSwatch,
+                    { backgroundColor: item.hex },
+                    colorMoto === item.hex && styles.colorSwatchActivo,
+                  ]}
+                />
+                <Text style={styles.colorName} numberOfLines={1}>{item.nombre}</Text>
+                <Text style={styles.colorGroup}>{item.grupo}</Text>
+              </TouchableOpacity>
             )}
-          />
-        ) : (
-          <FlatList
-            data={dummyPaletas}
-            keyExtractor={item => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.listItem}>
-                <View style={styles.palettePreview}>
-                  {item.colores.map((color, index) => (
-                    <View key={index} style={[styles.colorBlock, { backgroundColor: color }]} />
-                  ))}
-                </View>
-                <View style={styles.listTextInfo}>
-                  <Text style={styles.itemName}>{item.nombre}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#cbd5e1" />
-              </View>
-            )}
+            ListEmptyComponent={<Text style={styles.emptyText}>No se encontraron resultados</Text>}
           />
         )}
       </View>
-
-      {/* BOTÓN FLOTANTE */}
-      <TouchableOpacity style={styles.fab}>
-        <Ionicons name="add" size={32} color="#fff" />
-      </TouchableOpacity>
-
     </View>
   );
 }
 
-const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.background },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 60, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.card },
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f8fafc' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 60, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#e2e8f0', backgroundColor: '#fff' },
   backButton: { padding: 5 },
-  titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
-  searchContainer: { backgroundColor: theme.card, paddingHorizontal: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: theme.border },
+  titulo: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
+  listoButton: { backgroundColor: '#3b82f6', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  listoText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  searchContainer: { backgroundColor: '#fff', paddingHorizontal: 20, paddingBottom: 15, paddingTop: 12, borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: 10, paddingHorizontal: 15, height: 45 },
-  searchInput: { flex: 1, marginLeft: 10, color: theme.textPrimary, fontSize: 16 },
-  tabContainer: { flexDirection: 'row', backgroundColor: theme.card, borderBottomWidth: 1, borderBottomColor: theme.border },
+  searchInput: { flex: 1, marginLeft: 10, color: '#0f172a', fontSize: 16 },
+  tabContainer: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
   tab: { flex: 1, paddingVertical: 15, alignItems: 'center' },
   activeTab: { borderBottomWidth: 3, borderBottomColor: '#3b82f6' },
   tabText: { color: '#64748b', fontSize: 16, fontWeight: '600' },
   activeTabText: { color: '#3b82f6' },
   listContainer: { flex: 1, padding: 20 },
-  listItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, padding: 15, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: theme.border },
+  listItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 15, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0' },
   stickerPreview: { width: 50, height: 50, backgroundColor: '#f1f5f9', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  palettePreview: { flexDirection: 'row', width: 50, height: 50, borderRadius: 8, overflow: 'hidden', marginRight: 15, borderWidth: 1, borderColor: '#e2e8f0' },
-  colorBlock: { flex: 1, height: '100%' },
   listTextInfo: { flex: 1 },
-  itemName: { color: theme.textPrimary, fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+  itemName: { color: '#0f172a', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
   itemSubText: { color: '#64748b', fontSize: 12 },
-  fab: { position: 'absolute', bottom: 30, right: 30, width: 60, height: 60, borderRadius: 30, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3 }
+  emptyText: { textAlign: 'center', color: '#94a3b8', marginTop: 40 },
+  colorItem: { width: '33.33%', alignItems: 'center', marginBottom: 20 },
+  colorSwatch: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#e2e8f0', marginBottom: 6 },
+  colorSwatchActivo: { borderColor: '#3b82f6', borderWidth: 4 },
+  colorName: { fontSize: 13, fontWeight: '600', color: '#0f172a' },
+  colorGroup: { fontSize: 11, color: '#94a3b8' },
 });
