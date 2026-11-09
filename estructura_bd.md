@@ -1,5 +1,117 @@
 [
 {
+"table_name": "bitacoras_rodadas",
+"column_name": "id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "bitacoras_rodadas",
+"column_name": "evento_id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "bitacoras_rodadas",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "bitacoras_rodadas",
+"column_name": "distancia_km",
+"data_type": "numeric",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "0"
+},
+{
+"table_name": "bitacoras_rodadas",
+"column_name": "duracion_minutos",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "0"
+},
+{
+"table_name": "bitacoras_rodadas",
+"column_name": "calificacion",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "bitacoras_rodadas",
+"column_name": "comentarios_review",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "bitacoras_rodadas",
+"column_name": "foto_url",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "bitacoras_rodadas",
+"column_name": "velocidad_promedio",
+"data_type": "numeric",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "bitacoras_rodadas",
+"column_name": "clima",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "bitacoras_rodadas",
+"column_name": "tipo_terreno",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "bitacoras_rodadas",
+"column_name": "gastos_ruta",
+"data_type": "numeric",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "0"
+},
+{
+"table_name": "bitacoras_rodadas",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "bitacoras_rodadas",
+"column_name": "motocicleta_id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
 "table_name": "diagnosticos",
 "column_name": "id",
 "data_type": "uuid",
@@ -160,6 +272,158 @@
 "column_default": "'Planeada'::text"
 },
 {
+"table_name": "eventos",
+"column_name": "estado_review",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "'pendiente'::text"
+},
+{
+"table_name": "eventos",
+"column_name": "recordar_despues_de",
+"data_type": "timestamp with time zone",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "serie_id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "recurrencia",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "'none'::text"
+},
+{
+"table_name": "eventos",
+"column_name": "intervalo_recurrencia",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "recurrencia_hasta",
+"data_type": "date",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "rodada_punto_reunion",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "rodada_destino",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "rodada_distancia_km",
+"data_type": "numeric",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "rodada_dificultad",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "mantenimiento_servicio",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "mantenimiento_taller",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "mantenimiento_kilometraje",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "eventos",
+"column_name": "mantenimiento_costo_estimado",
+"data_type": "numeric",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "faqs",
+"column_name": "id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "faqs",
+"column_name": "pregunta",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "faqs",
+"column_name": "respuesta",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "faqs",
+"column_name": "orden",
+"data_type": "integer",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "0"
+},
+{
+"table_name": "faqs",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
 "table_name": "foro_likes",
 "column_name": "id",
 "data_type": "uuid",
@@ -241,6 +505,46 @@
 },
 {
 "table_name": "foro_publicaciones",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "historial_checkins",
+"column_name": "id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "historial_checkins",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "historial_checkins",
+"column_name": "fecha",
+"data_type": "date",
+"character_maximum_length": null,
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "historial_checkins",
+"column_name": "tipo",
+"data_type": "text",
+"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "'quiz'::text"
+},
+{
+"table_name": "historial_checkins",
 "column_name": "created_at",
 "data_type": "timestamp with time zone",
 "character_maximum_length": null,
@@ -441,14 +745,6 @@
 },
 {
 "table_name": "motocicletas",
-"column_name": "placas",
-"data_type": "text",
-"character_maximum_length": null,
-"is_nullable": "YES",
-"column_default": null
-},
-{
-"table_name": "motocicletas",
 "column_name": "kilometraje_actual",
 "data_type": "integer",
 "character_maximum_length": null,
@@ -465,25 +761,131 @@
 },
 {
 "table_name": "motocicletas",
-"column_name": "aseguradora",
-"data_type": "text",
-"character_maximum_length": null,
-"is_nullable": "YES",
-"column_default": null
-},
-{
-"table_name": "motocicletas",
-"column_name": "numero_poliza",
-"data_type": "text",
-"character_maximum_length": null,
-"is_nullable": "YES",
-"column_default": null
-},
-{
-"table_name": "motocicletas",
 "column_name": "created_at",
 "data_type": "timestamp with time zone",
 "character_maximum_length": null,
+"is_nullable": "YES",
+    "column_default": "timezone('utc'::text, now())"
+}
+]
+
+[
+{
+"table_name": "historial_checkins",
+"column_name": "id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "historial_checkins",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "historial_checkins",
+"column_name": "fecha",
+"data_type": "date",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "historial_checkins",
+"column_name": "tipo",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": "'quiz'::text"
+},
+{
+"table_name": "historial_checkins",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "motos_catalogo",
+"column_name": "id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "motos_catalogo",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "motos_catalogo",
+"column_name": "nombre",
+"data_type": "text",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "motos_catalogo",
+"column_name": "marca",
+"data_type": "text",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "motos_catalogo",
+"column_name": "modelo",
+"data_type": "integer",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "motos_catalogo",
+"column_name": "tipo",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "motos_catalogo",
+"column_name": "cilindrada",
+"data_type": "integer",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "motos_catalogo",
+"column_name": "precio",
+"data_type": "numeric",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "motos_catalogo",
+"column_name": "descripcion",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "motos_catalogo",
+"column_name": "imagen_url",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "motos_catalogo",
+"column_name": "propietario",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "motos_catalogo",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
 "is_nullable": "YES",
 "column_default": "timezone('utc'::text, now())"
 },
@@ -491,7 +893,6 @@
 "table_name": "perfiles",
 "column_name": "id",
 "data_type": "uuid",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": null
 },
@@ -499,7 +900,6 @@
 "table_name": "perfiles",
 "column_name": "username",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": null
 },
@@ -507,7 +907,6 @@
 "table_name": "perfiles",
 "column_name": "nombre_completo",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -515,7 +914,6 @@
 "table_name": "perfiles",
 "column_name": "fecha_nacimiento",
 "data_type": "date",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -523,7 +921,6 @@
 "table_name": "perfiles",
 "column_name": "telefono",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -531,7 +928,6 @@
 "table_name": "perfiles",
 "column_name": "ciudad",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -539,23 +935,6 @@
 "table_name": "perfiles",
 "column_name": "bio",
 "data_type": "text",
-"character_maximum_length": null,
-"is_nullable": "YES",
-"column_default": null
-},
-{
-"table_name": "perfiles",
-"column_name": "tipo_sangre",
-"data_type": "text",
-"character_maximum_length": null,
-"is_nullable": "YES",
-"column_default": null
-},
-{
-"table_name": "perfiles",
-"column_name": "contacto_emergencia",
-"data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -563,7 +942,6 @@
 "table_name": "perfiles",
 "column_name": "nivel_experiencia",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -571,7 +949,6 @@
 "table_name": "perfiles",
 "column_name": "avatar_url",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -579,23 +956,13 @@
 "table_name": "perfiles",
 "column_name": "created_at",
 "data_type": "timestamp with time zone",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": "timezone('utc'::text, now())"
 },
 {
 "table_name": "perfiles",
-"column_name": "numero_licencia",
-"data_type": "text",
-"character_maximum_length": null,
-"is_nullable": "YES",
-"column_default": null
-},
-{
-"table_name": "perfiles",
 "column_name": "limite_notificacion",
 "data_type": "integer",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": "60"
 },
@@ -603,15 +970,55 @@
 "table_name": "perfiles",
 "column_name": "limite_bloqueo",
 "data_type": "integer",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": "120"
+},
+{
+"table_name": "perfiles",
+"column_name": "last_password_change_at",
+"data_type": "timestamp with time zone",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "perfiles",
+"column_name": "notificaciones_config",
+"data_type": "jsonb",
+"is_nullable": "NO",
+"column_default": "'{\"checkInTime\": \"19:00\", \"limiteEnabled\": true, \"checkInEnabled\": true}'::jsonb"
+},
+{
+"table_name": "perfiles",
+"column_name": "insignia_favorita_id",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "perfiles_publicos",
+"column_name": "id",
+"data_type": "uuid",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "perfiles_publicos",
+"column_name": "username",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "perfiles_publicos",
+"column_name": "avatar_url",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
 },
 {
 "table_name": "rachas_usuario",
 "column_name": "perfil_id",
 "data_type": "uuid",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": null
 },
@@ -619,7 +1026,6 @@
 "table_name": "rachas_usuario",
 "column_name": "racha_actual",
 "data_type": "integer",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": "0"
 },
@@ -627,7 +1033,6 @@
 "table_name": "rachas_usuario",
 "column_name": "racha_maxima",
 "data_type": "integer",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": "0"
 },
@@ -635,7 +1040,6 @@
 "table_name": "rachas_usuario",
 "column_name": "ultimo_checkin",
 "data_type": "date",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -643,7 +1047,6 @@
 "table_name": "rachas_usuario",
 "column_name": "comodines_disponibles",
 "data_type": "integer",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": "1"
 },
@@ -651,7 +1054,6 @@
 "table_name": "rachas_usuario",
 "column_name": "ultimo_comodin_usado",
 "data_type": "date",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -659,7 +1061,6 @@
 "table_name": "rachas_usuario",
 "column_name": "created_at",
 "data_type": "timestamp with time zone",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": "timezone('utc'::text, now())"
 },
@@ -667,7 +1068,6 @@
 "table_name": "rachas_usuario",
 "column_name": "updated_at",
 "data_type": "timestamp with time zone",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": "timezone('utc'::text, now())"
 },
@@ -675,7 +1075,6 @@
 "table_name": "resenas",
 "column_name": "id",
 "data_type": "uuid",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": "uuid_generate_v4()"
 },
@@ -683,7 +1082,6 @@
 "table_name": "resenas",
 "column_name": "perfil_id",
 "data_type": "uuid",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -691,7 +1089,6 @@
 "table_name": "resenas",
 "column_name": "entidad_evaluada",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": null
 },
@@ -699,7 +1096,6 @@
 "table_name": "resenas",
 "column_name": "tipo_entidad",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -707,7 +1103,6 @@
 "table_name": "resenas",
 "column_name": "calificacion",
 "data_type": "integer",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -715,7 +1110,6 @@
 "table_name": "resenas",
 "column_name": "comentario",
 "data_type": "text",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": null
 },
@@ -723,7 +1117,83 @@
 "table_name": "resenas",
 "column_name": "created_at",
 "data_type": "timestamp with time zone",
-"character_maximum_length": null,
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "security_logs",
+"column_name": "id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "security_logs",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "security_logs",
+"column_name": "event_type",
+"data_type": "text",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "security_logs",
+"column_name": "ip_address",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "security_logs",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
+},
+{
+"table_name": "support_tickets",
+"column_name": "id",
+"data_type": "uuid",
+"is_nullable": "NO",
+"column_default": "uuid_generate_v4()"
+},
+{
+"table_name": "support_tickets",
+"column_name": "perfil_id",
+"data_type": "uuid",
+"is_nullable": "YES",
+"column_default": null
+},
+{
+"table_name": "support_tickets",
+"column_name": "asunto",
+"data_type": "text",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "support_tickets",
+"column_name": "mensaje",
+"data_type": "text",
+"is_nullable": "NO",
+"column_default": null
+},
+{
+"table_name": "support_tickets",
+"column_name": "estado",
+"data_type": "text",
+"is_nullable": "YES",
+"column_default": "'abierto'::text"
+},
+{
+"table_name": "support_tickets",
+"column_name": "created_at",
+"data_type": "timestamp with time zone",
 "is_nullable": "YES",
 "column_default": "timezone('utc'::text, now())"
 },
@@ -731,7 +1201,6 @@
 "table_name": "tiempo_uso",
 "column_name": "id",
 "data_type": "uuid",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": "uuid_generate_v4()"
 },
@@ -739,7 +1208,6 @@
 "table_name": "tiempo_uso",
 "column_name": "perfil_id",
 "data_type": "uuid",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": null
 },
@@ -747,7 +1215,6 @@
 "table_name": "tiempo_uso",
 "column_name": "fecha",
 "data_type": "date",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": "CURRENT_DATE"
 },
@@ -755,7 +1222,6 @@
 "table_name": "tiempo_uso",
 "column_name": "minutos_usados",
 "data_type": "numeric",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": "0"
 },
@@ -763,7 +1229,6 @@
 "table_name": "tiempo_uso",
 "column_name": "limite_diario_minutos",
 "data_type": "integer",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": "120"
 },
@@ -771,7 +1236,6 @@
 "table_name": "tiempo_uso",
 "column_name": "recordatorio_minutos",
 "data_type": "integer",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": "60"
 },
@@ -779,7 +1243,6 @@
 "table_name": "tiempo_uso",
 "column_name": "created_at",
 "data_type": "timestamp with time zone",
-"character_maximum_length": null,
 "is_nullable": "YES",
 "column_default": "timezone('utc'::text, now())"
 },
@@ -787,7 +1250,6 @@
 "table_name": "usuario_insignias",
 "column_name": "perfil_id",
 "data_type": "uuid",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": null
 },
@@ -795,8 +1257,14 @@
 "table_name": "usuario_insignias",
 "column_name": "insignia_id",
 "data_type": "uuid",
-"character_maximum_length": null,
 "is_nullable": "NO",
 "column_default": null
+},
+{
+"table_name": "usuario_insignias",
+"column_name": "fecha_desbloqueo",
+"data_type": "timestamp with time zone",
+"is_nullable": "YES",
+"column_default": "timezone('utc'::text, now())"
 }
 ]

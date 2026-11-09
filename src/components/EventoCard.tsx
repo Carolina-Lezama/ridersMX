@@ -11,9 +11,9 @@ export default function EventoCard({ evento, onPress }: any) {
   const estado = evento.estado || 'Planeada'; // Fallback de seguridad
 
   // 1. Definir colores base por TIPO (Mantenimiento vs Rodada)
-  let colorTema = esMantenimiento ? '#ef4444' : theme.primary;
+  let colorTema = esMantenimiento ? theme.dangerText : theme.primary;
   let icono = esMantenimiento ? 'build-outline' : 'map-outline';
-  let bgColor = esMantenimiento ? '#fef2f2' : theme.background;
+  let bgColor = esMantenimiento ? theme.dangerBg : theme.background;
 
   // 2. Variables dinámicas que cambiarán según el ESTADO
   let opacidad = 1;
@@ -23,21 +23,21 @@ export default function EventoCard({ evento, onPress }: any) {
 
   if (estado === 'Completada') {
     badgeText = 'Completada';
-    badgeColor = '#10b981'; // Verde Éxito
-    badgeBg = '#d1fae5';
-    colorTema = '#10b981';  // Forzamos el icono a verde
-    bgColor = '#d1fae5';
+    badgeColor = theme.successText;
+    badgeBg = theme.successBg;
+    colorTema = theme.successText;
+    bgColor = theme.successBg;
   } else if (estado === 'Cancelada') {
     badgeText = 'Cancelada';
-    badgeColor = '#64748b'; // Gris
-    badgeBg = '#f1f5f9';
-    colorTema = '#94a3b8';
-    bgColor = '#f8fafc';
+    badgeColor = theme.textSecondary;
+    badgeBg = theme.mutedBg;
+    colorTema = theme.iconSecondary;
+    bgColor = theme.background;
     opacidad = 0.5; // Hacemos que toda la tarjeta se vea "apagada"
   } else if (estado === 'Reprogramada') {
     badgeText = 'Reprogramada';
-    badgeColor = '#f59e0b'; // Naranja Alerta
-    badgeBg = '#fef3c7';
+    badgeColor = theme.warningText;
+    badgeBg = theme.warningBg;
   }
 
   return (
@@ -91,7 +91,7 @@ export default function EventoCard({ evento, onPress }: any) {
 }
 
 const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
-  card: { flexDirection: 'row', backgroundColor: theme.card, borderRadius: 16, padding: 15, marginBottom: 15, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: theme.border },
+  card: { flexDirection: 'row', backgroundColor: theme.card, borderRadius: 16, padding: 15, marginBottom: 15, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: theme.border },
   iconContainer: { width: 50, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   contentContainer: { flex: 1, justifyContent: 'center' },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },

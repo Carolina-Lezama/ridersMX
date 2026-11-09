@@ -15,13 +15,10 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../../../assets/theme/ThemeContext';
 import { supabase } from '../../../services/supabase';
 
-const SUCCESS_COLOR = '#22c55e';
-const WARNING_COLOR = '#eab308';
-const ERROR_COLOR = '#ef4444';
-
 export default function CambiarContrasenaScreen() {
   const navigation = useNavigation();
   const { theme } = useTheme();
+  const styles = createStyles(theme);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -40,10 +37,10 @@ export default function CambiarContrasenaScreen() {
   const passwordsMatch = newPassword === confirmPassword && confirmPassword.length > 0;
   const strengthScore = [hasMinLength, hasUppercase, hasNumber, hasSpecialChar].filter(Boolean).length;
   const strengthColor = strengthScore === 4
-    ? SUCCESS_COLOR
+    ? theme.successText
     : strengthScore >= 2
-      ? WARNING_COLOR
-      : ERROR_COLOR;
+      ? theme.warningText
+      : theme.dangerText;
   const strengthLabel = strengthScore === 4
     ? 'Fuerte'
     : strengthScore >= 2
@@ -130,7 +127,7 @@ export default function CambiarContrasenaScreen() {
       <Ionicons
         name={fulfilled ? 'checkmark-circle' : 'ellipse-outline'}
         size={16}
-        color={fulfilled ? SUCCESS_COLOR : theme.iconSecondary}
+        color={fulfilled ? theme.successText : theme.iconSecondary}
       />
       <Text style={[styles.requirementText, { color: theme.textSecondary }]}>{text}</Text>
     </View>
@@ -291,7 +288,7 @@ export default function CambiarContrasenaScreen() {
             <Text
               style={[
                 styles.feedbackText,
-                { color: feedback.type === 'success' ? SUCCESS_COLOR : theme.dangerText },
+                { color: feedback.type === 'success' ? theme.successText : theme.dangerText },
               ]}
               accessibilityRole="alert"
             >
@@ -311,7 +308,7 @@ export default function CambiarContrasenaScreen() {
             accessibilityState={{ disabled: !isFormValid || isSubmitting, busy: isSubmitting }}
           >
             {isSubmitting ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={theme.onPrimary} />
             ) : (
               <Text style={styles.submitButtonText}>Actualizar Contraseña</Text>
             )}
@@ -322,7 +319,7 @@ export default function CambiarContrasenaScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -414,7 +411,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   errorText: {
-    color: ERROR_COLOR,
+    color: theme.dangerText,
     fontSize: 12,
     marginTop: 6,
     marginLeft: 4,
@@ -432,7 +429,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   submitButtonText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 16,
     fontWeight: 'bold',
   },

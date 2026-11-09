@@ -39,7 +39,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     borderColor: theme.primary,
   },
   texto: {
-    color: '#fff',
+    color: theme.onPrimary,
     fontWeight: 'bold',
     fontSize: 16,
   },

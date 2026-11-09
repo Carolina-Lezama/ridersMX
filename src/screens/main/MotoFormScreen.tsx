@@ -3,8 +3,22 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIn
 import { Ionicons } from '@expo/vector-icons';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
+import Skeleton from '../../components/Skeleton';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+
+interface DatosSeguroMotocicleta {
+  aseguradora: string | null;
+  numero_poliza: string | null;
+}
+
+const esDatosSeguroMotocicleta = (valor: unknown): valor is DatosSeguroMotocicleta =>
+  typeof valor === 'object'
+  && valor !== null
+  && 'aseguradora' in valor
+  && (typeof valor.aseguradora === 'string' || valor.aseguradora === null)
+  && 'numero_poliza' in valor
+  && (typeof valor.numero_poliza === 'string' || valor.numero_poliza === null);
 
 export default function MotoFormScreen({ navigation, route }: any) {
   const { theme } = useTheme();
@@ -16,6 +30,7 @@ export default function MotoFormScreen({ navigation, route }: any) {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   // ESTADOS DEL FORMULARIO (Mapeados exactamente a las columnas de la BD)
   const [alias, setAlias] = useState('');
@@ -25,11 +40,13 @@ export default function MotoFormScreen({ navigation, route }: any) {
   const [cilindrada, setCilindrada] = useState('');
   const [anio, setAnio] = useState('');
   const [color, setColor] = useState('');
-  const [placas, setPlacas] = useState('');
   const [kilometraje, setKilometraje] = useState('');
   const [combustible, setCombustible] = useState('');
   const [aseguradora, setAseguradora] = useState('');
   const [poliza, setPoliza] = useState('');
+
+  const marcaError = !marca.trim() && submitted ? 'La marca es obligatoria.' : undefined;
+  const modeloError = !modelo.trim() && submitted ? 'El modelo es obligatorio.' : undefined;
 
   useEffect(() => {
     if (esEdicion) {
@@ -57,12 +74,19 @@ export default function MotoFormScreen({ navigation, route }: any) {
         setCilindrada(data.cilindrada ? data.cilindrada.toString() : '');
         setAnio(data.anio ? data.anio.toString() : '');
         setColor(data.color || '');
-        setPlacas(data.placas || '');
         setKilometraje(data.kilometraje_actual ? data.kilometraje_actual.toString() : '0');
         setCombustible(data.tipo_combustible || '');
-        setAseguradora(data.aseguradora || '');
-        setPoliza(data.numero_poliza || '');
       }
+
+      const { data: seguro, error: errorSeguro } = await supabase
+        .rpc('obtener_seguro_motocicleta', { p_motocicleta_id: motoId })
+        .single();
+      if (errorSeguro) throw errorSeguro;
+      if (!esDatosSeguroMotocicleta(seguro)) {
+        throw new Error('No se pudieron cargar los datos del seguro.');
+      }
+      setAseguradora(seguro.aseguradora || '');
+      setPoliza(seguro.numero_poliza || '');
     } catch (error: any) {
       Alert.alert('Error al cargar vehículo', error.message);
       navigation.goBack();
@@ -73,8 +97,8 @@ export default function MotoFormScreen({ navigation, route }: any) {
 
   // FUNCIÓN PARA GUARDAR (CREAR O ACTUALIZAR)
   const handleGuardar = async () => {
+    setSubmitted(true);
     if (!marca.trim() || !modelo.trim()) {
-      Alert.alert('Campos obligatorios', 'Por favor introduce al menos la Marca y el Modelo.');
       return;
     }
 
@@ -87,42 +111,28 @@ export default function MotoFormScreen({ navigation, route }: any) {
         return;
       }
 
-      // Estructuramos el objeto convirtiendo los números correctamente a enteros
-      const motoPayload = {
-        perfil_id: session.user.id,
-        alias: alias.trim(),
-        tipo: tipo.trim(),
-        marca: marca.trim(),
-        modelo: modelo.trim(),
-        cilindrada: cilindrada ? parseInt(cilindrada) : null,
-        anio: anio ? parseInt(anio) : null,
-        color: color.trim(),
-        placas: placas.trim().toUpperCase(),
-        kilometraje_actual: kilometraje ? parseInt(kilometraje) : 0,
-        tipo_combustible: combustible.trim(),
-        aseguradora: aseguradora.trim(),
-        numero_poliza: poliza.trim(),
-      };
+      const { error } = await supabase.rpc('guardar_motocicleta_segura', {
+        p_motocicleta_id: esEdicion ? motoId : null,
+        p_alias: alias.trim(),
+        p_tipo: tipo.trim(),
+        p_marca: marca.trim(),
+        p_modelo: modelo.trim(),
+        p_cilindrada: cilindrada ? parseInt(cilindrada) : null,
+        p_anio: anio ? parseInt(anio) : null,
+        p_color: color.trim(),
+        p_kilometraje_actual: kilometraje ? parseInt(kilometraje) : 0,
+        p_tipo_combustible: combustible.trim(),
+        p_aseguradora: aseguradora.trim(),
+        p_numero_poliza: poliza.trim(),
+      });
+      if (error) throw error;
 
-      if (esEdicion) {
-        // MODO ACTUALIZAR (UPDATE)
-        const { error } = await supabase
-          .from('motocicletas')
-          .update(motoPayload)
-          .eq('id', motoId);
-
-        if (error) throw error;
-        Alert.alert('¡Actualizado!', 'Los datos del vehículo se guardaron correctamente.');
-      } else {
-        // MODO CREAR (INSERT)
-        const { error } = await supabase
-          .from('motocicletas')
-          .insert([motoPayload]);
-
-        if (error) throw error;
-        Alert.alert('¡Añadida!', 'Tu nueva motocicleta está lista en el garaje.');
-      }
-
+      Alert.alert(
+        esEdicion ? '¡Actualizado!' : '¡Añadida!',
+        esEdicion
+          ? 'Los datos del vehículo se guardaron correctamente.'
+          : 'Tu nueva motocicleta está lista en el garaje.',
+      );
       navigation.goBack(); // Regresamos a la lista de motos automáticamente
     } catch (error: any) {
       Alert.alert('Error al guardar', error.message);
@@ -189,9 +199,28 @@ export default function MotoFormScreen({ navigation, route }: any) {
 
   if (loading) {
     return (
-      <View style={styles.centerContent}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={styles.loadingText}>Cargando especificaciones...</Text>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Skeleton width={28} height={28} borderRadius={14} />
+          <Skeleton width={180} height={21} />
+          <View style={{ width: 28 }} />
+        </View>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {[7, 3, 2].map((fieldCount, sectionIndex) => (
+            <View key={sectionIndex} style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Skeleton width={20} height={20} borderRadius={6} />
+                <Skeleton width={160} height={19} style={{ marginLeft: 10 }} />
+              </View>
+              {Array.from({ length: fieldCount }, (_, fieldIndex) => (
+                <View key={fieldIndex} style={{ marginBottom: 16 }}>
+                  <Skeleton width={120} height={13} style={{ marginBottom: 9 }} />
+                  <Skeleton height={44} borderRadius={10} />
+                </View>
+              ))}
+            </View>
+          ))}
+        </ScrollView>
       </View>
     );
   }
@@ -214,23 +243,22 @@ export default function MotoFormScreen({ navigation, route }: any) {
         {/* SECCIÓN 1: Identidad visual de la moto */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons name="bicycle-outline" size={20} color="#007bff" />
+            <Ionicons name="bicycle-outline" size={20} color={theme.primary} />
             <Text style={styles.cardTitle}>Datos del Vehículo</Text>
           </View>
 
           <CustomInput label="Apodo / Alias de la moto" placeholder="Ej. La consentida, La negra" value={alias} onChangeText={setAlias} />
-          <CustomInput label="Marca *" placeholder="Ej. Yamaha, Honda, BMW" value={marca} onChangeText={setMarca} />
-          <CustomInput label="Modelo *" placeholder="Ej. MT-07, CB190R, R1250" value={modelo} onChangeText={setModelo} />
+          <CustomInput label="Marca *" placeholder="Ej. Yamaha, Honda, BMW" value={marca} onChangeText={setMarca} error={marcaError} />
+          <CustomInput label="Modelo *" placeholder="Ej. MT-07, CB190R, R1250" value={modelo} onChangeText={setModelo} error={modeloError} />
           <CustomInput label="Cilindrada (cc)" placeholder="Ej. 300, 600, 1000" keyboardType="numeric" value={cilindrada} onChangeText={setCilindrada} />
           <CustomInput label="Año" placeholder="Ej. 2024" keyboardType="numeric" value={anio} onChangeText={setAnio} />
           <CustomInput label="Color" placeholder="Ej. Negro Mate, Rojo" value={color} onChangeText={setColor} />
-          <CustomInput label="Placas" placeholder="Ej. 12ABC3" value={placas} onChangeText={setPlacas} autoCapitalize="characters" />
         </View>
 
         {/* SECCIÓN 2: Estado operativo */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons name="speedometer-outline" size={20} color="#10b981" />
+            <Ionicons name="speedometer-outline" size={20} color={theme.successText} />
             <Text style={styles.cardTitle}>Estado y Combustible</Text>
           </View>
 
@@ -242,7 +270,7 @@ export default function MotoFormScreen({ navigation, route }: any) {
         {/* SECCIÓN 3: Papeles / Seguro */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons name="shield-checkmark-outline" size={20} color="#f59e0b" />
+            <Ionicons name="shield-checkmark-outline" size={20} color={theme.warningText} />
             <Text style={styles.cardTitle}>Seguro de Moto (Opcional)</Text>
           </View>
 
@@ -283,10 +311,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   
   scrollContent: { padding: 20, paddingBottom: 40 },
-  centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background },
-  loadingText: { marginTop: 10, color: theme.textSecondary },
-  
-  card: { backgroundColor: theme.card, padding: 20, borderRadius: 16, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  card: { backgroundColor: theme.card, padding: 20, borderRadius: 16, marginBottom: 20, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.divider, paddingBottom: 10 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginLeft: 10 },
   

@@ -107,7 +107,7 @@ export default function OnboardingScreen({ navigation }: any) {
             [{ nativeEvent: { contentOffset: { x: scrollX } } }],
             { useNativeDriver: false }
           )}
-          scrollEventThrottle={32}
+          scrollEventThrottle={16}
           onViewableItemsChanged={viewableItemsChanged}
           viewabilityConfig={viewConfig}
           ref={slidesRef}
@@ -203,7 +203,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 30,
-    shadowColor: '#007bff',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,

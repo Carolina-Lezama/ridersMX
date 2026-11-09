@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -7,111 +7,103 @@ import {
   FlatList,
   Modal,
   Pressable,
+  Share,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../../../assets/theme/ThemeContext'; 
+import { useFocusEffect } from '@react-navigation/native';
+import { useTheme } from '../../../../assets/theme/ThemeContext';
+import {
+  guardarInsigniaFavorita,
+  obtenerResumenInsignias,
+  type Insignia,
+} from '../../../services/badgeService';
+import { supabase } from '../../../services/supabase';
 
-export interface Insignia {
-  id: string;
-  nombre: string;
-  descripcion: string;
-  requisito: string;
-  icono: keyof typeof Ionicons.glyphMap;
-  color: string;
-  desbloqueada: boolean;
-  fechaDesbloqueo?: string;
-  progresoActual: number;
-  progresoTotal: number;
-}
-
-// Datos de prueba (Luego se sincronizarán con Supabase)
-const INSIGNIAS_MOCK: Insignia[] = [
-  {
-    id: 'badge_1',
-    nombre: 'Primer Paso',
-    descripcion: 'Completaste tu primer Check-in diario.',
-    requisito: 'Alcanza una racha de 1 día',
-    icono: 'footsteps-outline',
-    color: '#3b82f6',
-    desbloqueada: true,
-    fechaDesbloqueo: '10 Sep',
-    progresoActual: 1,
-    progresoTotal: 1,
-  },
-  {
-    id: 'badge_2',
-    nombre: 'Piloto Novato',
-    descripcion: 'Demostraste constancia durante una semana entera.',
-    requisito: 'Alcanza una racha de 7 días continuos',
-    icono: 'flame-outline',
-    color: '#f59e0b',
-    desbloqueada: true,
-    fechaDesbloqueo: '17 Sep',
-    progresoActual: 7,
-    progresoTotal: 7,
-  },
-  {
-    id: 'badge_3',
-    nombre: 'Mecánico Afilado',
-    descripcion: 'Responde correctamente 15 preguntas de mantenimiento.',
-    requisito: 'Acierta 15 preguntas en el Quiz Express',
-    icono: 'build-outline',
-    color: '#10b981',
-    desbloqueada: false,
-    progresoActual: 9,
-    progresoTotal: 15,
-  },
-  {
-    id: 'badge_4',
-    nombre: 'Rider Enfocado',
-    descripcion: 'Mantén el hábito activo durante medio mes.',
-    requisito: 'Alcanza una racha de 15 días continuos',
-    icono: 'speedometer-outline',
-    color: '#8b5cf6',
-    desbloqueada: false,
-    progresoActual: 7,
-    progresoTotal: 15,
-  },
-  {
-    id: 'badge_5',
-    nombre: 'Escudo Helado',
-    descripcion: 'Salvaste tu racha utilizando un comodín.',
-    requisito: 'Utiliza tu primer Comodín de Racha',
-    icono: 'snow-outline',
-    color: '#06b6d4',
-    desbloqueada: true,
-    fechaDesbloqueo: '22 Sep',
-    progresoActual: 1,
-    progresoTotal: 1,
-  },
-  {
-    id: 'badge_6',
-    nombre: 'Leyenda del Asfalto',
-    descripcion: 'Un mes completo de disciplina diaria en tu garaje.',
-    requisito: 'Alcanza una racha de 30 días continuos',
-    icono: 'trophy-outline',
-    color: '#ec4899',
-    desbloqueada: false,
-    progresoActual: 7,
-    progresoTotal: 30,
-  },
-];
-
-export default function InsigniasScreen() {
+export default function InsigniasScreen({ navigation }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
+  const [insignias, setInsignias] = useState<Insignia[]>([]);
+  const [perfilId, setPerfilId] = useState<string | null>(null);
+  const [insigniaFavoritaId, setInsigniaFavoritaId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
   const [insigniaSeleccionada, setInsigniaSeleccionada] = useState<Insignia | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+
+  const cargarInsignias = useCallback(async () => {
+    setLoading(true);
+    setErrorCarga(null);
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      if (!session?.user) throw new Error('Inicia sesión para consultar tus insignias.');
+
+      const resumen = await obtenerResumenInsignias(session.user.id);
+      setPerfilId(session.user.id);
+      setInsignias(resumen.insignias);
+      setInsigniaFavoritaId(resumen.favoritaId);
+    } catch (error) {
+      console.error('Error al cargar insignias:', error);
+      setErrorCarga(error instanceof Error ? error.message : 'No se pudieron cargar las insignias.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void cargarInsignias();
+    }, [cargarInsignias]),
+  );
 
   const abrirDetalle = (insignia: Insignia) => {
     setInsigniaSeleccionada(insignia);
     setModalVisible(true);
   };
 
+  const regresar = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('MainApp');
+    }
+  };
+
   const cerrarDetalle = () => {
     setModalVisible(false);
     setInsigniaSeleccionada(null);
+  };
+
+  const compartirInsignia = async (insignia: Insignia) => {
+    try {
+      await Share.share({
+        message: `¡Desbloqueé la insignia "${insignia.nombre}" en RidersMX! ${insignia.descripcion}`,
+      });
+    } catch (error) {
+      Alert.alert(
+        'No se pudo compartir',
+        error instanceof Error ? error.message : 'Inténtalo de nuevo más tarde.',
+      );
+    }
+  };
+
+  const elegirFavorita = async (insignia: Insignia) => {
+    if (!perfilId || !insignia.desbloqueada) return;
+
+    try {
+      await guardarInsigniaFavorita(perfilId, insignia.id);
+      setInsigniaFavoritaId(insignia.id);
+      cerrarDetalle();
+    } catch (error) {
+      console.error('Error al guardar la insignia favorita:', error);
+      Alert.alert(
+        'No se pudo guardar',
+        error instanceof Error ? error.message : 'Inténtalo de nuevo más tarde.',
+      );
+    }
   };
 
   const renderInsigniaCard = ({ item }: { item: Insignia }) => {
@@ -132,7 +124,7 @@ export default function InsigniasScreen() {
         {/* Ícono de Candado para Bloqueadas */}
         {!item.desbloqueada && (
           <View style={styles.lockBadge}>
-            <Ionicons name="lock-closed" size={12} color="#fff" />
+            <Ionicons name="lock-closed" size={12} color={theme.onPrimary} />
           </View>
         )}
 
@@ -150,7 +142,7 @@ export default function InsigniasScreen() {
           <Ionicons
             name={item.icono}
             size={32}
-            color={item.desbloqueada ? item.color : '#9ca3af'}
+            color={item.desbloqueada ? item.color : theme.iconSecondary}
           />
         </View>
 
@@ -168,7 +160,7 @@ export default function InsigniasScreen() {
         {/* Estado / Progreso */}
         {item.desbloqueada ? (
           <Text style={styles.unlockedText}>
-            Desbloqueada el {item.fechaDesbloqueo}
+            {item.id === insigniaFavoritaId ? 'Tu insignia favorita' : 'Desbloqueada'}
           </Text>
         ) : (
           <View style={styles.progressContainer}>
@@ -193,22 +185,45 @@ export default function InsigniasScreen() {
     <View style={styles.container}>
       {/* Encabezado */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Galería de Logros 🏆</Text>
-        <Text style={styles.headerSubtitle}>
-          Demuestra tu constancia y desbloquea insignias exclusivas.
-        </Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Regresar"
+            onPress={regresar}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color={theme.iconPrimary} />
+          </TouchableOpacity>
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Galería de Logros</Text>
+            <Text style={styles.headerSubtitle}>
+              Demuestra tu constancia y desbloquea insignias exclusivas.
+            </Text>
+          </View>
+        </View>
       </View>
 
-      {/* Grilla de Insignias (2 Columnas) */}
-      <FlatList
-        data={INSIGNIAS_MOCK}
-        keyExtractor={(item) => item.id}
-        renderItem={renderInsigniaCard}
-        numColumns={2}
-        columnWrapperStyle={styles.rowWrapper}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color={theme.primary} style={styles.loading} />
+      ) : errorCarga ? (
+        <View style={styles.errorState}>
+          <Text style={styles.errorText}>{errorCarga}</Text>
+          <TouchableOpacity onPress={() => void cargarInsignias()} style={styles.retryButton}>
+            <Text style={styles.retryText}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={insignias}
+          keyExtractor={(item) => item.id}
+          renderItem={renderInsigniaCard}
+          numColumns={2}
+          columnWrapperStyle={styles.rowWrapper}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={<Text style={styles.errorText}>Aún no hay insignias disponibles.</Text>}
+        />
+      )}
 
       {/* Modal de Detalle */}
       <Modal
@@ -246,7 +261,7 @@ export default function InsigniasScreen() {
                     color={
                       insigniaSeleccionada.desbloqueada
                         ? insigniaSeleccionada.color
-                        : '#9ca3af'
+                        : theme.iconSecondary
                     }
                   />
                 </View>
@@ -263,7 +278,7 @@ export default function InsigniasScreen() {
                     }
                     size={14}
                     color={
-                      insigniaSeleccionada.desbloqueada ? '#10b981' : '#f59e0b'
+                      insigniaSeleccionada.desbloqueada ? theme.successText : theme.warningText
                     }
                   />
                   <Text
@@ -271,14 +286,12 @@ export default function InsigniasScreen() {
                       styles.modalStatusText,
                       {
                         color: insigniaSeleccionada.desbloqueada
-                          ? '#10b981'
-                          : '#f59e0b',
+                          ? theme.successText
+                          : theme.warningText,
                       },
-                    ]}
+                    ]                    }
                   >
-                    {insigniaSeleccionada.desbloqueada
-                      ? `Obtenida el ${insigniaSeleccionada.fechaDesbloqueo}`
-                      : 'En Progreso'}
+                    {insigniaSeleccionada.desbloqueada ? 'Insignia obtenida' : 'En progreso'}
                   </Text>
                 </View>
 
@@ -296,16 +309,31 @@ export default function InsigniasScreen() {
 
                 {/* Botones de Acción */}
                 {insigniaSeleccionada.desbloqueada ? (
-                  <TouchableOpacity
-                    style={[
-                      styles.btnPrimary,
-                      { backgroundColor: theme.primary },
-                    ]}
-                    onPress={() => console.log('Compartir logro')}
-                  >
-                    <Ionicons name="share-social-outline" size={18} color="#fff" />
-                    <Text style={styles.btnPrimaryText}>Compartir Logro</Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity
+                      style={[styles.btnPrimary, { backgroundColor: theme.primary }]}
+                      onPress={() => void compartirInsignia(insigniaSeleccionada)}
+                    >
+                      <Ionicons name="share-social-outline" size={18} color={theme.onPrimary} />
+                      <Text style={styles.btnPrimaryText}>Compartir logro</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.btnSecondary}
+                      disabled={insigniaFavoritaId === insigniaSeleccionada.id}
+                      onPress={() => void elegirFavorita(insigniaSeleccionada)}
+                    >
+                      <Ionicons
+                        name={insigniaFavoritaId === insigniaSeleccionada.id ? 'star' : 'star-outline'}
+                        size={18}
+                        color={theme.primary}
+                      />
+                      <Text style={styles.btnSecondaryText}>
+                        {insigniaFavoritaId === insigniaSeleccionada.id
+                          ? 'Tu insignia favorita'
+                          : 'Elegir como favorita'}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
                 ) : (
                   <TouchableOpacity
                     style={styles.btnDisabled}
@@ -336,6 +364,20 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
     header: {
       marginBottom: 20,
     },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    backButton: {
+      width: 42,
+      height: 42,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 8,
+      borderRadius: 14,
+      backgroundColor: theme.card,
+    },
+    headerText: { flex: 1 },
     headerTitle: {
       fontSize: 26,
       fontWeight: '800',
@@ -346,6 +388,17 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       color: theme.textSecondary,
       marginTop: 4,
     },
+    loading: { marginTop: 48 },
+    errorState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
+    errorText: { color: theme.textSecondary, textAlign: 'center' },
+    retryButton: {
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      marginTop: 14,
+      borderRadius: 12,
+      backgroundColor: theme.primary,
+    },
+    retryText: { color: theme.onPrimary, fontWeight: '700' },
 
     // List & Cards
     listContent: {
@@ -365,8 +418,8 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       borderWidth: 1.5,
     },
     cardUnlocked: {
-      borderColor: '#f59e0b', // Borde destacado dorado
-      shadowColor: '#f59e0b',
+      borderColor: theme.warningText,
+      shadowColor: theme.warningText,
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.15,
       shadowRadius: 6,
@@ -381,7 +434,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       position: 'absolute',
       top: 10,
       right: 10,
-      backgroundColor: '#6b7280',
+      backgroundColor: theme.textSecondary,
       width: 20,
       height: 20,
       borderRadius: 10,
@@ -407,7 +460,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
     unlockedText: {
       fontSize: 11,
       fontWeight: '600',
-      color: '#f59e0b',
+      color: theme.warningText,
       textAlign: 'center',
     },
 
@@ -438,7 +491,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
     // Modal
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.65)',
+      backgroundColor: theme.overlay,
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 24,
@@ -523,10 +576,24 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       borderRadius: 14,
     },
     btnPrimaryText: {
-      color: '#fff',
+      color: theme.onPrimary,
       fontSize: 15,
       fontWeight: '700',
     },
+    btnSecondary: {
+      width: '100%',
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 14,
+      marginTop: 10,
+      borderRadius: 14,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    btnSecondaryText: { color: theme.primary, fontSize: 15, fontWeight: '700' },
     btnDisabled: {
       width: '100%',
       backgroundColor: theme.border,

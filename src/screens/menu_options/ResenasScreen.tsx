@@ -24,19 +24,32 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import emailjs from '@emailjs/react-native';
 
+// Cliente de Supabase (src/services/supabase.ts)
+import { supabase } from '../../services/supabase';
+
 // Tema global (el mismo que usa Configuración)
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import type { Theme } from '../../../assets/theme/theme';
 
 // ─── CONFIGURACIÓN DEL CORREO DE SOPORTE (EmailJS) ───────────────────────────
-// Crea una cuenta en https://www.emailjs.com y pega aquí tus 3 datos (ver instrucciones).
-// El destinatario (riders.mx67@gmail.com) se define en la plantilla de EmailJS.
+
+// Las llaves viven en el archivo .env (que NO se sube a git). Ver .env.example
 const EMAILJS = {
-  serviceId: 'TU_SERVICE_ID',
-  templateId: 'TU_TEMPLATE_ID',
-  publicKey: 'TU_PUBLIC_KEY',
+  serviceId: process.env.EXPO_PUBLIC_EMAILJS_SERVICE_ID ?? '',
+  templateId: process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID ?? '',
+  templateId2: process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID_2 ?? '',
+  publicKey: process.env.EXPO_PUBLIC_EMAILJS_PUBLIC_KEY ?? '',
 };
-const EMAILJS_CONFIGURADO = !Object.values(EMAILJS).some((v) => v.startsWith('TU_'));
+const EMAILJS_CONFIGURADO = Object.values(EMAILJS).every((v) => v.length > 0);
+
+const EMAILJS_ALERTA_TEMPLATE_ID = process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ALERTA_ID_2 ?? '';
+const EMAILJS_ALERTA_CONFIGURADO = !!(EMAILJS.serviceId && EMAILJS.publicKey && EMAILJS_ALERTA_TEMPLATE_ID);
+
+const LIMITE_ELIMINACIONES_DUENO = 2;
+
+const TABLA_PERFILES = 'perfiles';
+
+const TIPO_ENTIDAD_MOTO = 'Moto';
 
 // ─── TIPOS ───────────────────────────────────────────────────────────────────
 
@@ -45,29 +58,26 @@ interface Comentario {
   texto: string;
   puntuacion?: number;
   esPropia?: boolean;
+  deBD?: boolean; 
+  id?: string; 
+  perfilId?: string; 
 }
 
 interface Moto {
   id: string;
   nombre: string;
   marca: string;
-  modelo: number; // año del modelo (2024, 2025...)
+  modelo: number; 
   tipo: string;
-  cilindrada: number; // en cc
-  precio: number; // en MXN
+  cilindrada: number; 
+  precio: number; 
   puntuacion: number;
   descripcion: string;
-  /**
-   * Aquí pones tu imagen. Acepta:
-   *  - una URL:            'https://mi-sitio.com/moto.png'
-   *  - un archivo local:   require('../../assets/motos/rt250.png')
-   * Si la dejas vacía se muestra un ícono de moto como marcador.
-   */
+
   imagen?: ImageSourcePropType | string;
   comentarios: Comentario[];
-  propietario?: string; // quién publicó la moto
-  esPropia?: boolean; // true si la subió el usuario desde el formulario
-}
+  propietario?: string; 
+  esPropia?: boolean; }
 
 type FiltroKey = 'marca' | 'precio' | 'cilindrada' | 'modelo';
 type Filtros = Record<FiltroKey, string | null>;
@@ -84,8 +94,96 @@ type DatosMoto = Pick<
   'nombre' | 'marca' | 'modelo' | 'tipo' | 'cilindrada' | 'precio' | 'descripcion' | 'imagen' | 'propietario'
 >;
 
+// ─── AYUDAS PARA LA BASE DE DATOS ────────────────────────────────────────────
+
+// Bucket de Supabase Storage donde se guardan las fotos de las motos publicadas.
+// ⚠️ Debe existir (público) y permitir subir a la carpeta del usuario: ver el .sql, bloque 2.
+// Si no existe, la moto se publica igual pero SIN foto.
+const BUCKET_MOTOS = 'motos';
+
+/** Convierte una fila de la tabla `motos_catalogo` en una Moto de la pantalla. */
+const filaAMoto = (f: any, uid: string | null): Moto => ({
+  id: String(f.id),
+  nombre: f.nombre ?? '',
+  marca: f.marca ?? '',
+  modelo: Number(f.modelo ?? 0),
+  tipo: f.tipo ?? '',
+  cilindrada: Number(f.cilindrada ?? 0),
+  precio: Number(f.precio ?? 0),
+  puntuacion: 0, // el promedio se calcula con las reseñas
+  descripcion: f.descripcion ?? '',
+  imagen: f.imagen_url ?? undefined,
+  comentarios: [],
+  propietario: f.propietario ?? undefined,
+  esPropia: !!uid && f.perfil_id === uid,
+});
+
+/** Sube la foto elegida (ruta local) al bucket `motos` y devuelve su URL pública, o null si falla. */
+const subirFotoMoto = async (uri: string, perfilId: string): Promise<string | null> => {
+  try {
+    const res = await fetch(uri);
+    const buffer = await res.arrayBuffer();
+    const extUri = (uri.split('?')[0].split('.').pop() ?? '').toLowerCase();
+    const tipoHeader = res.headers.get('content-type') ?? '';
+    const contentType = tipoHeader.startsWith('image/')
+      ? tipoHeader
+      : extUri === 'png'
+      ? 'image/png'
+      : extUri === 'webp'
+      ? 'image/webp'
+      : 'image/jpeg';
+    const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+    // La carpeta es el id del usuario: así lo exige la política del bucket
+    const ruta = `${perfilId}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from(BUCKET_MOTOS).upload(ruta, buffer, { contentType });
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Moto] subida de foto → ruta:', ruta, '| error:', error?.message ?? null);
+    if (error) return null;
+    return supabase.storage.from(BUCKET_MOTOS).getPublicUrl(ruta).data.publicUrl;
+  } catch (e: any) {
+    console.warn('[Moto] no se pudo subir la foto:', e?.message);
+    return null;
+  }
+};
+
+/** Borra una foto del bucket `motos` a partir de su URL pública. Si la foto es externa, no hace nada. */
+const borrarFotoMoto = async (url: string) => {
+  try {
+    const marcador = `/storage/v1/object/public/${BUCKET_MOTOS}/`;
+    const i = url.indexOf(marcador);
+    if (i === -1) return; // foto de otra página: no está en nuestro bucket
+    const ruta = decodeURIComponent(url.slice(i + marcador.length).split('?')[0]);
+    const { error } = await supabase.storage.from(BUCKET_MOTOS).remove([ruta]);
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Moto] borrar foto →', ruta, '| error:', error?.message ?? null);
+  } catch (e: any) {
+    console.warn('[Moto] no se pudo borrar la foto:', e?.message);
+  }
+};
+
+// ─── NOTIFICACIÓN FLOTANTE (reemplaza los cuadros del navegador) ─────────────
+
+interface AccionAviso {
+  texto: string;
+  onPress: () => void;
+  tipo?: 'primario' | 'secundario' | 'peligro' | 'neutro';
+}
+
+interface AvisoData {
+  icono: React.ComponentProps<typeof Ionicons>['name'];
+  tono: 'exito' | 'error' | 'alerta' | 'info';
+  titulo: string;
+  mensaje: string;
+  moto?: Moto; // vista previa de una moto dentro del aviso
+  acciones?: AccionAviso[]; // con botones el aviso espera una decisión; sin botones se cierra solo
+  alCerrar?: () => void; // botón "atrás" de Android cuando hay botones
+}
+
 // ─── DATOS DE EJEMPLO ────────────────────────────────────────────────────────
 // Precios y textos son de ejemplo: cámbialos por los reales de tu proyecto.
+//
+// Estas motos son locales (semilla). Las que publica la gente se guardan en la tabla
+// `motos_catalogo` y se muestran ANTES de estas en la lista.
 
 const MOTOS: Moto[] = [
   {
@@ -153,7 +251,7 @@ const MOTOS: Moto[] = [
     puntuacion: 4.0,
     descripcion:
       'La Italika RC200 Gris es una motocicleta de estilo chopper cruiser, con bastidor de baja cilindrada, diseñada principalmente para quienes buscan uno. Cuenta con un motor de 200 cc.',
-    imagen: 'https://images.unsplash.com/photo-1609630875176-b90c7a87265c?w=500',
+    imagen: 'https://elektra.vtexassets.com/arquivos/ids/33579086/34005722-d1.jpg?v=639264376627000000',
     comentarios: [
       {
         usuario: 'Usuario 1',
@@ -180,7 +278,7 @@ const MOTOS: Moto[] = [
     puntuacion: 4.0,
     descripcion:
       'Moto urbana de 150 cc pensada para el día a día: ligera, fácil de maniobrar y con un consumo de gasolina muy bajo. Una buena primera moto.',
-    imagen: undefined, // ← pon aquí tu imagen
+    imagen: 'https://comotos.co/wp-content/uploads/2021/11/Italika-DM150-1024x1024.jpg', // ← pon aquí tu imagen
     comentarios: [
       {
         usuario: 'Usuario 1',
@@ -200,132 +298,12 @@ const MOTOS: Moto[] = [
     puntuacion: 3.5,
     descripcion:
       'Moto de trabajo resistente, con suspensión reforzada y espacio para carga. Ideal para repartos y trayectos diarios largos.',
-    imagen: undefined, // ← pon aquí tu imagen
+    imagen: 'https://http2.mlstatic.com/D_Q_NP_2X_686522-MLM116127930218_092026-T.webp', // ← pon aquí tu imagen
     comentarios: [
       {
         usuario: 'Usuario 1',
         texto: 'Aguanta bien la carga y no me ha dado problemas en el trabajo diario. Es algo tosca a velocidades altas.',
         puntuacion: 3,
-      },
-    ],
-  },
-  {
-    id: '6',
-    nombre: 'Italika 250Z Naranja',
-    marca: 'Italika',
-    modelo: 2025,
-    tipo: 'Naked',
-    cilindrada: 250,
-    precio: 36999,
-    puntuacion: 4.0,
-    descripcion:
-      'Naked de 250 cc con posición de manejo erguida, faro LED y buena respuesta en aceleración. Cómoda tanto en ciudad como en salidas cortas a carretera.',
-    imagen: undefined, // ← pon aquí tu imagen
-    comentarios: [
-      {
-        usuario: 'Usuario 1',
-        texto: 'Se siente firme y tiene buen empuje. La posición de manejo es muy cómoda.',
-        puntuacion: 4,
-      },
-    ],
-  },
-  {
-    id: '7',
-    nombre: 'Honda CB190R',
-    marca: 'Honda',
-    modelo: 2025,
-    tipo: 'Naked',
-    cilindrada: 190,
-    precio: 49900,
-    puntuacion: 4.5,
-    descripcion:
-      'Naked ligera de estilo agresivo, con manejo ágil y un motor suave que rinde bien en ciudad. Destaca por el respaldo y la confiabilidad de la marca.',
-    imagen: undefined, // ← pon aquí tu imagen
-    comentarios: [
-      {
-        usuario: 'Usuario 1',
-        texto: 'Suave, confiable y muy bonita. Se nota la calidad de Honda en los acabados.',
-        puntuacion: 5,
-      },
-    ],
-  },
-  {
-    id: '8',
-    nombre: 'Honda CRF250L',
-    marca: 'Honda',
-    modelo: 2025,
-    tipo: 'Doble propósito',
-    cilindrada: 250,
-    precio: 99900,
-    puntuacion: 4.5,
-    descripcion:
-      'Doble propósito con suspensión de largo recorrido y buena altura al suelo. Lista para brecha, terracería y también para el asfalto diario.',
-    imagen: undefined, // ← pon aquí tu imagen
-    comentarios: [
-      {
-        usuario: 'Usuario 1',
-        texto: 'Va igual de bien en brecha que en ciudad. La suspensión hace toda la diferencia.',
-        puntuacion: 5,
-      },
-    ],
-  },
-  {
-    id: '9',
-    nombre: 'Yamaha FZ 25',
-    marca: 'Yamaha',
-    modelo: 2025,
-    tipo: 'Naked',
-    cilindrada: 250,
-    precio: 69900,
-    puntuacion: 4.5,
-    descripcion:
-      'Naked de 250 cc con motor eficiente y diseño musculoso. Combina buen consumo con potencia suficiente para carretera.',
-    imagen: undefined, // ← pon aquí tu imagen
-    comentarios: [
-      {
-        usuario: 'Usuario 1',
-        texto: 'Rinde mucho por litro y en carretera se comporta muy estable.',
-        puntuacion: 5,
-      },
-    ],
-  },
-  {
-    id: '10',
-    nombre: 'Yamaha MT-03',
-    marca: 'Yamaha',
-    modelo: 2026,
-    tipo: 'Naked',
-    cilindrada: 300,
-    precio: 109900,
-    puntuacion: 5.0,
-    descripcion:
-      'Naked de media cilindrada con motor bicilíndrico, aceleración inmediata y chasis muy preciso. Una de las favoritas para dar el salto a más potencia.',
-    imagen: undefined, // ← pon aquí tu imagen
-    comentarios: [
-      {
-        usuario: 'Usuario 1',
-        texto: 'Divertidísima. El motor jala desde abajo y el chasis te da mucha confianza.',
-        puntuacion: 5,
-      },
-    ],
-  },
-  {
-    id: '11',
-    nombre: 'Bajaj Pulsar NS200',
-    marca: 'Bajaj',
-    modelo: 2024,
-    tipo: 'Naked',
-    cilindrada: 200,
-    precio: 56900,
-    puntuacion: 4.0,
-    descripcion:
-      'Naked deportiva de 200 cc con buen aceleración y frenos de disco. Ofrece mucho desempeño por su precio.',
-    imagen: undefined, // ← pon aquí tu imagen
-    comentarios: [
-      {
-        usuario: 'Usuario 1',
-        texto: 'Muy buena relación precio-desempeño. Acelera bien y frena mejor.',
-        puntuacion: 4,
       },
     ],
   },
@@ -340,7 +318,7 @@ const MOTOS: Moto[] = [
     puntuacion: 4.5,
     descripcion:
       'Deportiva bicilíndrica de 400 cc con carenado completo y postura racing. Equilibrio ideal entre pista, carretera y uso diario.',
-    imagen: undefined, // ← pon aquí tu imagen
+    imagen: 'https://kawasakicapital.com.mx/cdn/shop/files/Ninja-zx4RR-abs_2026-04.jpg?v=1778895431&width=533', // ← pon aquí tu imagen
     comentarios: [
       {
         usuario: 'Usuario 1',
@@ -360,7 +338,7 @@ const MOTOS: Moto[] = [
     puntuacion: 4.5,
     descripcion:
       'Clásica de estilo retro con motor monocilíndrico de 350 cc. Su sonido y su torque a bajas revoluciones la hacen perfecta para paseos tranquilos.',
-    imagen: undefined, // ← pon aquí tu imagen
+    imagen: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQCx6RrNdFXS_H3gBVrZpVHPDdgkM2ukoNgqMNv5sGowXDAZIzrjBy1RJA&s=10', // ← pon aquí tu imagen
     comentarios: [
       {
         usuario: 'Usuario 1',
@@ -380,7 +358,7 @@ const MOTOS: Moto[] = [
     puntuacion: 4.0,
     descripcion:
       'Naked compacta y muy ágil, con carácter deportivo y estructura ligera. Perfecta para moverse rápido entre el tráfico.',
-    imagen: undefined, // ← pon aquí tu imagen
+    imagen: 'https://www.hiperbikes.com.mx/wp-content/uploads/2019/02/KTM-DUKE-200-2025.jpg', // ← pon aquí tu imagen
     comentarios: [
       {
         usuario: 'Usuario 1',
@@ -400,7 +378,7 @@ const MOTOS: Moto[] = [
     puntuacion: 3.5,
     descripcion:
       'Urbana de 250 cc con look retro-moderno y precio accesible. Una opción con estilo para quienes quieren más cilindrada sin gastar de más.',
-    imagen: undefined, // ← pon aquí tu imagen
+    imagen: 'https://www.vento.com/wp-content/uploads/ROCKETMAN-RACING-250-16.jpg', // ← pon aquí tu imagen
     comentarios: [
       {
         usuario: 'Usuario 1',
@@ -475,6 +453,31 @@ const normalizar = (s: string) =>
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
+// ─── DETECCIÓN DE MOTOS REPETIDAS ────────────────────────────────────────────
+
+/** Deja solo letras y números: "FT-150", "ft 150" y "FT150" quedan iguales. */
+const soloAlfanumerico = (t: string) => normalizar(t).replace(/[^a-z0-9]/g, '');
+
+/** Nombre comparable: sin símbolos y sin repetir la marca ("Italika FT150" = "FT150" de Italika). */
+const claveNombre = (m: { marca: string; nombre: string }) => {
+  const marca = soloAlfanumerico(m.marca);
+  const nombre = soloAlfanumerico(m.nombre);
+  return marca ? nombre.split(marca).join('') : nombre;
+};
+
+type DatosComparables = { marca: string; nombre: string; modelo: number; cilindrada: number };
+
+/**
+ * Dos motos son "la misma" si coinciden marca, nombre, año y cilindrada.
+ * Una versión distinta (ej. carburada vs inyección) se distingue escribiéndolo en el nombre:
+ * "FT150 Carburada" y "FT150 Inyección" ya NO se consideran repetidas.
+ */
+const esMismaMoto = (a: DatosComparables, b: DatosComparables) =>
+  soloAlfanumerico(a.marca) === soloAlfanumerico(b.marca) &&
+  claveNombre(a) === claveNombre(b) &&
+  Number(a.modelo) === Number(b.modelo) &&
+  Number(a.cilindrada) === Number(b.cilindrada);
+
 function cumpleFiltro(m: Moto, key: FiltroKey, valor: string): boolean {
   switch (key) {
     case 'marca':
@@ -507,9 +510,10 @@ function filtrar(motos: Moto[], filtros: Filtros, busqueda: string): Moto[] {
 
 /** La calificación de la moto se actualiza cuando el usuario publica su reseña. */
 function calcularPuntuacion(moto: Moto, comentarios: Comentario[]): number {
-  const propias = comentarios.filter((c) => c.esPropia && c.puntuacion);
+  // Cuentan las reseñas guardadas en la BD (de cualquier usuario) y las propias recién publicadas
+  const propias = comentarios.filter((c) => (c.esPropia || c.deBD) && c.puntuacion);
   if (propias.length === 0) return moto.puntuacion;
-  const base = moto.comentarios.length; // reseñas originales (0 en motos nuevas)
+  const base = moto.comentarios.length; // reseñas de ejemplo originales (0 en motos nuevas)
   const suma = propias.reduce((acc, c) => acc + (c.puntuacion ?? 0), 0);
   return Math.round(((moto.puntuacion * base + suma) / (base + propias.length)) * 10) / 10;
 }
@@ -664,7 +668,7 @@ function SliderPrecio({
           backgroundColor: C.surface,
           borderWidth: 3,
           borderColor: C.accent,
-          shadowColor: '#000',
+          shadowColor: C.shadow,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.2,
           shadowRadius: 4,
@@ -832,12 +836,12 @@ function BarraFiltros({
               onPress={() => setAbierto(estaAbierto ? null : f.key)}
               style={[styles.chip, estaAbierto && styles.chipAbierto, activo && styles.chipActivo]}
             >
-              <Ionicons name={f.icon} size={15} color={activo ? '#FFFFFF' : C.textSec} />
+              <Ionicons name={f.icon} size={15} color={activo ? C.onPrimary : C.textSec} />
               <Text style={[styles.chipText, activo && styles.chipTextActivo]}>{etiqueta}</Text>
               <Ionicons
                 name={estaAbierto ? 'chevron-up' : 'chevron-down'}
                 size={14}
-                color={activo ? '#FFFFFF' : C.textMuted}
+                color={activo ? C.onPrimary : C.textMuted}
               />
             </TouchableOpacity>
           );
@@ -1069,30 +1073,58 @@ function DetalleResena({
   moto,
   onBack,
   onPublicar,
+  onEditar,
+  onEliminar,
+  onEditarResena,
+  onEliminarResena,
+  onModerarResena,
+  eliminadasPorDueno = 0,
 }: {
   moto: Moto;
   onBack: () => void;
-  onPublicar: (comentario: Comentario) => void;
+  // Devuelve true si la reseña se guardó (entonces el formulario se cierra)
+  onPublicar: (comentario: Comentario) => Promise<boolean>;
+  // Solo se pasan cuando la moto es del usuario que la está viendo
+  onEditar?: () => void;
+  onEliminar?: () => void;
+  // Editar la reseña propia (devuelve true si se guardó)
+  onEditarResena: (resenaId: string, cambios: { texto: string; puntuacion: number }) => Promise<boolean>;
+  // Eliminar la reseña propia
+  onEliminarResena: (resena: Comentario) => void;
+  // Solo para el dueño de la moto: eliminar la opinión de otra persona (con límite)
+  onModerarResena?: (resena: Comentario) => void;
+  eliminadasPorDueno?: number;
 }) {
   const { C, styles } = useResenasTheme();
   const yaResene = moto.comentarios.some((c) => c.esPropia);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [textoResena, setTextoResena] = useState('');
   const [estrellaSeleccionada, setEstrellaSeleccionada] = useState(0);
-  const [nombreUsuario, setNombreUsuario] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [editandoId, setEditandoId] = useState<string | null>(null); // reseña propia que se está editando
+  const scrollRef = useRef<ScrollView>(null);
 
   const limpiarFormulario = () => {
     setMostrarFormulario(false);
     setTextoResena('');
-    setNombreUsuario('');
     setEstrellaSeleccionada(0);
+    setEditandoId(null);
   };
 
-  const enviarResena = () => {
-    if (!nombreUsuario.trim()) {
-      Alert.alert('Falta tu nombre', 'Escribe tu nombre o usuario para publicar la reseña.');
-      return;
-    }
+  // Carga la reseña propia en el formulario y baja hasta él
+  const iniciarEdicionResena = (c: Comentario) => {
+    if (!c.id) return;
+    setEditandoId(c.id);
+    setTextoResena(c.texto);
+    setEstrellaSeleccionada(c.puntuacion ?? 0);
+    setMostrarFormulario(true);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+  };
+
+  const hayOpinionesModerables = !!onModerarResena && moto.comentarios.some((c) => c.deBD && !!c.id && !c.esPropia);
+
+  const enviarResena = async () => {
+    if (enviando) return;
     if (estrellaSeleccionada === 0) {
       Alert.alert('Falta la calificación', 'Elige de 1 a 5 estrellas para calificar la moto.');
       return;
@@ -1101,13 +1133,18 @@ function DetalleResena({
       Alert.alert('Falta tu comentario', 'Cuéntanos tu experiencia antes de publicar.');
       return;
     }
-    onPublicar({
-      usuario: nombreUsuario.trim(),
-      texto: textoResena.trim(),
-      puntuacion: estrellaSeleccionada,
-      esPropia: true,
-    });
-    limpiarFormulario();
+    setEnviando(true);
+    // El nombre que se muestra sale de `perfiles.username`; la pantalla principal lo completa.
+    const guardada = editandoId
+      ? await onEditarResena(editandoId, { texto: textoResena.trim(), puntuacion: estrellaSeleccionada })
+      : await onPublicar({
+          usuario: '',
+          texto: textoResena.trim(),
+          puntuacion: estrellaSeleccionada,
+          esPropia: true,
+        });
+    setEnviando(false);
+    if (guardada) limpiarFormulario();
   };
 
   const specs: { icon: IconName; label: string; valor: string }[] = [
@@ -1135,7 +1172,7 @@ function DetalleResena({
         <BotonTema />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <ImagenMoto imagen={moto.imagen} style={styles.imagenDetalle} />
 
         <View style={styles.detalleContent}>
@@ -1146,6 +1183,28 @@ function DetalleResena({
             <Text style={styles.detallePropietario}>
               Publicada por {moto.propietario ?? 'ti'}
             </Text>
+          )}
+
+          {/* Solo el dueño de la publicación ve estos botones */}
+          {moto.esPropia && (onEditar || onEliminar) && (
+            <View style={styles.accionesPropias}>
+              {onEditar && (
+                <TouchableOpacity style={styles.btnAccionPropia} onPress={onEditar} activeOpacity={0.85}>
+                  <Ionicons name="create-outline" size={18} color={C.textPri} />
+                  <Text style={styles.btnAccionPropiaText}>Editar</Text>
+                </TouchableOpacity>
+              )}
+              {onEliminar && (
+                <TouchableOpacity
+                  style={[styles.btnAccionPropia, styles.btnAccionPeligro]}
+                  onPress={onEliminar}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="trash-outline" size={18} color={C.danger} />
+                  <Text style={[styles.btnAccionPropiaText, { color: C.danger }]}>Eliminar</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
 
           {/* Calificación */}
@@ -1185,9 +1244,19 @@ function DetalleResena({
           {moto.comentarios.length === 0 && (
             <Text style={styles.comentariosVacio}>Todavía no hay opiniones. ¡Sé la primera persona en escribir una!</Text>
           )}
+          {hayOpinionesModerables && (
+            <View style={styles.avisoModeracion}>
+              <Ionicons name="shield-checkmark-outline" size={18} color={C.textSec} />
+              <Text style={styles.avisoModeracionText}>
+                Eres el dueño de esta publicación: puedes eliminar hasta {LIMITE_ELIMINACIONES_DUENO} opiniones de otras
+                personas ({Math.min(eliminadasPorDueno, LIMITE_ELIMINACIONES_DUENO)} usadas). Pasar ese límite se reporta
+                al equipo como actividad sospechosa.
+              </Text>
+            </View>
+          )}
           {moto.comentarios.map((c, idx) => (
             <View
-              key={idx}
+              key={c.id ?? idx}
               style={[styles.comentarioCard, c.esPropia && styles.comentarioPropio]}
             >
               <View style={styles.comentarioHeader}>
@@ -1201,6 +1270,42 @@ function DetalleResena({
                 {c.puntuacion ? <Estrellas puntuacion={c.puntuacion} size={14} /> : null}
               </View>
               <Text style={styles.comentarioTexto}>{c.texto}</Text>
+
+              {/* Tu propia reseña: editar o eliminar */}
+              {c.esPropia && c.deBD && !!c.id && (
+                <View style={styles.comentarioAcciones}>
+                  <TouchableOpacity
+                    style={styles.btnComentarioAccion}
+                    onPress={() => iniciarEdicionResena(c)}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="create-outline" size={15} color={C.textPri} />
+                    <Text style={styles.btnComentarioAccionText}>Editar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.btnComentarioAccion, styles.btnComentarioAccionPeligro]}
+                    onPress={() => onEliminarResena(c)}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="trash-outline" size={15} color={C.danger} />
+                    <Text style={[styles.btnComentarioAccionText, { color: C.danger }]}>Eliminar</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Dueño de la moto: eliminar la opinión de otra persona (con límite) */}
+              {onModerarResena && c.deBD && !!c.id && !c.esPropia && (
+                <View style={styles.comentarioAcciones}>
+                  <TouchableOpacity
+                    style={[styles.btnComentarioAccion, styles.btnComentarioAccionPeligro]}
+                    onPress={() => onModerarResena(c)}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="trash-outline" size={15} color={C.danger} />
+                    <Text style={[styles.btnComentarioAccionText, { color: C.danger }]}>Eliminar opinión</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           ))}
 
@@ -1211,23 +1316,14 @@ function DetalleResena({
               onPress={() => setMostrarFormulario(true)}
               activeOpacity={0.85}
             >
-              <Ionicons name="create-outline" size={18} color="#FFFFFF" />
+              <Ionicons name="create-outline" size={18} color={C.onPrimary} />
               <Text style={styles.btnPrimarioText}>Escribir una reseña</Text>
             </TouchableOpacity>
           )}
 
-          {!yaResene && mostrarFormulario && (
+          {(!yaResene || !!editandoId) && mostrarFormulario && (
             <View style={styles.formularioResena}>
-              <Text style={styles.formularioTitulo}>Tu reseña</Text>
-
-              <Text style={styles.formularioLabel}>Tu nombre o usuario</Text>
-              <TextInput
-                style={styles.formularioInput}
-                placeholder="Ej. Carlos G."
-                placeholderTextColor={C.textMuted}
-                value={nombreUsuario}
-                onChangeText={setNombreUsuario}
-              />
+              <Text style={styles.formularioTitulo}>{editandoId ? 'Editar tu reseña' : 'Tu reseña'}</Text>
 
               <Text style={styles.formularioLabel}>Calificación</Text>
               <CalificacionInteractiva valor={estrellaSeleccionada} onChange={setEstrellaSeleccionada} />
@@ -1248,14 +1344,21 @@ function DetalleResena({
                 <TouchableOpacity style={styles.btnCancelar} onPress={limpiarFormulario}>
                   <Text style={styles.btnCancelarText}>Cancelar</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.btnEnviar} onPress={enviarResena} activeOpacity={0.85}>
-                  <Text style={styles.btnEnviarText}>Publicar reseña</Text>
+                <TouchableOpacity
+                  style={[styles.btnEnviar, enviando && { opacity: 0.6 }]}
+                  onPress={enviarResena}
+                  disabled={enviando}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.btnEnviarText}>
+                    {enviando ? (editandoId ? 'Guardando…' : 'Publicando…') : editandoId ? 'Guardar cambios' : 'Publicar reseña'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
 
-          {yaResene && (
+          {yaResene && !editandoId && (
             <View style={styles.yaReseneBadge}>
               <Ionicons name="checkmark-circle" size={18} color={C.success} />
               <Text style={styles.yaReseneText}>Ya escribiste una reseña para esta moto</Text>
@@ -1348,34 +1451,43 @@ function InputNumerico({
 
 function FormularioMoto({
   marcas,
+  inicial,
   onBack,
   onPublicar,
   sucioRef,
 }: {
   marcas: string[];
+  inicial?: Moto; // si viene, el formulario edita esa moto en lugar de crear una nueva
   onBack: () => void;
-  onPublicar: (datos: DatosMoto) => void;
+  // Guarda la moto en la BD; el formulario se cierra desde la pantalla principal si todo sale bien
+  onPublicar: (datos: DatosMoto) => Promise<void>;
   sucioRef: { current: boolean };
 }) {
   const { C, styles } = useResenasTheme();
   const scrollRef = useRef<ScrollView>(null);
   const posiciones = useRef<Partial<Record<CampoForm, number>>>({});
 
-  const [foto, setFoto] = useState<string | null>(null);
-  const [nombre, setNombre] = useState('');
-  const [marca, setMarca] = useState('');
-  const [modelo, setModelo] = useState('');
-  const [tipo, setTipo] = useState<string | null>(null);
-  const [cilindrada, setCilindrada] = useState('');
-  const [precio, setPrecio] = useState('');
-  const [descripcion, setDescripcion] = useState('');
-  const [propietario, setPropietario] = useState('');
+  const [foto, setFoto] = useState<string | null>(typeof inicial?.imagen === 'string' ? inicial.imagen : null);
+  const [nombre, setNombre] = useState(inicial?.nombre ?? '');
+  const [marca, setMarca] = useState(inicial?.marca ?? '');
+  const [modelo, setModelo] = useState(inicial ? String(inicial.modelo) : '');
+  const [tipo, setTipo] = useState<string | null>(inicial?.tipo || null);
+  const [cilindrada, setCilindrada] = useState(inicial ? String(inicial.cilindrada) : '');
+  const [precio, setPrecio] = useState(inicial ? String(inicial.precio) : '');
+  const [descripcion, setDescripcion] = useState(inicial?.descripcion ?? '');
+  const [propietario, setPropietario] = useState(inicial?.propietario ?? '');
   const [errores, setErrores] = useState<Errores>({});
+  const [publicando, setPublicando] = useState(false);
 
   const anioMaximo = new Date().getFullYear() + 1;
 
   // Avisa a la pantalla principal si hay datos escritos (para confirmar antes de salir)
-  const sucio = !!(foto || nombre || marca || modelo || tipo || cilindrada || precio || descripcion || propietario);
+  // "Sucio" = hay cambios respecto a como se abrió el formulario (vacío al crear, la moto al editar)
+  const valoresIniciales = useRef(
+    JSON.stringify([foto, nombre, marca, modelo, tipo, cilindrada, precio, descripcion, propietario])
+  ).current;
+  const sucio =
+    JSON.stringify([foto, nombre, marca, modelo, tipo, cilindrada, precio, descripcion, propietario]) !== valoresIniciales;
   useEffect(() => {
     sucioRef.current = sucio;
   }, [sucio, sucioRef]);
@@ -1430,7 +1542,8 @@ function FormularioMoto({
   };
 
   // ── Publicar ──
-  const publicar = () => {
+  const publicar = async () => {
+    if (publicando) return;
     const e: Errores = {};
     const nombreLimpio = nombre.trim();
     const marcaLimpia = marca.trim();
@@ -1456,17 +1569,23 @@ function FormularioMoto({
     // Si la marca ya existe (aunque la escriban en minúsculas) usamos la escritura original
     const marcaExistente = marcas.find((m) => normalizar(m) === normalizar(marcaLimpia));
 
-    onPublicar({
-      nombre: nombreLimpio,
-      marca: marcaExistente ?? marcaLimpia,
-      modelo: anio,
-      tipo: tipo as string,
-      cilindrada: cc,
-      precio: precioNum,
-      descripcion: descripcion.trim(),
-      imagen: foto ?? undefined,
-      propietario: propietario.trim() || undefined,
-    });
+    setPublicando(true);
+    try {
+      await onPublicar({
+        nombre: nombreLimpio,
+        marca: marcaExistente ?? marcaLimpia,
+        modelo: anio,
+        tipo: tipo as string,
+        cilindrada: cc,
+        precio: precioNum,
+        descripcion: descripcion.trim(),
+        // `foto` es una ruta local: la pantalla principal la sube al bucket `motos` y guarda la URL
+        imagen: foto ?? undefined,
+        propietario: propietario.trim() || undefined,
+      });
+    } finally {
+      setPublicando(false);
+    }
   };
 
   return (
@@ -1478,7 +1597,7 @@ function FormularioMoto({
         <TouchableOpacity onPress={onBack} style={styles.iconBtn} accessibilityLabel="Volver a la lista">
           <Ionicons name="arrow-back" size={22} color={C.textPri} />
         </TouchableOpacity>
-        <Text style={styles.headerTitulo}>Publicar mi moto</Text>
+        <Text style={styles.headerTitulo}>{inicial ? 'Editar mi moto' : 'Publicar mi moto'}</Text>
         <BotonTema />
       </View>
 
@@ -1498,7 +1617,7 @@ function FormularioMoto({
             <>
               <Image source={{ uri: foto }} style={styles.fotoPreview} resizeMode="cover" />
               <TouchableOpacity style={styles.fotoQuitar} onPress={() => setFoto(null)} accessibilityLabel="Quitar foto">
-                <Ionicons name="close" size={18} color="#FFFFFF" />
+                <Ionicons name="close" size={18} color={C.onPrimary} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.fotoCambiar} onPress={elegirFoto} activeOpacity={0.85}>
                 <Ionicons name="camera-outline" size={16} color={C.textPri} />
@@ -1648,9 +1767,16 @@ function FormularioMoto({
           />
         </Campo>
 
-        <TouchableOpacity style={styles.btnPrimario} onPress={publicar} activeOpacity={0.85}>
-          <Ionicons name="cloud-upload-outline" size={18} color="#FFFFFF" />
-          <Text style={styles.btnPrimarioText}>Publicar moto</Text>
+        <TouchableOpacity
+          style={[styles.btnPrimario, publicando && { opacity: 0.6 }]}
+          onPress={publicar}
+          disabled={publicando}
+          activeOpacity={0.85}
+        >
+          <Ionicons name={inicial ? 'save-outline' : 'cloud-upload-outline'} size={18} color={C.onPrimary} />
+          <Text style={styles.btnPrimarioText}>
+            {publicando ? (inicial ? 'Guardando…' : 'Publicando…') : inicial ? 'Guardar cambios' : 'Publicar moto'}
+          </Text>
         </TouchableOpacity>
 
         <View style={{ height: 30 }} />
@@ -1797,7 +1923,7 @@ function ModalProblema({
                 disabled={enviando}
               >
                 {enviando ? (
-                  <ActivityIndicator color="#FFFFFF" />
+                  <ActivityIndicator color={C.onPrimary} />
                 ) : (
                   <Text style={styles.btnEnviarText}>Enviar reporte</Text>
                 )}
@@ -1825,9 +1951,9 @@ function AvisoToast({
   useEffect(() => {
     if (!aviso) return;
     opacidad.setValue(0);
-    Animated.timing(opacidad, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+    Animated.timing(opacidad, { toValue: 1, duration: 220, useNativeDriver: Platform.OS !== 'web' }).start();
     const t = setTimeout(() => {
-      Animated.timing(opacidad, { toValue: 0, duration: 220, useNativeDriver: true }).start(onHide);
+      Animated.timing(opacidad, { toValue: 0, duration: 220, useNativeDriver: Platform.OS !== 'web' }).start(onHide);
     }, 4000);
     return () => clearTimeout(t);
   }, [aviso]);
@@ -1836,10 +1962,9 @@ function AvisoToast({
   const ok = aviso.tipo === 'ok';
   return (
     <Animated.View
-      pointerEvents="none"
       style={[
         styles.toast,
-        { opacity: opacidad, backgroundColor: ok ? C.successBg : C.dangerSoft, borderColor: ok ? C.success : C.danger },
+        { pointerEvents: 'none', opacity: opacidad, backgroundColor: ok ? C.successBg : C.dangerSoft, borderColor: ok ? C.success : C.danger },
       ]}
     >
       <Ionicons name={ok ? 'checkmark-circle' : 'close-circle'} size={22} color={ok ? C.success : C.danger} />
@@ -2091,7 +2216,7 @@ function ListaResenas({
           activeOpacity={0.9}
           accessibilityLabel="Publicar mi moto"
         >
-          <Ionicons name="add" size={22} color="#FFFFFF" />
+          <Ionicons name="add" size={22} color={C.onPrimary} />
           <Text style={styles.fabText}>Publicar mi moto</Text>
         </TouchableOpacity>
       )}
@@ -2117,6 +2242,8 @@ export default function ResenasScreen({ navigation }: any) {
   const [catalogo, setCatalogo] = useState<Moto[]>(MOTOS);
   const [motoId, setMotoId] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [motoEditandoId, setMotoEditandoId] = useState<string | null>(null); // moto que se está editando
+  const [aviso, setAviso] = useState<AvisoData | null>(null); // notificación flotante
   const formularioSucio = useRef(false); // el formulario avisa aquí si tiene datos sin publicar
 
   // Las reseñas viven aquí para que no se pierdan al ir y venir entre vistas
@@ -2127,13 +2254,110 @@ export default function ResenasScreen({ navigation }: any) {
     }, {})
   );
 
+  // Reseñas guardadas en la tabla `resenas` (de todos los usuarios), agrupadas por moto
+  const [resenasBD, setResenasBD] = useState<Record<string, Comentario[]>>({});
+  const [usuarioActual, setUsuarioActual] = useState<{ id: string; username: string } | null>(null);
+  // Cuántas opiniones ajenas ha eliminado el usuario (como dueño) en cada una de sus motos
+  const [eliminadasPorMoto, setEliminadasPorMoto] = useState<Record<string, number>>({});
+
+  // Carga el usuario logueado y todas las reseñas de motos al abrir la pantalla
+  useEffect(() => {
+    let activo = true;
+    (async () => {
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const uid: string | null = auth?.user?.id ?? null;
+
+        if (uid) {
+          const { data: perfil } = await supabase.from(TABLA_PERFILES).select('username').eq('id', uid).maybeSingle();
+          if (activo) setUsuarioActual({ id: uid, username: perfil?.username ?? 'Tú' });
+        }
+
+        // Catálogo: motos publicadas por usuarios (tabla `motos_catalogo`), más nuevas primero
+        const { data: filasMotos, error: errorMotos } = await supabase
+          .from('motos_catalogo')
+          .select('*')
+          .order('created_at', { ascending: false });
+        // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+        console.log('[Catálogo] motos leídas:', filasMotos?.length, '| error:', errorMotos?.message ?? null);
+        if (!errorMotos && filasMotos && activo) {
+          setCatalogo([...filasMotos.map((f: any) => filaAMoto(f, uid)), ...MOTOS]);
+        }
+
+        // Cuántas opiniones ajenas ya eliminó este usuario en sus motos (tabla `resenas_eliminadas`)
+        if (uid) {
+          const { data: filasElim, error: errorElim } = await supabase
+            .from('resenas_eliminadas')
+            .select('moto_id')
+            .eq('propietario_id', uid)
+            .eq('bloqueada', false);
+          // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+          console.log('[Moderación] eliminadas leídas:', filasElim?.length, '| error:', errorElim?.message ?? null);
+          if (!errorElim && filasElim && activo) {
+            const conteo: Record<string, number> = {};
+            filasElim.forEach((f: any) => {
+              conteo[f.moto_id] = (conteo[f.moto_id] ?? 0) + 1;
+            });
+            setEliminadasPorMoto(conteo);
+          }
+        }
+
+        // Tabla `resenas`: una fila por reseña. La moto se identifica con entidad_evaluada (id de la moto).
+        const { data: filas, error } = await supabase
+          .from('resenas')
+          .select('id, perfil_id, entidad_evaluada, calificacion, comentario, created_at')
+          .eq('tipo_entidad', TIPO_ENTIDAD_MOTO)
+          .order('created_at', { ascending: true });
+        // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+        console.log('[Reseñas] usuario logueado:', uid);
+        console.log('[Reseñas] filas leídas:', filas?.length, '| error:', error);
+
+        if (error || !filas) {
+          console.warn('No se pudieron cargar las reseñas:', error?.message);
+          return;
+        }
+
+        // Nombres de quienes reseñaron (tabla `perfiles`)
+        const ids: string[] = Array.from(new Set(filas.map((f: any) => f.perfil_id).filter(Boolean)));
+        const nombres: Record<string, string> = {};
+        if (ids.length > 0) {
+          const { data: perfiles } = await supabase.from(TABLA_PERFILES).select('id, username').in('id', ids);
+          (perfiles ?? []).forEach((p: any) => {
+            nombres[p.id] = p.username;
+          });
+        }
+
+        const agrupadas: Record<string, Comentario[]> = {};
+        filas.forEach((f: any) => {
+          const lista = agrupadas[f.entidad_evaluada] ?? (agrupadas[f.entidad_evaluada] = []);
+          lista.push({
+            usuario: nombres[f.perfil_id] ?? 'Usuario',
+            texto: f.comentario ?? '',
+            puntuacion: f.calificacion ?? undefined,
+            esPropia: !!uid && f.perfil_id === uid,
+            deBD: true,
+            id: f.id,
+            perfilId: f.perfil_id,
+          });
+        });
+        if (activo) setResenasBD(agrupadas);
+      } catch (e: any) {
+        console.warn('Error al conectar con la base de datos:', e?.message);
+      }
+    })();
+    return () => {
+      activo = false;
+    };
+  }, []);
+
   const motos = useMemo(
     () =>
       catalogo.map((m) => {
-        const coms = comentarios[m.id] ?? m.comentarios;
+        // reseñas de ejemplo (locales) + reseñas reales guardadas en la BD
+        const coms = [...(comentarios[m.id] ?? m.comentarios), ...(resenasBD[m.id] ?? [])];
         return { ...m, comentarios: coms, puntuacion: calcularPuntuacion(m, coms) };
       }),
-    [catalogo, comentarios]
+    [catalogo, comentarios, resenasBD]
   );
 
   const marcasExistentes = useMemo(() => {
@@ -2151,9 +2375,46 @@ export default function ResenasScreen({ navigation }: any) {
   };
 
   // Cierra el formulario; si ya escribieron algo, pregunta antes de descartarlo
+  // Notificación flotante pasajera (se cierra sola)
+  const avisar = (titulo: string, mensaje: string, tono: AvisoData['tono'] = 'error') =>
+    setAviso({
+      titulo,
+      mensaje,
+      tono,
+      icono: tono === 'exito' ? 'checkmark-circle' : tono === 'error' ? 'close-circle' : tono === 'alerta' ? 'alert-circle' : 'information-circle',
+    });
+
+  // Notificación flotante con botones: devuelve el valor del botón que elija la persona
+  function preguntar<T>(cfg: {
+    icono: AvisoData['icono'];
+    tono: AvisoData['tono'];
+    titulo: string;
+    mensaje: string;
+    moto?: Moto;
+    opciones: { texto: string; valor: T; tipo?: AccionAviso['tipo'] }[];
+    valorAlCerrar: T;
+  }): Promise<T> {
+    return new Promise<T>((resolve) => {
+      const responder = (v: T) => {
+        setAviso(null);
+        resolve(v);
+      };
+      setAviso({
+        icono: cfg.icono,
+        tono: cfg.tono,
+        titulo: cfg.titulo,
+        mensaje: cfg.mensaje,
+        moto: cfg.moto,
+        acciones: cfg.opciones.map((o) => ({ texto: o.texto, tipo: o.tipo, onPress: () => responder(o.valor) })),
+        alCerrar: () => responder(cfg.valorAlCerrar),
+      });
+    });
+  }
+
   const cerrarFormulario = () => {
     if (!formularioSucio.current) {
       setMostrarFormulario(false);
+      setMotoEditandoId(null);
       return;
     }
     Alert.alert('¿Descartar tu publicación?', 'Si sales ahora, se perderán los datos que ya escribiste.', [
@@ -2164,6 +2425,7 @@ export default function ResenasScreen({ navigation }: any) {
         onPress: () => {
           formularioSucio.current = false;
           setMostrarFormulario(false);
+          setMotoEditandoId(null);
         },
       },
     ]);
@@ -2185,23 +2447,399 @@ export default function ResenasScreen({ navigation }: any) {
     return () => sub.remove();
   }, [motoId, mostrarFormulario]);
 
-  const publicarResena = (id: string, nueva: Comentario) =>
-    setComentarios((prev) => ({ ...prev, [id]: [...(prev[id] ?? []), nueva] }));
+  // Guarda la reseña en la tabla `resenas`. Devuelve true si se guardó bien.
+  const publicarResena = async (id: string, nueva: Comentario): Promise<boolean> => {
+    if (!usuarioActual) {
+      avisar('Inicia sesión', 'Necesitas una sesión iniciada para publicar una reseña.', 'alerta');
+      return false;
+    }
+    const { data, error } = await supabase
+      .from('resenas')
+      .insert({
+        perfil_id: usuarioActual.id,
+        entidad_evaluada: id, // id de la moto (texto)
+        tipo_entidad: TIPO_ENTIDAD_MOTO,
+        calificacion: nueva.puntuacion, // 1 a 5
+        comentario: nueva.texto,
+      })
+      .select(); // devuelve la fila guardada: si trae `id` y `created_at`, se escribió en la BD
 
-  const publicarMoto = (datos: DatosMoto) => {
-    const nueva: Moto = {
-      ...datos,
-      id: `u${Date.now()}`,
-      puntuacion: 0,
-      comentarios: [],
-      esPropia: true,
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Reseñas] insert → data:', JSON.stringify(data));
+    if (error) {
+      console.log(
+        '[Reseñas] ERROR → code:', error.code,
+        '| message:', error.message,
+        '| details:', error.details,
+        '| hint:', error.hint
+      );
+    }
+
+    if (error) {
+      avisar('No se pudo publicar tu reseña', error.message);
+      return false;
+    }
+    setResenasBD((prev) => ({
+      ...prev,
+      [id]: [
+        ...(prev[id] ?? []),
+        {
+          usuario: usuarioActual.username,
+          texto: nueva.texto,
+          puntuacion: nueva.puntuacion,
+          esPropia: true,
+          deBD: true,
+          id: data?.[0]?.id,
+          perfilId: usuarioActual.id,
+        },
+      ],
+    }));
+    return true;
+  };
+
+  // Edita la reseña propia en la tabla `resenas`. Devuelve true si se guardó.
+  const editarResena = async (
+    motoId: string,
+    resenaId: string,
+    cambios: { texto: string; puntuacion: number }
+  ): Promise<boolean> => {
+    if (!usuarioActual) {
+      avisar('Inicia sesión', 'Necesitas una sesión iniciada para editar tu reseña.', 'alerta');
+      return false;
+    }
+    const { data, error } = await supabase
+      .from('resenas')
+      .update({ calificacion: cambios.puntuacion, comentario: cambios.texto })
+      .eq('id', resenaId)
+      .eq('perfil_id', usuarioActual.id)
+      .select();
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Reseñas] update → filas:', data?.length, '| error:', error?.message ?? null);
+    if (error) {
+      avisar('No se pudo guardar tu cambio', error.message);
+      return false;
+    }
+    if (!data || data.length === 0) {
+      // Sin error y sin filas: la política de seguridad (RLS) no permite actualizar, o la reseña ya no existe
+      avisar('No se pudo guardar tu cambio', 'No tienes permiso para editar esta reseña o ya no existe.');
+      return false;
+    }
+    setResenasBD((prev) => ({
+      ...prev,
+      [motoId]: (prev[motoId] ?? []).map((c) =>
+        c.id === resenaId ? { ...c, texto: cambios.texto, puntuacion: cambios.puntuacion } : c
+      ),
+    }));
+    avisar('Reseña actualizada', 'Tu opinión se guardó con los cambios.', 'exito');
+    return true;
+  };
+
+  // Elimina la reseña propia. Después la persona puede escribir otra.
+  const eliminarResenaPropia = async (motoId: string, resena: Comentario) => {
+    if (!usuarioActual || !resena.id) return;
+    const confirmado = await preguntar<boolean>({
+      icono: 'trash-outline',
+      tono: 'error',
+      titulo: '¿Eliminar tu reseña?',
+      mensaje: 'Se borrará tu opinión y tu calificación de esta moto. Después podrás escribir una nueva.',
+      opciones: [
+        { texto: 'Sí, eliminar', valor: true, tipo: 'peligro' },
+        { texto: 'Cancelar', valor: false, tipo: 'neutro' },
+      ],
+      valorAlCerrar: false,
+    });
+    if (!confirmado) return;
+
+    const { data, error } = await supabase
+      .from('resenas')
+      .delete()
+      .eq('id', resena.id)
+      .eq('perfil_id', usuarioActual.id)
+      .select();
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Reseñas] delete → filas:', data?.length, '| error:', error?.message ?? null);
+    if (error) {
+      avisar('No se pudo eliminar tu reseña', error.message);
+      return;
+    }
+    if (!data || data.length === 0) {
+      avisar('No se pudo eliminar tu reseña', 'No tienes permiso para borrar esta reseña o ya no existe.');
+      return;
+    }
+    setResenasBD((prev) => ({ ...prev, [motoId]: (prev[motoId] ?? []).filter((c) => c.id !== resena.id) }));
+    avisar('Reseña eliminada', 'Ya puedes escribir una nueva opinión de esta moto.', 'exito');
+  };
+
+  // Aviso por correo (plantilla de EmailJS) al equipo: un dueño superó el límite de opiniones eliminadas.
+  // El correo es "lo mejor posible": el registro confiable es la tabla `resenas_eliminadas` de la BD.
+  const enviarAlertaActividadSospechosa = async (moto: Moto, eliminadas: number, limite: number) => {
+    if (!EMAILJS_ALERTA_CONFIGURADO || !usuarioActual) {
+      console.log('[Alerta] La plantilla de EmailJS para alertas no está configurada: se omite el correo.');
+      return;
+    }
+    try {
+      await emailjs.send(
+        EMAILJS.serviceId,
+        EMAILJS_ALERTA_TEMPLATE_ID,
+        {
+          usuario: usuarioActual.username,
+          usuario_id: usuarioActual.id,
+          moto: `${moto.marca} ${moto.nombre} ${moto.modelo}`,
+          moto_id: moto.id,
+          eliminadas: String(eliminadas),
+          limite: String(limite),
+          plataforma: `${Platform.OS} ${Platform.Version}`,
+          fecha: new Date().toLocaleString('es-MX'),
+        },
+        { publicKey: EMAILJS.publicKey }
+      );
+      console.log('[Alerta] correo de actividad sospechosa enviado');
+    } catch (e: any) {
+      console.warn('[Alerta] no se pudo enviar el correo:', e?.text ?? e?.message);
+    }
+  };
+
+  // El dueño de una moto elimina la opinión de otra persona. El límite lo aplica la BD (función RPC).
+  const moderarResena = async (moto: Moto, resena: Comentario) => {
+    if (!usuarioActual || !resena.id) return;
+    const usadas = eliminadasPorMoto[moto.id] ?? 0;
+    const restantes = LIMITE_ELIMINACIONES_DUENO - usadas;
+
+    const continuar = await preguntar<boolean>({
+      icono: restantes > 0 ? 'trash-outline' : 'alert-circle-outline',
+      tono: restantes > 0 ? 'error' : 'alerta',
+      titulo: restantes > 0 ? '¿Eliminar esta opinión?' : 'Ya usaste todas tus eliminaciones',
+      mensaje:
+        restantes > 0
+          ? `Eliminarás la opinión de ${resena.usuario}. Como dueño puedes quitar hasta ${LIMITE_ELIMINACIONES_DUENO} opiniones de esta moto; te quedan ${restantes}.`
+          : `Ya eliminaste ${LIMITE_ELIMINACIONES_DUENO} opiniones de esta moto. Si continúas, esta no se eliminará y el intento se reportará al equipo como actividad sospechosa.`,
+      opciones: [
+        { texto: restantes > 0 ? 'Sí, eliminar' : 'Continuar y reportar', valor: true, tipo: restantes > 0 ? 'peligro' : 'secundario' },
+        { texto: 'Cancelar', valor: false, tipo: 'neutro' },
+      ],
+      valorAlCerrar: false,
+    });
+    if (!continuar) return;
+
+    const { data, error } = await supabase.rpc('eliminar_resena_como_dueno', { p_resena_id: resena.id });
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Moderación] rpc → data:', JSON.stringify(data), '| error:', error?.message ?? null);
+
+    if (error) {
+      // PGRST202 = la función aún no existe en la BD
+      avisar(
+        'No se pudo eliminar la opinión',
+        error.code === 'PGRST202'
+          ? 'Falta crear la función de moderación en la base de datos. Pide al equipo ejecutar el SQL de moderación.'
+          : error.message
+      );
+      return;
+    }
+
+    const r: any = data ?? {};
+    if (r.ok) {
+      setResenasBD((prev) => ({ ...prev, [moto.id]: (prev[moto.id] ?? []).filter((c) => c.id !== resena.id) }));
+      setEliminadasPorMoto((prev) => ({ ...prev, [moto.id]: Number(r.eliminadas ?? usadas + 1) }));
+      avisar('Opinión eliminada', `Te quedan ${r.restantes} de ${r.limite} eliminaciones en esta moto.`, 'exito');
+      return;
+    }
+
+    if (r.motivo === 'limite') {
+      setEliminadasPorMoto((prev) => ({ ...prev, [moto.id]: Number(r.eliminadas ?? LIMITE_ELIMINACIONES_DUENO) }));
+      // Solo el primer intento por moto envía correo, para no llenar la bandeja del equipo
+      if (r.primer_intento) await enviarAlertaActividadSospechosa(moto, Number(r.eliminadas), Number(r.limite));
+      avisar(
+        'Límite alcanzado',
+        'No se eliminó la opinión. Ya usaste todas tus eliminaciones de esta moto y el intento quedó registrado para que el equipo lo revise.',
+        'alerta'
+      );
+      return;
+    }
+
+    if (r.motivo === 'no_existe') {
+      setResenasBD((prev) => ({ ...prev, [moto.id]: (prev[moto.id] ?? []).filter((c) => c.id !== resena.id) }));
+      avisar('Esa opinión ya no existe', 'Alguien más ya la eliminó.', 'info');
+      return;
+    }
+    avisar('No se pudo eliminar la opinión', 'Solo el dueño de la publicación puede eliminar opiniones de otras personas.');
+  };
+
+  // Crea o edita una moto en `motos_catalogo` (con su foto en Storage)
+  const guardarMoto = async (datos: DatosMoto): Promise<void> => {
+    if (!usuarioActual) {
+      avisar('Inicia sesión', 'Necesitas una sesión iniciada para publicar tu moto.', 'alerta');
+      return;
+    }
+    const editando = motoEditandoId ? catalogo.find((m) => m.id === motoEditandoId) ?? null : null;
+
+    // 0) ¿Ya existe esta moto? Se revisa el catálogo cargado (incluye las de ejemplo) y la BD,
+    //    por si otra persona la publicó después de que abriste la pantalla.
+    const { data: filasMismoAnio } = await supabase.from('motos_catalogo').select('*').eq('modelo', datos.modelo);
+    const candidatas = [...catalogo, ...(filasMismoAnio ?? []).map((f: any) => filaAMoto(f, usuarioActual.id))];
+    const repetida = candidatas.find((m) => m.id !== editando?.id && esMismaMoto(m, datos));
+    if (repetida) {
+      const decision = await preguntar<'ver' | 'seguir' | 'cancelar'>({
+        icono: 'copy-outline',
+        tono: 'alerta',
+        titulo: 'Esta moto ya existe',
+        mensaje:
+          'Ya está publicada en el catálogo. Si la tuya es otra versión (por ejemplo carburada o inyección), agrégalo al nombre y continúa.',
+        moto: repetida,
+        opciones: [
+          { texto: 'Ver la moto', valor: 'ver', tipo: 'primario' },
+          { texto: editando ? 'Guardar de todos modos' : 'Publicar de todos modos', valor: 'seguir', tipo: 'secundario' },
+          { texto: 'Seguir editando', valor: 'cancelar', tipo: 'neutro' },
+        ],
+        valorAlCerrar: 'cancelar',
+      });
+      if (decision === 'cancelar') return; // se queda en el formulario para cambiar el nombre u otros datos
+      if (decision === 'ver') {
+        // Si la publicó alguien más y aún no estaba en la lista, la agregamos para poder abrirla
+        setCatalogo((prev) => (prev.some((m) => m.id === repetida.id) ? prev : [repetida, ...prev]));
+        formularioSucio.current = false;
+        setMostrarFormulario(false);
+        setMotoEditandoId(null);
+        setMotoId(repetida.id); // te lleva a la publicación que ya existe
+        return;
+      }
+      // decision === 'seguir': continúa normalmente
+    }
+
+    // 1) Foto: una URL http(s) ya está subida (edición sin cambiar la foto); una ruta local se sube al bucket.
+    //    Si la subida falla, la moto se guarda igual (conservando la foto anterior si la había).
+    let imagenUrl: string | null = null;
+    let fotoFallo = false;
+    if (typeof datos.imagen === 'string' && datos.imagen) {
+      if (/^https?:\/\//i.test(datos.imagen)) {
+        imagenUrl = datos.imagen;
+      } else {
+        imagenUrl = await subirFotoMoto(datos.imagen, usuarioActual.id);
+        fotoFallo = imagenUrl === null;
+        if (fotoFallo && editando && typeof editando.imagen === 'string') imagenUrl = editando.imagen;
+      }
+    }
+
+    const campos = {
+      nombre: datos.nombre,
+      marca: datos.marca,
+      modelo: datos.modelo,
+      tipo: datos.tipo,
+      cilindrada: datos.cilindrada,
+      precio: datos.precio,
+      descripcion: datos.descripcion,
+      imagen_url: imagenUrl,
+      propietario: datos.propietario ?? usuarioActual.username,
     };
+
+    // ── EDITAR ──
+    if (editando) {
+      const { data, error } = await supabase
+        .from('motos_catalogo')
+        .update(campos)
+        .eq('id', editando.id)
+        .select()
+        .maybeSingle();
+      // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+      console.log('[Moto] update → data:', JSON.stringify(data), '| error:', error?.message ?? null);
+      if (error) {
+        avisar('No se pudieron guardar los cambios', error.message);
+        return;
+      }
+      if (!data) {
+        // Sin error y sin fila: la política de seguridad (RLS) no permite actualizar esta moto
+        avisar('No se pudieron guardar los cambios', 'No tienes permiso para editar esta moto o ya no existe.');
+        return;
+      }
+      // Si cambió la foto y la anterior estaba en nuestro bucket, se borra para no acumular archivos
+      if (typeof editando.imagen === 'string' && editando.imagen !== imagenUrl) await borrarFotoMoto(editando.imagen);
+      const actualizada = filaAMoto(data, usuarioActual.id);
+      setCatalogo((prev) => prev.map((m) => (m.id === actualizada.id ? actualizada : m)));
+      formularioSucio.current = false;
+      setMostrarFormulario(false);
+      setMotoEditandoId(null);
+      avisar(
+        'Cambios guardados',
+        fotoFallo ? 'Se actualizó tu moto, pero la foto nueva no se pudo subir.' : 'Tu publicación se actualizó.',
+        fotoFallo ? 'alerta' : 'exito'
+      );
+      return;
+    }
+
+    // ── CREAR ──
+    const { data, error } = await supabase
+      .from('motos_catalogo')
+      .insert({ perfil_id: usuarioActual.id, ...campos })
+      .select()
+      .single();
+
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Moto] insert → data:', JSON.stringify(data));
+    if (error) {
+      console.log(
+        '[Moto] ERROR → code:', error.code,
+        '| message:', error.message,
+        '| details:', error.details,
+        '| hint:', error.hint
+      );
+    }
+
+    if (error || !data) {
+      avisar('No se pudo publicar tu moto', error?.message ?? 'Inténtalo de nuevo.');
+      return; // el formulario se queda abierto con lo que escribiste
+    }
+
+    const nueva = filaAMoto(data, usuarioActual.id);
     setCatalogo((prev) => [nueva, ...prev]);
     setComentarios((prev) => ({ ...prev, [nueva.id]: [] }));
     formularioSucio.current = false;
     setMostrarFormulario(false);
     setMotoId(nueva.id); // te lleva directo al detalle de tu moto
-    Alert.alert('¡Moto publicada!', 'Ya aparece en la lista de motos.');
+    avisar(
+      '¡Moto publicada!',
+      fotoFallo
+        ? 'Ya aparece en la lista, pero la foto no se pudo subir. Puedes agregarla después con "Editar".'
+        : 'Ya aparece en la lista de motos.',
+      fotoFallo ? 'alerta' : 'exito'
+    );
+  };
+
+  // Elimina una moto del usuario (y su foto), previa confirmación
+  const eliminarMoto = async (moto: Moto) => {
+    const confirmado = await preguntar<boolean>({
+      icono: 'trash-outline',
+      tono: 'error',
+      titulo: '¿Eliminar tu moto?',
+      mensaje: 'Se borrará tu publicación y su foto. Las reseñas dejarán de mostrarse. No se puede deshacer.',
+      moto,
+      opciones: [
+        { texto: 'Sí, eliminar', valor: true, tipo: 'peligro' },
+        { texto: 'Cancelar', valor: false, tipo: 'neutro' },
+      ],
+      valorAlCerrar: false,
+    });
+    if (!confirmado) return;
+
+    const { data, error } = await supabase.from('motos_catalogo').delete().eq('id', moto.id).select();
+    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
+    console.log('[Moto] delete → filas:', data?.length, '| error:', error?.message ?? null);
+    if (error) {
+      avisar('No se pudo eliminar', error.message);
+      return;
+    }
+    if (!data || data.length === 0) {
+      // Sin error y sin filas borradas: la política de seguridad (RLS) no lo permite
+      avisar('No se pudo eliminar', 'No tienes permiso para borrar esta moto o ya no existe.');
+      return;
+    }
+    if (typeof moto.imagen === 'string') await borrarFotoMoto(moto.imagen);
+    setCatalogo((prev) => prev.filter((m) => m.id !== moto.id));
+    setMotoId(null); // regresa a la lista
+    avisar('Moto eliminada', 'Tu publicación ya no aparece en el catálogo.', 'exito');
+  };
+
+  const iniciarEdicion = (moto: Moto) => {
+    setMotoEditandoId(moto.id);
+    setMostrarFormulario(true);
   };
 
   return (
@@ -2223,6 +2861,12 @@ export default function ResenasScreen({ navigation }: any) {
             moto={motoActual}
             onBack={() => setMotoId(null)}
             onPublicar={(c) => publicarResena(motoActual.id, c)}
+            onEditar={motoActual.esPropia ? () => iniciarEdicion(motoActual) : undefined}
+            onEliminar={motoActual.esPropia ? () => eliminarMoto(motoActual) : undefined}
+            onEditarResena={(resenaId, cambios) => editarResena(motoActual.id, resenaId, cambios)}
+            onEliminarResena={(r) => eliminarResenaPropia(motoActual.id, r)}
+            onModerarResena={motoActual.esPropia ? (r) => moderarResena(motoActual, r) : undefined}
+            eliminadasPorDueno={eliminadasPorMoto[motoActual.id] ?? 0}
           />
         </View>
       )}
@@ -2230,57 +2874,155 @@ export default function ResenasScreen({ navigation }: any) {
       {mostrarFormulario && (
         <View style={StyleSheet.absoluteFill}>
           <FormularioMoto
+            key={motoEditandoId ?? 'nueva'}
             marcas={marcasExistentes}
+            inicial={catalogo.find((m) => m.id === motoEditandoId)}
             onBack={cerrarFormulario}
-            onPublicar={publicarMoto}
+            onPublicar={guardarMoto}
             sucioRef={formularioSucio}
           />
         </View>
       )}
+
+      {/* Notificación flotante: avisos y confirmaciones dentro de la app */}
+      <AvisoFlotante aviso={aviso} onCerrar={() => setAviso(null)} />
+    </View>
+  );
+}
+
+// ─── COMPONENTE: AVISO FLOTANTE ──────────────────────────────────────────────
+
+function AvisoFlotante({ aviso, onCerrar }: { aviso: AvisoData | null; onCerrar: () => void }) {
+  const { C, styles } = useResenasTheme();
+  const anim = useRef(new Animated.Value(0)).current;
+  const conBotones = !!aviso?.acciones?.length;
+
+  useEffect(() => {
+    if (!aviso) return;
+    anim.setValue(0);
+    Animated.timing(anim, { toValue: 1, duration: 220, useNativeDriver: Platform.OS !== 'web' }).start();
+    if (conBotones) return; // los avisos con botones esperan a que la persona decida
+    const t = setTimeout(onCerrar, aviso.tono === 'error' ? 5000 : 3200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aviso]);
+
+  if (!aviso) return null;
+
+  const colores =
+    aviso.tono === 'exito'
+      ? { bg: C.successBg, fg: C.success, border: C.successBorder }
+      : aviso.tono === 'error'
+      ? { bg: C.dangerSoft, fg: C.danger, border: C.dangerBorder }
+      : aviso.tono === 'alerta'
+      ? { bg: C.warningBg, fg: C.warning, border: C.warningBorder }
+      : { bg: C.infoBg, fg: C.info, border: C.infoBorder };
+
+  const estiloBoton = (tipo: AccionAviso['tipo']) =>
+    tipo === 'primario'
+      ? { fondo: { backgroundColor: C.accent }, texto: { color: C.onPrimary } }
+      : tipo === 'peligro'
+      ? { fondo: { backgroundColor: C.danger }, texto: { color: C.onPrimary } }
+      : tipo === 'secundario'
+      ? { fondo: { backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border }, texto: { color: C.textPri } }
+      : { fondo: { backgroundColor: 'transparent' }, texto: { color: C.textSec } };
+
+  const tarjeta = (
+    <Animated.View
+      style={[
+        styles.avisoCard,
+        { borderColor: colores.border },
+        { opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [-24, 0] }) }] },
+      ]}
+      accessibilityRole="alert"
+    >
+      <View style={styles.avisoCabecera}>
+        <View style={[styles.avisoIconoWrap, { backgroundColor: colores.bg }]}>
+          <Ionicons name={aviso.icono} size={22} color={colores.fg} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.avisoTitulo}>{aviso.titulo}</Text>
+          <Text style={styles.avisoMensaje}>{aviso.mensaje}</Text>
+        </View>
+      </View>
+
+      {aviso.moto && (
+        <View style={styles.avisoMoto}>
+          <ImagenMoto imagen={aviso.moto.imagen} style={styles.avisoMotoImg} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.avisoMotoNombre} numberOfLines={2}>
+              {aviso.moto.nombre}
+            </Text>
+            <Text style={styles.avisoMotoSub}>
+              {aviso.moto.marca} · {aviso.moto.modelo} · {aviso.moto.cilindrada} cc
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {conBotones && (
+        <View style={styles.avisoAcciones}>
+          {aviso.acciones!.map((a) => {
+            const e = estiloBoton(a.tipo);
+            return (
+              <TouchableOpacity key={a.texto} style={[styles.avisoBtn, e.fondo]} onPress={a.onPress} activeOpacity={0.85}>
+                <Text style={[styles.avisoBtnText, e.texto]}>{a.texto}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+    </Animated.View>
+  );
+
+  // Con botones: tapa la pantalla y espera una decisión. Sin botones: aviso pasajero que no estorba.
+  if (conBotones) {
+    return (
+      <Modal transparent animationType="fade" visible onRequestClose={aviso.alCerrar ?? onCerrar} statusBarTranslucent>
+        <View style={styles.avisoBackdrop}>{tarjeta}</View>
+      </Modal>
+    );
+  }
+  return (
+    <View style={[styles.avisoToast, { pointerEvents: 'box-none' }]}>
+      <TouchableOpacity activeOpacity={0.95} onPress={onCerrar}>
+        {tarjeta}
+      </TouchableOpacity>
     </View>
   );
 }
 
 // ─── PALETA Y ESTILOS ─────────────────────────────────────────────────────────
 
-// Modo claro: conserva exactamente los colores originales de la pantalla.
-// Modo oscuro: toma los colores base de theme.ts y ajusta los propios de Reseñas.
-function crearPaleta(theme: Theme, isDarkMode: boolean) {
-  if (!isDarkMode) {
-    return {
-      bg: '#FFFFFF',
-      surface: '#FFFFFF',
-      surfaceAlt: '#F4F5F7',
-      border: '#E5E7EB',
-      textPri: '#1F2430',
-      textSec: '#5B6472',
-      textMuted: '#9AA1AD',
-      accent: '#E4472B',
-      accentSoft: '#FDEEEA',
-      star: '#F5A524',
-      success: '#16A34A',
-      danger: '#DC2626',
-      dangerSoft: '#FEF2F2',
-      successBg: '#ECFDF3',
-      ink: '#1F2430',
-    };
-  }
+// Both color modes use semantic tokens from theme.ts.
+function crearPaleta(theme: Theme) {
   return {
     bg: theme.background,
     surface: theme.card,
-    surfaceAlt: '#273449',
+    surfaceAlt: theme.cardHeader,
     border: theme.border,
     textPri: theme.textPrimary,
     textSec: theme.textSecondary,
     textMuted: theme.iconSecondary,
-    accent: '#F0583C',
-    accentSoft: '#3B1D17',
-    star: '#F5A524',
-    success: '#4ADE80',
+    accent: theme.accent,
+    accentSoft: theme.accentBg,
+    star: theme.star,
+    onPrimary: theme.onPrimary,
+    overlay: theme.overlay,
+    shadow: theme.shadow,
+    success: theme.successText,
     danger: theme.dangerText,
     dangerSoft: theme.dangerBg,
-    successBg: '#052E16',
-    ink: '#475569',
+    successBg: theme.successBg,
+    successBorder: theme.successBorder,
+    warning: theme.warningText,
+    warningBg: theme.warningBg,
+    warningBorder: theme.warningBorder,
+    info: theme.infoText,
+    infoBg: theme.infoBg,
+    infoBorder: theme.infoBorder,
+    dangerBorder: theme.dangerBorder,
+    ink: theme.textPrimary,
   };
 }
 
@@ -2290,7 +3032,7 @@ type Paleta = ReturnType<typeof crearPaleta>;
 function useResenasTheme() {
   const { theme, isDarkMode, toggleTheme } = useTheme();
   return useMemo(() => {
-    const C = crearPaleta(theme, isDarkMode);
+    const C = crearPaleta(theme);
     return { C, styles: crearEstilos(C), isDarkMode, toggleTheme };
   }, [theme, isDarkMode]);
 }
@@ -2377,7 +3119,7 @@ const crearEstilos = (C: Paleta) =>
   chipAbierto: { borderColor: C.textPri },
   chipActivo: { backgroundColor: C.ink, borderColor: C.ink },
   chipText: { fontSize: 13, fontWeight: '600', color: C.textPri },
-  chipTextActivo: { color: '#FFFFFF' },
+  chipTextActivo: { color: C.onPrimary },
   chipLimpiar: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, height: 38 },
   chipLimpiarText: { fontSize: 13, fontWeight: '700', color: C.accent },
   panel: {
@@ -2403,7 +3145,7 @@ const crearEstilos = (C: Paleta) =>
   pillActiva: { backgroundColor: C.accent, borderColor: C.accent },
   pillDeshabilitada: { opacity: 0.35 },
   pillText: { fontSize: 13, fontWeight: '600', color: C.textPri },
-  pillTextActiva: { color: '#FFFFFF' },
+  pillTextActiva: { color: C.onPrimary },
   pillCantidad: { fontSize: 12, fontWeight: '600', color: C.textMuted },
 
   // Lista
@@ -2418,7 +3160,7 @@ const crearEstilos = (C: Paleta) =>
     borderRadius: 18,
     borderWidth: 1,
     borderColor: C.border,
-    shadowColor: '#1F2430',
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.06,
     shadowRadius: 14,
@@ -2517,6 +3259,98 @@ const crearEstilos = (C: Paleta) =>
   calificacionTexto: { fontSize: 13, color: C.textSec, fontWeight: '600' },
 
   // Botones
+  // Aviso flotante
+  avisoBackdrop: {
+    flex: 1,
+    backgroundColor: C.overlay,
+    paddingTop: TOP_PADDING,
+    paddingHorizontal: 16,
+  },
+  avisoToast: {
+    position: 'absolute',
+    top: TOP_PADDING,
+    left: 16,
+    right: 16,
+    zIndex: 999,
+    elevation: 20,
+  },
+  avisoCard: {
+    backgroundColor: C.surface,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: C.border,
+    elevation: 10,
+    shadowColor: C.shadow,
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  avisoCabecera: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  avisoIconoWrap: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  avisoTitulo: { fontSize: 16, fontWeight: '800', color: C.textPri },
+  avisoMensaje: { fontSize: 13.5, color: C.textSec, marginTop: 3, lineHeight: 19 },
+  avisoMoto: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: C.surfaceAlt,
+  },
+  avisoMotoImg: { width: 56, height: 56, borderRadius: 10 },
+  avisoMotoNombre: { fontSize: 14, fontWeight: '800', color: C.textPri },
+  avisoMotoSub: { fontSize: 12.5, color: C.textSec, marginTop: 2 },
+  avisoAcciones: { marginTop: 14, gap: 8 },
+  avisoBtn: { paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  avisoBtnText: { fontSize: 14.5, fontWeight: '800' },
+
+  // Acciones sobre cada opinión (editar / eliminar / moderar)
+  comentarioAcciones: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 10 },
+  btnComentarioAccion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.surfaceAlt,
+  },
+  btnComentarioAccionPeligro: { borderColor: C.danger, backgroundColor: C.dangerSoft },
+  btnComentarioAccionText: { fontSize: 12.5, fontWeight: '700', color: C.textPri },
+  avisoModeracion: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: C.surfaceAlt,
+    borderWidth: 1,
+    borderColor: C.border,
+    marginBottom: 10,
+  },
+  avisoModeracionText: { flex: 1, fontSize: 12.5, color: C.textSec, lineHeight: 18 },
+
+  // Acciones del dueño de la moto (editar / eliminar)
+  accionesPropias: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  btnAccionPropia: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.surfaceAlt,
+  },
+  btnAccionPeligro: { borderColor: C.danger, backgroundColor: C.dangerSoft },
+  btnAccionPropiaText: { fontSize: 14, fontWeight: '800', color: C.textPri },
+
   btnPrimario: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2527,7 +3361,7 @@ const crearEstilos = (C: Paleta) =>
     paddingVertical: 14,
     marginTop: 18,
   },
-  btnPrimarioText: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
+  btnPrimarioText: { color: C.onPrimary, fontWeight: '800', fontSize: 15 },
   btnSecundario: {
     marginTop: 16,
     paddingVertical: 11,
@@ -2547,7 +3381,7 @@ const crearEstilos = (C: Paleta) =>
   },
   btnCancelarText: { fontSize: 14, fontWeight: '700', color: C.textSec },
   btnEnviar: { flex: 2, paddingVertical: 13, borderRadius: 12, backgroundColor: C.accent, alignItems: 'center' },
-  btnEnviarText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
+  btnEnviarText: { fontSize: 14, fontWeight: '800', color: C.onPrimary },
   yaReseneBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2591,7 +3425,7 @@ const crearEstilos = (C: Paleta) =>
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(31,36,48,0.7)',
+    backgroundColor: C.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2648,7 +3482,7 @@ const crearEstilos = (C: Paleta) =>
     shadowRadius: 14,
     elevation: 6,
   },
-  fabText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF' },
+  fabText: { fontSize: 15, fontWeight: '800', color: C.onPrimary },
   tagPropia: { backgroundColor: C.accentSoft },
   tagPropiaText: { color: C.accent },
   detallePropietario: { fontSize: 13, color: C.textSec, marginTop: 4 },
@@ -2662,7 +3496,7 @@ const crearEstilos = (C: Paleta) =>
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(17,24,39,0.45)',
+    backgroundColor: C.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 999,
@@ -2673,7 +3507,7 @@ const crearEstilos = (C: Paleta) =>
     borderRadius: 22,
     padding: 20,
     width: '100%',
-    shadowColor: '#000',
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
     shadowRadius: 24,
@@ -2694,7 +3528,7 @@ const crearEstilos = (C: Paleta) =>
   ayudaItemDesc: { fontSize: 13, color: C.textSec, lineHeight: 18 },
 
   selectorMarca: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,24,39,0.55)' },
+  sheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: C.overlay },
   sheet: {
     backgroundColor: C.bg,
     borderTopLeftRadius: 24,
@@ -2752,14 +3586,14 @@ const crearEstilos = (C: Paleta) =>
     padding: 14,
     borderRadius: 14,
     borderWidth: 1,
-    shadowColor: '#000',
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
   },
   toastTexto: { flex: 1, fontSize: 14, fontWeight: '700', lineHeight: 19 },
-  problemaOverlay: { flex: 1, backgroundColor: 'rgba(17,24,39,0.55)' },
+  problemaOverlay: { flex: 1, backgroundColor: C.overlay },
   problemaScroll: { flex: 1 },
   problemaScrollContent: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 24 },
   problemaCard: {
@@ -2768,7 +3602,7 @@ const crearEstilos = (C: Paleta) =>
     padding: 20,
     borderWidth: 1,
     borderColor: C.border,
-    shadowColor: '#000',
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 24,

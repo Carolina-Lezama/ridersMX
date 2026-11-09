@@ -1,4 +1,7 @@
-npx expo start y luego a
+npm start
+
+Este comando inicia automáticamente el servidor Python del chatbot junto con
+Expo. Con el emulador abierto, presiona `a` en esa misma terminal.
 
 Asegúrate de tener Android Studio Panda 4 abierto con tu emulador corriendo.
 

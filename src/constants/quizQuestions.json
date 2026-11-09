@@ -63,5 +63,200 @@
     ],
     "respuestaCorrecta": 1,
     "explicacion": "Al frenar, el peso de la moto se transfiere hacia adelante. El freno delantero proporciona entre el 70% y el 80% del poder de frenado total, mientras que el trasero estabiliza."
+  },
+  {
+    "id": "q_006",
+    "categoria": "Mantenimiento",
+    "pregunta": "¿Dónde debes consultar el intervalo recomendado para cambiar el aceite de tu motocicleta?",
+    "opciones": [
+      "En el manual del fabricante",
+      "En la etiqueta de la placa",
+      "En el casco del conductor",
+      "En el recibo de gasolina"
+    ],
+    "respuestaCorrecta": 0,
+    "explicacion": "El manual indica el tipo de aceite y los intervalos adecuados para cada modelo y condiciones de uso."
+  },
+  {
+    "id": "q_007",
+    "categoria": "Seguridad",
+    "pregunta": "¿Qué debes hacer si tu casco recibió un golpe fuerte durante una caída?",
+    "opciones": [
+      "Revisarlo por fuera y seguir usándolo",
+      "Reemplazarlo aunque no tenga daños visibles",
+      "Pintarlo para cubrir la marca",
+      "Ajustar únicamente la correa"
+    ],
+    "respuestaCorrecta": 1,
+    "explicacion": "El material interno puede quedar dañado aunque la carcasa parezca intacta; un casco que recibió un impacto fuerte debe reemplazarse."
+  },
+  {
+    "id": "q_008",
+    "categoria": "Mantenimiento",
+    "pregunta": "¿Por qué conviene revisar la cadena de transmisión con regularidad?",
+    "opciones": [
+      "Para detectar tensión inadecuada, desgaste o falta de lubricación",
+      "Para aumentar la presión de las llantas",
+      "Para ajustar el nivel del líquido de frenos",
+      "Para medir la carga de la batería"
+    ],
+    "respuestaCorrecta": 0,
+    "explicacion": "La tensión, lubricación y desgaste correctos ayudan a prevenir daños y fallas en la transmisión."
+  },
+  {
+    "id": "q_009",
+    "categoria": "Seguridad",
+    "pregunta": "¿Qué debes hacer antes de conducir bajo la lluvia?",
+    "opciones": [
+      "Aumentar la velocidad para atravesar el agua",
+      "Revisar el estado de las llantas y conducir con mayor suavidad",
+      "Frenar bruscamente para probar los frenos",
+      "Apagar las luces para evitar reflejos"
+    ],
+    "respuestaCorrecta": 1,
+    "explicacion": "En superficies mojadas hay menos adherencia. Las llantas en buen estado y las maniobras suaves ayudan a conservar el control."
+  },
+  {
+    "id": "q_010",
+    "categoria": "Mantenimiento",
+    "pregunta": "¿Cuándo es más confiable medir el nivel de aceite?",
+    "opciones": [
+      "Siguiendo el procedimiento y la posición indicados en el manual",
+      "Con la moto inclinada sobre la pata lateral siempre",
+      "Inmediatamente después de acelerar el motor",
+      "Con la varilla completamente apretada en todos los modelos"
+    ],
+    "respuestaCorrecta": 0,
+    "explicacion": "El método cambia según el modelo; consulta el manual y coloca la motocicleta como se indica para obtener una lectura correcta."
+  },
+  {
+    "id": "q_011",
+    "categoria": "Conducción",
+    "pregunta": "¿Qué ayuda a mantener una distancia segura con el vehículo de enfrente?",
+    "opciones": [
+      "Elegir una referencia y dejar varios segundos de separación",
+      "Conducir junto a su punto ciego",
+      "Acercarse para evitar que otros vehículos se incorporen",
+      "Mirar únicamente la rueda trasera"
+    ],
+    "respuestaCorrecta": 0,
+    "explicacion": "Una separación de tiempo adecuada deja espacio para reaccionar y frenar; aumenta la distancia con lluvia o poca visibilidad."
+  },
+  {
+    "id": "q_012",
+    "categoria": "Seguridad",
+    "pregunta": "¿Qué debes hacer al acercarte a una intersección con poca visibilidad?",
+    "opciones": [
+      "Reducir la velocidad y prepararte para detenerte",
+      "Acelerar para cruzar antes que los demás",
+      "Circular pegado al vehículo de adelante",
+      "Confiar en que los demás te han visto"
+    ],
+    "respuestaCorrecta": 0,
+    "explicacion": "Reducir la velocidad y cubrir los frenos permite reaccionar ante vehículos, peatones u obstáculos que no se ven a tiempo."
+  },
+  {
+    "id": "q_013",
+    "categoria": "Mantenimiento",
+    "pregunta": "¿Qué puede indicar una maneta de freno que se siente esponjosa?",
+    "opciones": [
+      "Que es necesario revisar el sistema de frenos",
+      "Que la cadena está demasiado lubricada",
+      "Que la presión de la llanta trasera es alta",
+      "Que el tanque está lleno"
+    ],
+    "respuestaCorrecta": 0,
+    "explicacion": "Una sensación esponjosa puede señalar aire, fuga u otro problema hidráulico. Revisa el sistema antes de volver a circular."
+  },
+  {
+    "id": "q_014",
+    "categoria": "Conducción",
+    "pregunta": "¿Qué es recomendable hacer antes de cambiar de carril?",
+    "opciones": [
+      "Señalizar, revisar espejos y verificar el punto ciego",
+      "Cambiar de carril sin señal para no distraer",
+      "Mirar solo el espejo del lado contrario",
+      "Acelerar mientras se mira el teléfono"
+    ],
+    "respuestaCorrecta": 0,
+    "explicacion": "La señal, los espejos y una revisión del punto ciego ayudan a confirmar que el espacio esté libre antes de maniobrar."
+  },
+  {
+    "id": "q_015",
+    "categoria": "Mantenimiento",
+    "pregunta": "¿Qué debes hacer si detectas una fuga de líquido de frenos?",
+    "opciones": [
+      "No circular y solicitar una revisión inmediata",
+      "Limpiarla y continuar el viaje",
+      "Añadir agua al depósito",
+      "Usar solo el freno trasero"
+    ],
+    "respuestaCorrecta": 0,
+    "explicacion": "Una fuga puede reducir o anular la capacidad de frenado. La motocicleta debe revisarse antes de volver a utilizarse."
+  },
+  {
+    "id": "q_016",
+    "categoria": "Seguridad",
+    "pregunta": "¿Por qué es importante usar equipo de protección visible?",
+    "opciones": [
+      "Ayuda a que otros usuarios te detecten con mayor facilidad",
+      "Evita tener que revisar las luces",
+      "Permite frenar a menor distancia",
+      "Reduce automáticamente el consumo de combustible"
+    ],
+    "respuestaCorrecta": 0,
+    "explicacion": "Colores visibles y elementos reflectantes mejoran la posibilidad de ser visto, especialmente de noche o con poca luz."
+  },
+  {
+    "id": "q_017",
+    "categoria": "Mantenimiento",
+    "pregunta": "¿Qué se debe revisar si la motocicleta no arranca y las luces se ven débiles?",
+    "opciones": [
+      "El estado y las conexiones de la batería",
+      "La presión de la llanta delantera",
+      "La tensión del cable del acelerador solamente",
+      "El color del aceite"
+    ],
+    "respuestaCorrecta": 0,
+    "explicacion": "Una batería descargada o conexiones flojas pueden causar dificultad de arranque y luces débiles."
+  },
+  {
+    "id": "q_018",
+    "categoria": "Conducción",
+    "pregunta": "¿Qué debes hacer si un vehículo circula en tu punto ciego?",
+    "opciones": [
+      "Esperar y evitar cambiar de carril hasta confirmar que el espacio está libre",
+      "Cambiarte de carril rápidamente",
+      "Acelerar sin mirar de nuevo",
+      "Conducir más cerca de ese vehículo"
+    ],
+    "respuestaCorrecta": 0,
+    "explicacion": "Espera a que el vehículo sea visible en los espejos o al girar la cabeza de forma segura antes de cambiar de carril."
+  },
+  {
+    "id": "q_019",
+    "categoria": "Mantenimiento",
+    "pregunta": "¿Qué debes hacer si una llanta presenta una grieta o deformación?",
+    "opciones": [
+      "Dejar de usar la moto y solicitar una inspección",
+      "Aumentar la presión por encima de lo recomendado",
+      "Cubrir la grieta con cinta",
+      "Esperar a que desaparezca con el uso"
+    ],
+    "respuestaCorrecta": 0,
+    "explicacion": "Una llanta dañada puede fallar de forma inesperada. Debe inspeccionarse y reemplazarse si es necesario antes de circular."
+  },
+  {
+    "id": "q_020",
+    "categoria": "Seguridad",
+    "pregunta": "¿Cuál es una práctica segura al iniciar una rodada en grupo?",
+    "opciones": [
+      "Acordar ruta, paradas y señales antes de salir",
+      "Seguir muy de cerca a quien va adelante",
+      "Rebasar dentro del grupo sin avisar",
+      "Separarse sin informar al resto"
+    ],
+    "respuestaCorrecta": 0,
+    "explicacion": "Acordar la ruta y la comunicación ayuda a que el grupo mantenga el orden y sepa qué hacer si alguien se separa."
   }
 ]
