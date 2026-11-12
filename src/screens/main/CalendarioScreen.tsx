@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
 import EventoCard from '../../components/EventoCard';
@@ -33,19 +34,14 @@ export default function CalendarioScreen({ navigation }: any) {
   // Estados para Supabase
   const [eventos, setEventos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
-  // Se recarga cada vez que entras a la pantalla
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      cargarEventos();
-    });
-    return unsubscribe;
-  }, [navigation]);
-
-  const cargarEventos = async () => {
+  const cargarEventos = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      setErrorCarga(null);
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
       if (session?.user) {
         const { data, error } = await supabase
           .from('eventos')
@@ -55,13 +51,24 @@ export default function CalendarioScreen({ navigation }: any) {
         
         if (error) throw error;
         setEventos(data || []);
+      } else {
+        setEventos([]);
+        setErrorCarga('Inicia sesión para consultar tu agenda.');
       }
     } catch (error) {
-      console.log('Error cargando eventos:', error);
+      console.error('Error cargando eventos:', error);
+      setEventos([]);
+      setErrorCarga(error instanceof Error ? error.message : 'No se pudo cargar tu agenda.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void cargarEventos();
+    }, [cargarEventos]),
+  );
 
   // Convertir los eventos al formato del calendario
   const markedDates = useMemo(() => {
@@ -169,6 +176,15 @@ export default function CalendarioScreen({ navigation }: any) {
               </View>
             ))}
           </View>
+        ) : errorCarga ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="alert-circle-outline" size={50} color={theme.dangerText} />
+            <Text style={styles.emptyTitle}>No se pudo cargar la agenda</Text>
+            <Text style={styles.emptyText}>{errorCarga}</Text>
+            <TouchableOpacity onPress={() => void cargarEventos()}>
+              <Text style={[styles.emptyTitle, { color: theme.primary }]}>Intentar de nuevo</Text>
+            </TouchableOpacity>
+          </View>
         ) : eventosAMostrar.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="calendar-clear-outline" size={50} color={theme.iconSecondary} />
@@ -190,6 +206,7 @@ export default function CalendarioScreen({ navigation }: any) {
             renderItem={({ item }) => (
               <EventoCard 
                 evento={item} 
+                mostrarFecha={filtroVista === 'todas'}
                 onPress={() => navigation.navigate('EventoForm', { eventoId: item.id, fechaBase: item.fecha })} 
               />
             )}

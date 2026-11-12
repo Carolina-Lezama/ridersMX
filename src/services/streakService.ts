@@ -33,25 +33,30 @@ export const obtenerFechaISO = (fecha: Date = new Date()): string => {
 };
 
 export const calcularDiferenciaDias = (fechaInicioISO: string, fechaFinISO: string): number => {
-  const f1 = new Date(`${fechaInicioISO}T00:00:00`);
-  const f2 = new Date(`${fechaFinISO}T00:00:00`);
-  const diffTiempo = f2.getTime() - f1.getTime();
-  return Math.round(diffTiempo / (1000 * 3600 * 24));
+  const obtenerDiaUTC = (fechaISO: string) => {
+    const [year, month, day] = fechaISO.split('-').map(Number);
+    return Date.UTC(year, month - 1, day);
+  };
+
+  return (obtenerDiaUTC(fechaFinISO) - obtenerDiaUTC(fechaInicioISO)) / (1000 * 60 * 60 * 24);
 };
 
-export const evaluarEstadoAlAbrirApp = (estadoActual: StreakState): StreakState => {
+export const evaluarEstadoAlAbrirApp = (
+  estadoActual: StreakState,
+  fechaActual: Date = new Date(),
+): StreakState => {
   if (!estadoActual.ultimoCheckIn) return estadoActual;
 
-  const hoyISO = obtenerFechaISO();
+  const hoyISO = obtenerFechaISO(fechaActual);
   const diffDias = calcularDiferenciaDias(estadoActual.ultimoCheckIn, hoyISO);
 
   if (diffDias <= 1) {
-    return { ...estadoActual, rachaSalvadaRecientemente: false };
+    return estadoActual;
   }
 
   if (diffDias === 2) {
     if (estadoActual.comodines > 0) {
-      const ayer = new Date();
+      const ayer = new Date(fechaActual);
       ayer.setDate(ayer.getDate() - 1);
       const ayerISO = obtenerFechaISO(ayer);
 
@@ -59,7 +64,9 @@ export const evaluarEstadoAlAbrirApp = (estadoActual: StreakState): StreakState 
         ...estadoActual,
         comodines: estadoActual.comodines - 1,
         ultimoCheckIn: ayerISO,
-        diasCongelados: [...estadoActual.diasCongelados, ayerISO],
+        diasCongelados: estadoActual.diasCongelados.includes(ayerISO)
+          ? estadoActual.diasCongelados
+          : [...estadoActual.diasCongelados, ayerISO],
         rachaSalvadaRecientemente: true,
       };
     } else {
@@ -70,8 +77,11 @@ export const evaluarEstadoAlAbrirApp = (estadoActual: StreakState): StreakState 
   return { ...estadoActual, diasRacha: 0, rachaSalvadaRecientemente: false };
 };
 
-export const registrarCheckInExitoso = (estadoActual: StreakState): StreakState => {
-  const hoyISO = obtenerFechaISO();
+export const registrarCheckInExitoso = (
+  estadoActual: StreakState,
+  fechaActual: Date = new Date(),
+): StreakState => {
+  const hoyISO = obtenerFechaISO(fechaActual);
   const nuevaRacha = estadoActual.diasRacha + 1;
   let nuevosComodines = estadoActual.comodines;
 
@@ -96,7 +106,7 @@ export const obtenerEstadoRachaDB = async (userId: string): Promise<StreakState>
   try {
     const { data, error } = await supabase
       .from('rachas_usuario')
-      .select('racha_actual, comodines_disponibles, ultimo_checkin')
+      .select('racha_actual, comodines_disponibles, ultimo_checkin, ultimo_comodin_usado')
       .eq('perfil_id', userId)
       .maybeSingle();
 
@@ -104,11 +114,17 @@ export const obtenerEstadoRachaDB = async (userId: string): Promise<StreakState>
 
     let estadoBase = ESTADO_INICIAL_RACHA;
     if (data) {
+      const fechaActual = new Date();
+      const ayer = new Date(fechaActual);
+      ayer.setDate(ayer.getDate() - 1);
+      const hoyISO = obtenerFechaISO(fechaActual);
       estadoBase = {
         ...ESTADO_INICIAL_RACHA,
         diasRacha: data.racha_actual,
         comodines: data.comodines_disponibles,
         ultimoCheckIn: data.ultimo_checkin,
+        rachaSalvadaRecientemente: data.ultimo_checkin === hoyISO
+          && data.ultimo_comodin_usado === obtenerFechaISO(ayer),
       };
     }
 
@@ -122,8 +138,9 @@ export const obtenerEstadoRachaDB = async (userId: string): Promise<StreakState>
     console.warn('Fallo Supabase, leyendo caché local de rachas...', error);
     const localData = await AsyncStorage.getItem(getStorageKey(userId));
     if (localData) {
-      // Evaluamos el estado cacheado (así gastamos comodines visualmente si estuvo offline 2 días)
-      return evaluarEstadoAlAbrirApp(JSON.parse(localData));
+      const estadoEvaluado = evaluarEstadoAlAbrirApp(JSON.parse(localData));
+      await AsyncStorage.setItem(getStorageKey(userId), JSON.stringify(estadoEvaluado));
+      return estadoEvaluado;
     }
     return ESTADO_INICIAL_RACHA;
   }
@@ -131,46 +148,52 @@ export const obtenerEstadoRachaDB = async (userId: string): Promise<StreakState>
 
 export const ejecutarCheckInDB = async (userId: string, estadoOptimista: StreakState): Promise<StreakState> => {
   let data: {
+    exito: boolean;
     racha_actual: number;
     comodines_disponibles: number;
     comodin_usado_hoy?: boolean;
+    fecha_checkin: string;
   } | null = null;
 
   try {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (!timeZone) {
+      throw new Error('No se pudo determinar la zona horaria local del dispositivo.');
+    }
+
     const result = await supabase.rpc('procesar_checkin_diario', {
       p_user_id: userId,
+      p_timezone: timeZone,
     });
 
     if (result.error) throw result.error;
     data = result.data;
   } catch (error) {
-    console.error('Error procesando checkin en backend, guardando offline', error);
-    await AsyncStorage.setItem(getStorageKey(userId), JSON.stringify(estadoOptimista));
-    return estadoOptimista;
+    console.error('Error procesando check-in en el backend:', error);
+    throw error;
   }
 
   if (!data) {
     throw new Error('El servidor no devolvió el estado actualizado de la racha.');
   }
-
-  const fecha = obtenerFechaISO();
-  const { error: errorHistorial } = await supabase
-    .from('historial_checkins')
-    .insert({
-      perfil_id: userId,
-      fecha,
-      tipo: 'quiz',
-    });
-
-  if (errorHistorial && errorHistorial.code !== '23505') {
-    throw errorHistorial;
+  if (data.exito !== true || !data.fecha_checkin) {
+    throw new Error('El servidor devolvió una respuesta inválida al procesar la racha.');
   }
 
+  const fecha = data.fecha_checkin;
+  const fechaComodin = new Date(`${fecha}T00:00:00.000Z`);
+  fechaComodin.setUTCDate(fechaComodin.getUTCDate() - 1);
+  const fechaComodinISO = fechaComodin.toISOString().slice(0, 10);
+
+  const diasCongelados = data.comodin_usado_hoy && !estadoOptimista.diasCongelados.includes(fechaComodinISO)
+    ? [...estadoOptimista.diasCongelados, fechaComodinISO]
+    : estadoOptimista.diasCongelados;
   const nuevoEstado: StreakState = {
     ...estadoOptimista,
     diasRacha: data.racha_actual,
     comodines: data.comodines_disponibles,
     ultimoCheckIn: fecha,
+    diasCongelados,
     rachaSalvadaRecientemente: data.comodin_usado_hoy || estadoOptimista.rachaSalvadaRecientemente,
   };
 

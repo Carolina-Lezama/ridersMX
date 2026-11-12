@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, useWindowDimensions, Animated, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, useWindowDimensions, Animated, TouchableOpacity, Image, Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ONBOARDING_DATA } from '../../constants/onboardingData';
 import Paginator from '../../components/Paginator'; 
@@ -15,12 +15,13 @@ export default function OnboardingScreen({ navigation }: any) {
   
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Detecta el cambio cuando el usuario desliza arrastrando manualmente
+  // Detecta el cambio cuando el usuario desliza arrastrando manualmente.
   const viewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems && viewableItems.length > 0) {
       const newIdx = viewableItems[0].index;
-      console.log(`[Scroll Manual Detectado] Índice actual: ${newIdx}`);
-      setCurrentIndex(newIdx);
+      if (typeof newIdx === 'number' && newIdx >= 0 && newIdx < ONBOARDING_DATA.length) {
+        setCurrentIndex(newIdx);
+      }
     }
   }).current;
 
@@ -28,11 +29,8 @@ export default function OnboardingScreen({ navigation }: any) {
 
   // CORREGIDO: Forzamos la actualización de estado en el botón Siguiente/Empezar
   const scrollTo = async () => {
-    console.log(`[Clic Siguiente] Índice actual: ${currentIndex}`);
-
     if (currentIndex < ONBOARDING_DATA.length - 1) {
       const nextIndex = currentIndex + 1;
-      console.log(`[Acción] Moviendo a índice: ${nextIndex}`);
       
       // 1. Actualizamos el estado directamente
       setCurrentIndex(nextIndex);
@@ -43,12 +41,14 @@ export default function OnboardingScreen({ navigation }: any) {
         animated: true 
       });
     } else {
-      console.log('[Acción] ¡Empezar presionado! Guardando sesión...');
       try {
         await AsyncStorage.setItem('@ya_vio_onboarding', 'true');
         navigation.replace('Login'); 
       } catch (error) {
-        console.error('[Error AsyncStorage]:', error);
+        console.error('No se pudo guardar que el onboarding fue completado:', error);
+        const mensaje = 'No se pudo guardar el inicio. Revisa el almacenamiento disponible e inténtalo de nuevo.';
+        if (Platform.OS === 'web') window.alert(mensaje);
+        else Alert.alert('No se pudo continuar', mensaje);
       }
     }
   };
@@ -56,8 +56,6 @@ export default function OnboardingScreen({ navigation }: any) {
   // CORREGIDO: Forzamos la actualización de estado al presionar Saltar
   const skipToLast = () => {
     const lastIndex = ONBOARDING_DATA.length - 1;
-    console.log(`[Clic Saltar] Llevando directamente al último índice (${lastIndex})`);
-    
     // 1. Actualizamos el estado para cambiar la interfaz y botones al instante
     setCurrentIndex(lastIndex);
 

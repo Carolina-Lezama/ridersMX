@@ -82,7 +82,17 @@ export default function PostRideReviewModal({
   const horaFormateada = evento?.hora ? formatearHora(evento.hora, fechaEvento) : null;
 
   useEffect(() => {
-    if (visible) {
+    if (visible && evento?.id) {
+      setRating(0);
+      setDistancia('');
+      setDuracion('');
+      setNotas('');
+      setFotoUri(null);
+      setKilometraje('');
+      setTaller('');
+      setCosto('');
+      setMotos([]);
+      setMotocicletaSeleccionada(null);
       fetchMotosUsuario();
     } else {
       // Limpiar estados al cerrar
@@ -97,13 +107,14 @@ export default function PostRideReviewModal({
       setMotocicletaSeleccionada(null);
       setGuardando(false);
     }
-  }, [visible]);
+  }, [visible, evento?.id]);
 
   const fetchMotosUsuario = async () => {
     try {
       setCargandoMotos(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session?.user) throw new Error('Inicia sesión para cargar tus motocicletas.');
 
       const { data, error } = await supabase
         .from('motocicletas')
@@ -112,15 +123,16 @@ export default function PostRideReviewModal({
 
       if (error) throw error;
 
-      if (data && data.length > 0) {
-        setMotos(data);
-        // Si solo tiene una moto, la seleccionamos automáticamente por comodidad
-        if (data.length === 1) {
-          setMotocicletaSeleccionada(data[0].id);
-        }
+      setMotos(data ?? []);
+      if (data?.length === 1) {
+        setMotocicletaSeleccionada(data[0].id);
       }
     } catch (error) {
       console.error('Error obteniendo motos:', error);
+      Alert.alert(
+        'No se pudieron cargar las motocicletas',
+        error instanceof Error ? error.message : 'Inténtalo de nuevo.',
+      );
     } finally {
       setCargandoMotos(false);
     }
@@ -178,10 +190,22 @@ export default function PostRideReviewModal({
       return;
     }
 
+    const distanciaNumero = distancia.trim() ? Number(distancia.replace(',', '.')) : 0;
+    const duracionNumero = duracion.trim() ? Number(duracion.replace(',', '.')) : 0;
+    if (
+      !esMantenimiento
+      && ((!Number.isFinite(distanciaNumero) || distanciaNumero < 0)
+        || (!Number.isInteger(duracionNumero) || duracionNumero < 0))
+    ) {
+      Alert.alert('Datos no válidos', 'La distancia debe ser un número no negativo y la duración, minutos enteros no negativos.');
+      return;
+    }
+
     try {
       setGuardando(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session?.user) throw new Error('Inicia sesión para guardar la reseña.');
 
       if (esMantenimiento) {
         await guardarResenaMantenimiento({
@@ -195,15 +219,13 @@ export default function PostRideReviewModal({
           comentarios: notas,
         });
       } else {
-        const distanciaKm = distancia ? Number(distancia.replace(',', '.')) : 0;
-        const duracionMinutos = duracion ? Number(duracion.replace(',', '.')) : 0;
         await guardarResenaRodada({
           userId: session.user.id,
           eventoId: evento.id,
           motocicletaId: motocicletaSeleccionada,
           calificacion: rating,
-          distanciaKm: Number.isFinite(distanciaKm) ? distanciaKm : 0,
-          duracionMinutos: Number.isFinite(duracionMinutos) ? duracionMinutos : 0,
+          distanciaKm: distanciaNumero,
+          duracionMinutos: duracionNumero,
           comentarios: notas,
           fotoUri,
         });
@@ -223,12 +245,13 @@ export default function PostRideReviewModal({
      if (!evento?.id) return;
      try {
        setGuardando(true);
-       const { data: { session } } = await supabase.auth.getSession();
-       if (!session?.user) return;
+       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+       if (sessionError) throw sessionError;
+       if (!session?.user) throw new Error('Inicia sesión para posponer este recordatorio.');
        await posponerEventoPendiente(session.user.id, evento.id);
        onClose();
      } catch (error) {
-       Alert.alert('Error al posponer', 'No se pudo posponer el recordatorio.');
+       Alert.alert('Error al posponer', error instanceof Error ? error.message : 'No se pudo posponer el recordatorio.');
      } finally {
        setGuardando(false);
      }
@@ -239,12 +262,13 @@ export default function PostRideReviewModal({
      if (!evento?.id) return;
      try {
        setGuardando(true);
-       const { data: { session } } = await supabase.auth.getSession();
-       if (!session?.user) return;
+       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+       if (sessionError) throw sessionError;
+       if (!session?.user) throw new Error('Inicia sesión para actualizar este evento.');
        await ignorarEventoPendiente(session.user.id, evento.id);
        onClose();
      } catch (error) {
-       Alert.alert('Error', 'No se pudo ignorar este evento.');
+       Alert.alert('Error', error instanceof Error ? error.message : 'No se pudo ignorar este evento.');
      } finally {
        setGuardando(false);
      }
@@ -444,20 +468,9 @@ export default function PostRideReviewModal({
   );
 }
 
-// ... (La función formatearHora permanece igual)
 const formatearHora = (hora: string, fecha: Date | null) => {
-  const match = hora.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
-  if (!match || !fecha) return hora;
-  const horaOriginal = Number(match[1]);
-  const minutos = Number(match[2]);
-  const periodo = match[3]?.toUpperCase();
-  if (minutos > 59 || (periodo && (horaOriginal < 1 || horaOriginal > 12)) || (!periodo && horaOriginal > 23)) {
-    return hora;
-  }
-  const hora24 = periodo === 'PM' ? (horaOriginal % 12) + 12 : periodo === 'AM' ? horaOriginal % 12 : horaOriginal;
-  const hora12 = hora24 % 12 || 12;
-  const periodoFormateado = hora24 >= 12 ? 'PM' : 'AM';
-  return `${String(hora12).padStart(2, '0')}:${String(minutos).padStart(2, '0')} ${periodoFormateado}`;
+  if (!fecha) return hora;
+  return fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 };
 
 const createStyles = (theme: any) =>

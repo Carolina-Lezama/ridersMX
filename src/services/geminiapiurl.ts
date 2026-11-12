@@ -1,4 +1,3 @@
-import * as FileSystem from 'expo-file-system';
 // ==========================================
 // CONFIGURACIÓN INICIAL Y URL BASE
 // ==========================================

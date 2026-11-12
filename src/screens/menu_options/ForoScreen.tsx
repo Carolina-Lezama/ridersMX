@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -28,6 +29,8 @@ export default function ForoScreen({ navigation }: any) {
   const [publicaciones, setPublicaciones] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
+  const [errorCarga, setErrorCarga] = useState(false);
+  const primeraCarga = useRef(true);
   const [usuarioId, setUsuarioId] = useState<string | null>(null);
   const [comentarios, setComentarios] = useState<Record<string, any[]>>({});
   const [comentarioNuevo, setComentarioNuevo] = useState<Record<string, string>>({});
@@ -71,7 +74,10 @@ export default function ForoScreen({ navigation }: any) {
     return { descripcion: descripcion || contenido, detalles };
   };
 
-  const obtenerPublicaciones = async () => {
+  const obtenerPublicaciones = useCallback(async (refrescar = false) => {
+    setErrorCarga(false);
+    if (refrescar) setRefrescando(true);
+    else setCargando(true);
     try {
       const { data, error } = await supabase
         .from('foro_publicaciones')
@@ -84,20 +90,24 @@ export default function ForoScreen({ navigation }: any) {
       const userId = authData.user?.id ?? null;
       setUsuarioId(userId);
       const ids = (data || []).map((post: any) => post.id);
-      if (!ids.length) { setComentarios({}); return; }
+      if (!ids.length) {
+        setComentarios({});
+        setAsistencias({});
+        return;
+      }
       const creatorIds = [...new Set((data || []).map((post: any) => post.perfil_id).filter(Boolean))];
       let creatorNames: Record<string, string> = {};
       if (creatorIds.length) {
         const { data: profiles, error: profileError } = await supabase
-          .from('perfiles')
-          .select('id, username, nombre_completo')
+          .from('perfiles_publicos')
+          .select('id, username')
           .in('id', creatorIds);
         if (profileError) {
           console.warn('No se pudieron cargar los autores de las publicaciones:', profileError.message);
         } else {
           creatorNames = Object.fromEntries((profiles || []).map((profile: any) => [
             profile.id,
-            profile.username || profile.nombre_completo || 'Usuario',
+            profile.username || 'Usuario',
           ]));
         }
       }
@@ -151,13 +161,13 @@ export default function ForoScreen({ navigation }: any) {
       let usernamesById: Record<string, string> = {};
       if (commenterIds.length) {
         const { data: profiles, error: profilesError } = await supabase
-          .from('perfiles')
-          .select('id, username, nombre_completo')
+          .from('perfiles_publicos')
+          .select('id, username')
           .in('id', commenterIds);
         if (profilesError) throw profilesError;
         usernamesById = Object.fromEntries((profiles || []).map((profile: any) => [
           profile.id,
-          profile.username || profile.nombre_completo || 'Usuario',
+          profile.username || 'Usuario',
         ]));
       }
       const byPost: Record<string, any[]> = {};
@@ -171,11 +181,12 @@ export default function ForoScreen({ navigation }: any) {
       setComentarios(byPost);
     } catch (error) {
       console.error('Error al cargar publicaciones:', error);
+      setErrorCarga(true);
     } finally {
       setCargando(false);
       setRefrescando(false);
     }
-  };
+  }, []);
 
   const avisar = (titulo: string, mensaje: string) => Platform.OS === 'web'
     ? window.alert(`${titulo}: ${mensaje}`) : Alert.alert(titulo, mensaje);
@@ -207,10 +218,16 @@ export default function ForoScreen({ navigation }: any) {
   };
 
   const elegirImagenEdicion = async () => {
-    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permiso.granted) { avisar('Permiso requerido', 'Permite acceder a la galería para elegir una foto.'); return; }
-    const resultado = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.8 });
-    if (!resultado.canceled && edicion) setEdicion({ ...edicion, imagenUrl: resultado.assets[0].uri });
+    try {
+      const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permiso.granted) { avisar('Permiso requerido', 'Permite acceder a la galería para elegir una foto.'); return; }
+      const resultado = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.8 });
+      if (!resultado.canceled && resultado.assets?.length && edicion) {
+        setEdicion({ ...edicion, imagenUrl: resultado.assets[0].uri });
+      }
+    } catch (error) {
+      avisar('No se pudo abrir la galería', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
+    }
   };
 
   const editarComentario = (comment: any) => setEdicion({
@@ -258,7 +275,7 @@ export default function ForoScreen({ navigation }: any) {
       }
       if (result.error) throw result.error;
       setEdicion(null);
-      await obtenerPublicaciones();
+      await obtenerPublicaciones(true);
     } catch (error: any) {
       avisar('No se pudo guardar', error.message || 'Intenta de nuevo.');
     } finally { setGuardandoEdicion(false); }
@@ -274,7 +291,7 @@ export default function ForoScreen({ navigation }: any) {
       const table = tipo === 'publicacion' ? 'foro_publicaciones' : 'foro_comentarios';
       const { error } = await supabase.from(table).delete().eq('id', id).eq('perfil_id', usuarioId);
       if (error) throw error;
-      await obtenerPublicaciones();
+      await obtenerPublicaciones(true);
     } catch (error: any) {
       avisar('No se pudo borrar', error.message || 'Intenta de nuevo.');
     }
@@ -298,7 +315,7 @@ export default function ForoScreen({ navigation }: any) {
         );
         if (error) throw error;
       }
-      await obtenerPublicaciones();
+      await obtenerPublicaciones(true);
     } catch (error: any) {
       avisar('No se pudo guardar la reacción', error.message || 'Intenta de nuevo.');
     } finally { setProcesando((prev) => ({ ...prev, [post.id]: false })); }
@@ -317,7 +334,7 @@ export default function ForoScreen({ navigation }: any) {
         const { error } = await supabase.from('foro_asistencias').insert({ publicacion_id: post.id, perfil_id: usuarioId });
         if (error) throw error;
       }
-      await obtenerPublicaciones();
+      await obtenerPublicaciones(true);
     } catch (error: any) {
       avisar('No se pudo actualizar la asistencia', error.message || 'Puede que el cupo esté completo.');
     } finally { setProcesando((prev) => ({ ...prev, [`attendance-${post.id}`]: false })); }
@@ -334,23 +351,27 @@ export default function ForoScreen({ navigation }: any) {
       });
       if (error) throw error;
       setComentarioNuevo((prev) => ({ ...prev, [postId]: '' }));
-      await obtenerPublicaciones();
+      await obtenerPublicaciones(true);
     } catch (error: any) {
       avisar('No se pudo publicar el comentario', error.message || 'Revisa que la migración esté aplicada.');
     } finally { setProcesando((prev) => ({ ...prev, [`comment-${postId}`]: false })); }
   };
 
-  useEffect(() => {
-    obtenerPublicaciones();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const esPrimeraCarga = primeraCarga.current;
+      primeraCarga.current = false;
+      void obtenerPublicaciones(!esPrimeraCarga);
+    }, [obtenerPublicaciones])
+  );
 
   useEffect(() => {
     const termino = busqueda.trim();
     if (termino.length < 2) { setUsuariosSugeridos([]); return; }
     let cancelado = false;
     const timeout = setTimeout(async () => {
-      const { data, error } = await supabase.from('perfiles')
-        .select('id, username, nombre_completo, avatar_url')
+      const { data, error } = await supabase.from('perfiles_publicos')
+        .select('id, username, avatar_url')
         .ilike('username', `%${termino}%`)
         .limit(6);
       if (cancelado) return;
@@ -421,16 +442,24 @@ export default function ForoScreen({ navigation }: any) {
           refreshControl={
             <RefreshControl
               refreshing={refrescando}
-              onRefresh={() => {
-                setRefrescando(true);
-                obtenerPublicaciones();
-              }}
+              onRefresh={() => { void obtenerPublicaciones(true); }}
               colors={[theme.primary]}
             />
           }
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={(
             <View>
+              {errorCarga && (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  onPress={() => { void obtenerPublicaciones(true); }}
+                  style={{ padding: 12, marginBottom: 10, borderRadius: 10, backgroundColor: theme.card }}
+                >
+                  <Text style={{ color: theme.textSecondary }}>
+                    No se pudo actualizar el foro. Toca aquí para volver a intentar.
+                  </Text>
+                </TouchableOpacity>
+              )}
               <View style={styles.searchBox}>
                 <Ionicons name="search-outline" size={19} color={theme.textSecondary} />
                 <TextInput value={busqueda} onChangeText={setBusqueda} placeholder="Buscar publicaciones o usuarios..."
@@ -446,7 +475,6 @@ export default function ForoScreen({ navigation }: any) {
                       <Ionicons name="person-circle-outline" size={24} color={theme.primary} />
                       <View style={styles.suggestionTextWrap}>
                         <Text style={styles.suggestionUsername}>@{profile.username}</Text>
-                        {!!profile.nombre_completo && <Text style={styles.suggestionName}>{profile.nombre_completo}</Text>}
                       </View>
                       <Ionicons name="chevron-forward" size={17} color={theme.textSecondary} />
                     </TouchableOpacity>
@@ -616,9 +644,21 @@ export default function ForoScreen({ navigation }: any) {
           )}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="chatbubbles-outline" size={48} color={theme.textSecondary} />
-              <Text style={styles.emptyText}>No hay publicaciones aún.</Text>
-              <Text style={styles.emptySubtext}>Sé el primero en crear una rodada o duda.</Text>
+              {errorCarga ? (
+                <>
+                  <Ionicons name="cloud-offline-outline" size={48} color={theme.textSecondary} />
+                  <Text style={styles.emptyText}>No se pudo cargar el foro.</Text>
+                  <TouchableOpacity onPress={() => { void obtenerPublicaciones(true); }}>
+                    <Text style={[styles.emptySubtext, { color: theme.primary }]}>Toca para volver a intentar.</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="chatbubbles-outline" size={48} color={theme.textSecondary} />
+                  <Text style={styles.emptyText}>No hay publicaciones aún.</Text>
+                  <Text style={styles.emptySubtext}>Sé el primero en crear una rodada o duda.</Text>
+                </>
+              )}
             </View>
           }
         />

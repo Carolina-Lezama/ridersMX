@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -46,6 +46,9 @@ export default function ForoCrearPublicacion({ navigation }: any) {
   const [ubicacionQuery, setUbicacionQuery] = useState('');
   const [resultadosUbicacion, setResultadosUbicacion] = useState<any[]>([]);
   const [cargandoUbicacion, setCargandoUbicacion] = useState(false);
+  const [errorUbicacion, setErrorUbicacion] = useState(false);
+  const solicitudUbicacion = useRef(0);
+  const omitirBusquedaUbicacion = useRef(false);
 
   // Modales Marca/Modelo
   const [modalVisible, setModalVisible] = useState(false);
@@ -97,40 +100,58 @@ export default function ForoCrearPublicacion({ navigation }: any) {
     }
   };
 
-  const buscarUbicacion = async (texto: string) => {
-    setUbicacionQuery(texto);
-
-    if (!texto || texto.trim().length < 3) {
+  useEffect(() => {
+    const texto = ubicacionQuery.trim();
+    const solicitud = ++solicitudUbicacion.current;
+    if (omitirBusquedaUbicacion.current) {
+      omitirBusquedaUbicacion.current = false;
       setResultadosUbicacion([]);
       return;
     }
-
-    setCargandoUbicacion(true);
-    try {
-      const response = await fetch(
-        `https://api.locationiq.com/v1/autocomplete?key=${LOCATIONIQ_KEY}&q=${encodeURIComponent(
-          texto
-        )}&countrycodes=mx&limit=5&format=json&lang=es`
-      );
-      const data = await response.json();
-
-      if (Array.isArray(data)) {
-        setResultadosUbicacion(data);
-      } else {
-        setResultadosUbicacion([]);
-      }
-    } catch (error) {
-      console.error('Error buscando ubicación:', error);
+    if (texto.length < 3) {
       setResultadosUbicacion([]);
-    } finally {
+      setErrorUbicacion(false);
       setCargandoUbicacion(false);
+      return;
     }
-  };
+
+    const timeout = setTimeout(async () => {
+      setCargandoUbicacion(true);
+      setErrorUbicacion(false);
+      try {
+        const response = await fetch(
+          `https://api.locationiq.com/v1/autocomplete?key=${LOCATIONIQ_KEY}&q=${encodeURIComponent(
+            texto
+          )}&countrycodes=mx&limit=5&format=json&lang=es`
+        );
+        if (!response.ok) throw new Error(`LocationIQ respondió ${response.status}.`);
+        const data = await response.json();
+
+        if (solicitud === solicitudUbicacion.current) {
+          setResultadosUbicacion(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error('Error buscando ubicación:', error);
+        if (solicitud === solicitudUbicacion.current) {
+          setResultadosUbicacion([]);
+          setErrorUbicacion(true);
+        }
+      } finally {
+        if (solicitud === solicitudUbicacion.current) setCargandoUbicacion(false);
+      }
+    }, 300);
+    return () => {
+      clearTimeout(timeout);
+      solicitudUbicacion.current += 1;
+    };
+  }, [ubicacionQuery]);
 
   const seleccionarUbicacion = (item: any) => {
     const texto = typeof item === 'string' ? item : item?.display_name || '';
+    omitirBusquedaUbicacion.current = true;
     setUbicacionQuery(texto);
     setResultadosUbicacion([]);
+    setErrorUbicacion(false);
   };
 
   const abrirModal = (tipo: 'marca' | 'modelo') => {
@@ -164,6 +185,19 @@ export default function ForoCrearPublicacion({ navigation }: any) {
       return;
     }
 
+    let rutaImagenSubida: string | null = null;
+    const eliminarImagenPendiente = async () => {
+      if (!rutaImagenSubida) return;
+      try {
+        const { error } = await supabase.storage.from('foro-imagenes').remove([rutaImagenSubida]);
+        if (error) console.warn('No se pudo limpiar la imagen de una publicación fallida:', error.message);
+      } catch (error) {
+        console.warn('No se pudo limpiar la imagen de una publicación fallida:', error);
+      } finally {
+        rutaImagenSubida = null;
+      }
+    };
+
     try {
       setGuardando(true);
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -194,6 +228,7 @@ export default function ForoCrearPublicacion({ navigation }: any) {
         const mimeType = imagen.mimeType || (extension === 'png' ? 'image/png' : 'image/jpeg');
         const ruta = `${session.user.id}/${Date.now()}.${extension}`;
         const respuesta = await fetch(imagen.uri);
+        if (!respuesta.ok) throw new Error('No se pudo leer la imagen seleccionada.');
         const archivo = await respuesta.arrayBuffer();
 
         const { error: errorSubida } = await supabase.storage
@@ -205,6 +240,7 @@ export default function ForoCrearPublicacion({ navigation }: any) {
           return;
         }
 
+        rutaImagenSubida = ruta;
         imagenUrl = supabase.storage.from('foro-imagenes').getPublicUrl(ruta).data.publicUrl;
       }
 
@@ -219,14 +255,17 @@ export default function ForoCrearPublicacion({ navigation }: any) {
       ]);
 
       if (error) {
+        await eliminarImagenPendiente();
         console.error('Error devuelto por Supabase:', error);
         mostrarMensaje('Error al guardar', error.message);
         return;
       }
 
+      rutaImagenSubida = null;
       mostrarMensaje('¡Éxito!', 'Tu publicación ha sido creada.');
       navigation.goBack();
     } catch (err: any) {
+      await eliminarImagenPendiente();
       console.error('Error inesperado:', err);
       mostrarMensaje('Error inesperado', err.message || 'Ocurrió un error al publicar.');
     } finally {
@@ -356,10 +395,15 @@ export default function ForoCrearPublicacion({ navigation }: any) {
                 placeholder="Ej. Gasolinera Zavaleta, Puebla"
                 placeholderTextColor={theme.textSecondary}
                 value={ubicacionQuery}
-                onChangeText={buscarUbicacion}
+                onChangeText={setUbicacionQuery}
               />
               {cargandoUbicacion && <ActivityIndicator size="small" color={theme.primary} />}
             </View>
+            {errorUbicacion && (
+              <Text style={{ color: theme.textSecondary, marginTop: -8, marginBottom: 8 }}>
+                No se pudo buscar la ubicación. Revisa tu conexión e inténtalo de nuevo.
+              </Text>
+            )}
 
             {/* LISTA RESULTADOS UBICACIÓN */}
             {Array.isArray(resultadosUbicacion) && resultadosUbicacion.length > 0 && (

@@ -27,6 +27,22 @@ try { captureRef = require('react-native-view-shot').captureRef; } catch { captu
 try { Sharing = require('expo-sharing'); } catch { Sharing = null; }
 try { MediaLibrary = require('expo-media-library'); } catch { MediaLibrary = null; }
 
+const mostrarAlerta = (titulo: string, mensaje: string) => {
+  if (Platform.OS === 'web') window.alert(`${titulo}: ${mensaje}`);
+  else Alert.alert(titulo, mensaje);
+};
+
+const confirmarAccion = (titulo: string, mensaje: string, textoConfirmar: string, accion: () => void) => {
+  if (Platform.OS === 'web') {
+    if (window.confirm(`${titulo}\n\n${mensaje}`)) accion();
+    return;
+  }
+  Alert.alert(titulo, mensaje, [
+    { text: 'Cancelar', style: 'cancel' },
+    { text: textoConfirmar, style: 'destructive', onPress: accion },
+  ]);
+};
+
 // Qué tanto se nota el color sobre una moto real (PNG con fondo transparente)
 const INTENSIDAD_TINTE = 0.7;
 
@@ -702,6 +718,7 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
   const [modalNuevo, setModalNuevo] = useState(false);
   const [modalCompartirWeb, setModalCompartirWeb] = useState(false);
   const [nombreInput, setNombreInput] = useState('');
+  const [guardandoGaraje, setGuardandoGaraje] = useState(false);
   const [hexInput, setHexInput] = useState('');
 
   // brocha
@@ -817,17 +834,14 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
 
   const confirmarBorrarTrazos = () => {
     if (d.trazos.length === 0) return;
-    Alert.alert('Borrar pintura', '¿Quitar todos los trazos de brocha?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Borrar', style: 'destructive', onPress: borrarTrazos },
-    ]);
+    confirmarAccion('Borrar pintura', '¿Quitar todos los trazos de brocha?', 'Borrar', borrarTrazos);
   };
 
   // ---------- paleta propia ----------
   const guardarColor = () => {
     const hex = normalizarHex(hexInput);
     if (!hex) {
-      Alert.alert('Color no válido', 'Escribe un color hexadecimal de 6 dígitos, por ejemplo #ff8800.');
+      mostrarAlerta('Color no válido', 'Escribe un color hexadecimal de 6 dígitos, por ejemplo #ff8800.');
       return;
     }
     agregarColorPaleta(hex);
@@ -836,10 +850,7 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
 
   const borrarColor = (hex: string) => {
     if (!d.paleta.includes(hex)) return;
-    Alert.alert('Quitar color', `¿Quitar ${hex} de tu paleta?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Quitar', style: 'destructive', onPress: () => quitarColorPaleta(hex) },
-    ]);
+    confirmarAccion('Quitar color', `¿Quitar ${hex} de tu paleta?`, 'Quitar', () => quitarColorPaleta(hex));
   };
 
   const elegirColorPrincipal = (hex: string) => {
@@ -930,7 +941,7 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
     try {
       await Share.share({ message: mensaje });
     } catch {
-      Alert.alert('Error', 'No se pudo compartir el diseño.');
+      mostrarAlerta('Error', 'No se pudo compartir el diseño.');
     }
   };
 
@@ -972,7 +983,7 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
     }
 
     if (!captureRef || !MediaLibrary) {
-      Alert.alert(
+      mostrarAlerta(
         'Función no disponible',
         'Para guardar en la galería hay que instalar react-native-view-shot y expo-media-library.'
       );
@@ -981,14 +992,14 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
     try {
       const permiso = await MediaLibrary.requestPermissionsAsync(true);
       if (!permiso.granted) {
-        Alert.alert('Permiso requerido', 'Necesitamos permiso para guardar la imagen en tu galería.');
+        mostrarAlerta('Permiso requerido', 'Necesitamos permiso para guardar la imagen en tu galería.');
         return;
       }
       const uri = await capturar({ format: 'png', quality: 1, result: 'tmpfile' });
       await MediaLibrary.saveToLibraryAsync(uri);
-      Alert.alert('Listo', 'Tu moto se guardó en la galería.');
+      mostrarAlerta('Listo', 'Tu moto se guardó en la galería.');
     } catch {
-      Alert.alert('Error', 'No se pudo guardar la imagen.');
+      mostrarAlerta('Error', 'No se pudo guardar la imagen.');
     }
   };
 
@@ -998,12 +1009,21 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
     setModalGuardar(true);
   };
 
-  const confirmarGuardar = (comoNuevo: boolean) => {
+  const confirmarGuardar = async (comoNuevo: boolean) => {
+    if (guardandoGaraje) return;
     const nombre = nombreInput.trim() || `${nombreMoto} ${d.garaje.length + 1}`;
-    setModalGuardar(false);
-    setActiveId(null);
-    guardarEnGaraje(nombre, comoNuevo);
-    Alert.alert('¡Guardado!', 'Tu diseño ya está en tu garaje.');
+    setGuardandoGaraje(true);
+    try {
+      await guardarEnGaraje(nombre, comoNuevo);
+      setModalGuardar(false);
+      setActiveId(null);
+      mostrarAlerta('¡Guardado!', 'Tu diseño ya está en tu garaje.');
+    } catch (error) {
+      console.error('No se pudo guardar el diseño en el garaje:', error);
+      mostrarAlerta('No se pudo guardar el diseño', 'Revisa el almacenamiento disponible e inténtalo de nuevo.');
+    } finally {
+      setGuardandoGaraje(false);
+    }
   };
 
   const confirmarNuevo = () => setModalNuevo(true);
@@ -1015,10 +1035,7 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
   };
 
   const confirmarQuitarFoto = () =>
-    Alert.alert('Quitar foto', '¿Volver a una moto del catálogo? Tus stickers y trazos se conservan.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Quitar', style: 'destructive', onPress: quitarFoto },
-    ]);
+    confirmarAccion('Quitar foto', '¿Volver a una moto del catálogo? Tus stickers y trazos se conservan.', 'Quitar', quitarFoto);
 
   // ---------- pantalla ----------
   const avisoPintura =
@@ -1131,7 +1148,7 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
                     style={[styles.tarjeta, styles.tarjetaFoto]}
                     onPress={() => {
                       void pedirFotoMoto().catch((error: unknown) => {
-                        Alert.alert('No se pudo seleccionar la foto', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
+                        mostrarAlerta('No se pudo seleccionar la foto', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
                       });
                     }}
                     accessibilityRole="button"
@@ -1361,16 +1378,16 @@ export default function SimuladorEditorScreen({ navigation, route }: any) {
               autoFocus
             />
             <View style={styles.modalBotones}>
-              <TouchableOpacity style={styles.botonGris} onPress={() => setModalGuardar(false)}>
+              <TouchableOpacity style={styles.botonGris} onPress={() => setModalGuardar(false)} disabled={guardandoGaraje}>
                 <Text style={styles.botonGrisTexto}>Cancelar</Text>
               </TouchableOpacity>
               {editando && (
-                <TouchableOpacity style={styles.botonGris} onPress={() => confirmarGuardar(true)}>
+                <TouchableOpacity style={styles.botonGris} onPress={() => { void confirmarGuardar(true); }} disabled={guardandoGaraje}>
                   <Text style={styles.botonGrisTexto}>Como nuevo</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={styles.botonAzul} onPress={() => confirmarGuardar(false)}>
-                <Text style={styles.botonAzulTexto}>{editando ? 'Actualizar' : 'Guardar'}</Text>
+              <TouchableOpacity style={styles.botonAzul} onPress={() => { void confirmarGuardar(false); }} disabled={guardandoGaraje}>
+                <Text style={styles.botonAzulTexto}>{guardandoGaraje ? 'Guardando…' : editando ? 'Actualizar' : 'Guardar'}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -58,6 +58,7 @@ export const NotificacionesScreen = ({ navigation }: any) => {
   const {
     config,
     loading,
+    updating,
     toggleCheckIn,
     toggleLimite,
     toggleEventos,
@@ -73,6 +74,7 @@ export const NotificacionesScreen = ({ navigation }: any) => {
   };
 
   const guardarHoraSeleccionada = async (hora: Date) => {
+    if (updating) return;
     const valor = `${String(hora.getHours()).padStart(2, '0')}:${String(hora.getMinutes()).padStart(2, '0')}`;
     try {
       await actualizarHoraCheckIn(valor);
@@ -84,6 +86,7 @@ export const NotificacionesScreen = ({ navigation }: any) => {
   };
 
   const abrirSelectorHora = () => {
+    if (updating) return;
     const [hora, minuto] = config.checkInTime.split(':').map(Number);
     const fecha = new Date();
     fecha.setHours(hora, minuto, 0, 0);
@@ -233,10 +236,11 @@ export const NotificacionesScreen = ({ navigation }: any) => {
         <Text style={styles.mainHeader}>TUS RECORDATORIOS</Text>
 
         {/* SECCIÓN 1: RACHA Y HÁBITOS */}
-        <Section title="RACHA Y HÁBITOS" icon="flame-outline">
+        <Section title="RACHA Y HÁBITOS" icon="flame-outline" isComingSoon={Platform.OS === 'web'}>
           <SwitchRow 
             label="Recordatorio de Check-in Diario" 
             value={config.checkInEnabled}
+            disabled={updating || Platform.OS === 'web'}
             onValueChange={(enabled: boolean) => {
               void toggleCheckIn(enabled).catch((error) => {
                 console.error('Error actualizando recordatorios de racha:', error);
@@ -249,6 +253,7 @@ export const NotificacionesScreen = ({ navigation }: any) => {
               label="Hora del Recordatorio" 
               value={config.checkInTime}
               onPress={abrirSelectorHora}
+              disabled={updating || Platform.OS === 'web'}
             />
           )}
         </Section>
@@ -258,6 +263,7 @@ export const NotificacionesScreen = ({ navigation }: any) => {
         <SwitchRow 
           label="Alerta de Límite Diario Alcanzado" 
           value={config.limiteEnabled}
+          disabled={updating}
           onValueChange={(enabled: boolean) => {
             void toggleLimite(enabled).catch((error) => {
               console.error('Error actualizando alertas de límite:', error);
@@ -268,12 +274,21 @@ export const NotificacionesScreen = ({ navigation }: any) => {
       </Section>
 
       {/* SECCIÓN 3: AGENDA */}
-      <Section title="AGENDA Y VEHÍCULO" icon="calendar-outline">
+      <Section
+        title="AGENDA Y VEHÍCULO"
+        icon="calendar-outline"
+        isComingSoon={Platform.OS === 'web'}
+      >
         <SwitchRow
-          label="Recordatorios de Cambio de Aceite / Frenos" 
-          value={false} 
-          onValueChange={() => {}} 
-          disabled={true} 
+          label="Recordatorios de agenda"
+          value={config.eventosEnabled}
+          disabled={updating || Platform.OS === 'web'}
+          onValueChange={(enabled: boolean) => {
+            void toggleEventos(enabled).catch((error) => {
+              console.error('Error actualizando recordatorios de agenda:', error);
+              mostrarError(error instanceof Error ? error.message : 'No se pudieron actualizar los recordatorios de agenda.');
+            });
+          }}
         />
       </Section>
 
@@ -304,10 +319,10 @@ export const NotificacionesScreen = ({ navigation }: any) => {
                 onChange={manejarCambioHora}
               />
               <View style={styles.pickerActions}>
-                <TouchableOpacity onPress={() => setSelectorHoraVisible(false)}>
+                <TouchableOpacity disabled={updating} onPress={() => setSelectorHoraVisible(false)}>
                   <Text style={styles.pickerCancel}>Cancelar</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => void guardarHoraSeleccionada(horaTemporal)}>
+                <TouchableOpacity disabled={updating} onPress={() => void guardarHoraSeleccionada(horaTemporal)}>
                   <Text style={styles.pickerSave}>Guardar</Text>
                 </TouchableOpacity>
               </View>

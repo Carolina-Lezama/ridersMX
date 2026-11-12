@@ -17,9 +17,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import geminiapi from '../../services/geminiapiurl';
-import Markdown from 'react-native-markdown-display'; //y esta tambien
-import * as ImagePicker from 'expo-image-picker'; //npx expo install expo-image-picker react-native-markdown-display para esta libreria
-import * as FileSystem from 'expo-file-system/legacy';
+import Markdown from 'react-native-markdown-display';
+import * as ImagePicker from 'expo-image-picker';
 
 interface Message {
   id: string;
@@ -58,30 +57,35 @@ export default function DiagnosticoScreen({ navigation }: any) {
   const handleSeleccionarImagen = async () => {
     if (isLoading) return;
 
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert('Permiso denegado', 'Necesitamos acceso a tu galería.');
-      return;
-    }
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permiso denegado', 'Necesitamos acceso a tu galería.');
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,
-      allowsMultipleSelection: true, // Permite seleccionar varias imágenes a la vez
-      quality: 0.9,
-      base64: true,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        allowsMultipleSelection: true,
+        quality: 0.9,
+        base64: true,
+      });
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const imagenesNuevas = result.assets
-        .filter(asset => asset.base64)
-        .map(asset => ({
-          uri: asset.uri,
-          base64: asset.base64 as string,
-        }));
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const imagenesNuevas = result.assets
+          .filter(asset => asset.base64)
+          .map(asset => ({
+            uri: asset.uri,
+            base64: asset.base64 as string,
+          }));
 
-      // Acumulamos las nuevas imágenes al arreglo existente
-      setImagenesSeleccionadas(prev => [...prev, ...imagenesNuevas]);
+        setImagenesSeleccionadas(prev => [...prev, ...imagenesNuevas]);
+      }
+    } catch (error) {
+      const mensaje = error instanceof Error ? error.message : 'Inténtalo de nuevo.';
+      if (Platform.OS === 'web') window.alert(`No se pudo abrir la galería: ${mensaje}`);
+      else Alert.alert('No se pudo abrir la galería', mensaje);
     }
   };
 
@@ -174,25 +178,28 @@ export default function DiagnosticoScreen({ navigation }: any) {
   // 3. FUNCIONALIDAD BORRAR CHAT
   const handleClearChat = () => {
     Keyboard.dismiss(); // Cierra el teclado si está abierto
+    const limpiar = () => {
+      setMessages([
+        {
+          id: '1',
+          text: 'Hola! ¿En qué puedo ayudarte hoy?',
+          sender: 'ai',
+        },
+      ]);
+      setImagenesSeleccionadas([]);
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('¿Estás seguro de que deseas limpiar toda la conversación?')) limpiar();
+      return;
+    }
+
     Alert.alert(
       'Borrar chat',
       '¿Estás seguro de que deseas limpiar toda la conversación?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Sí, borrar',
-          style: 'destructive',
-          onPress: () => {
-            setMessages([
-              {
-                id: '1',
-                text: 'Hola! ¿En qué puedo ayudarte hoy?',
-                sender: 'ai',
-              },
-            ]);
-            setImagenesSeleccionadas([]);
-          },
-        },
+        { text: 'Sí, borrar', style: 'destructive', onPress: limpiar },
       ]
     );
   };
@@ -316,10 +323,7 @@ export default function DiagnosticoScreen({ navigation }: any) {
             style={styles.toolButton}
             activeOpacity={0.6}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            onPress={() => {
-              console.log('¡Botón de borrar presionado!'); // <-- Comprueba esto en tu terminal
-              handleClearChat();
-            }}
+            onPress={handleClearChat}
           >
             <Ionicons name="trash-outline" size={22} color={theme.iconSecondary} />
           </TouchableOpacity>
