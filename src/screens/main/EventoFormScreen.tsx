@@ -10,6 +10,7 @@ import { useTheme } from '../../../assets/theme/ThemeContext';
 import {
   convertirNumeroOpcional,
   normalizarNumeroDecimal,
+  obtenerFechaEvento,
 } from '../../utils/eventoNotifications';
 import { obtenerConfigNotificaciones } from '../../services/notificationConfigService';
 import { programarNotificacionesEventos } from '../../services/notificationService';
@@ -34,6 +35,13 @@ const generarIdSerie = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy
   const aleatorio = Math.floor(Math.random() * 16);
   return (caracter === 'x' ? aleatorio : (aleatorio & 0x3) | 0x8).toString(16);
 });
+
+const obtenerFechaLocalISO = (fecha: Date): string => {
+  const year = fecha.getFullYear();
+  const month = String(fecha.getMonth() + 1).padStart(2, '0');
+  const day = String(fecha.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const agregarMeses = (fecha: Date, meses: number, diaPreferido = fecha.getDate()) => {
   const siguiente = new Date(fecha);
@@ -85,7 +93,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
 
   // 1. Detectamos si venimos a Crear o a Editar
   const eventoId = route.params?.eventoId || null;
-  const fechaBase = route.params?.fechaBase || new Date().toISOString().split('T')[0];
+  const fechaBase = route.params?.fechaBase || obtenerFechaLocalISO(new Date());
   const esEdicion = !!eventoId;
 
   const [loading, setLoading] = useState(false);
@@ -123,8 +131,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
   const [intervaloDias, setIntervaloDias] = useState('7');
   const [fechaFinRecurrencia, setFechaFinRecurrencia] = useState(() => {
     const fecha = new Date(fechaBase + 'T00:00:00');
-    fecha.setMonth(fecha.getMonth() + 3);
-    return fecha;
+    return agregarMeses(fecha, 3);
   });
 
   useEffect(() => {
@@ -152,6 +159,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
           .from('eventos')
           .select('*')
           .eq('id', eventoId)
+          .eq('perfil_id', session.user.id)
           .single();
 
         if (error) throw error;
@@ -160,15 +168,9 @@ export default function EventoFormScreen({ navigation, route }: any) {
           setTitulo(data.titulo || '');
           if (data.fecha) setFechaObj(new Date(data.fecha + 'T00:00:00'));
 
-          if (data.hora) {
-            const [time, modifier] = data.hora.split(' ');
-            const [hours, minutes] = time.split(':');
-            let hour = parseInt(hours, 10);
-            if (modifier === 'PM' && hour < 12) hour += 12;
-            if (modifier === 'AM' && hour === 12) hour = 0;
-            const date = new Date();
-            date.setHours(hour, parseInt(minutes || '0', 10));
-            setHoraObj(date);
+          if (data.fecha && data.hora) {
+            const fechaHora = obtenerFechaEvento(data.fecha, data.hora);
+            if (fechaHora) setHoraObj(fechaHora);
           }
 
           setTipo(data.tipo || 'rodada');
@@ -274,6 +276,7 @@ export default function EventoFormScreen({ navigation, route }: any) {
         descripcion: descripcion.trim(),
         moto_asociada: motoAsociada.trim() || null,
         estado,
+        completado: estado === 'Completada',
         rodada_punto_reunion: tipo === 'rodada' ? puntoReunion.trim() || null : null,
         rodada_destino: tipo === 'rodada' ? destinoRodada.trim() || null : null,
         rodada_distancia_km: tipo === 'rodada' ? distanciaNumerica : null,
@@ -286,7 +289,11 @@ export default function EventoFormScreen({ navigation, route }: any) {
 
       let recordatoriosActualizados = true;
       if (esEdicion) {
-        const { error } = await supabase.from('eventos').update(eventoPayload).eq('id', eventoId);
+        const { error } = await supabase
+          .from('eventos')
+          .update(eventoPayload)
+          .eq('id', eventoId)
+          .eq('perfil_id', session.user.id);
         if (error) throw error;
         try {
           recordatoriosActualizados = await sincronizarRecordatoriosAgenda(session.user.id);
@@ -341,16 +348,20 @@ export default function EventoFormScreen({ navigation, route }: any) {
   const ejecutarBorrado = async () => {
     try {
       setSaving(true);
-      const { error } = await supabase.from('eventos').delete().eq('id', eventoId);
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session?.user) throw new Error('Inicia sesión para eliminar este evento.');
+
+      const { error } = await supabase
+        .from('eventos')
+        .delete()
+        .eq('id', eventoId)
+        .eq('perfil_id', session.user.id);
       if (error) throw error;
 
       let recordatoriosActualizados = true;
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
-        if (session?.user) {
-          recordatoriosActualizados = await sincronizarRecordatoriosAgenda(session.user.id);
-        }
+        recordatoriosActualizados = await sincronizarRecordatoriosAgenda(session.user.id);
       } catch (error) {
         console.error('La actividad se eliminó, pero no se pudieron actualizar los recordatorios:', error);
         recordatoriosActualizados = false;

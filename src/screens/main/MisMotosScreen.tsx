@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import Skeleton from '../../components/Skeleton';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   clearSelectedMotorcycleId,
   getSelectedMotorcycleId,
@@ -17,19 +18,14 @@ export default function MisMotosScreen({ navigation }: any) {
   const [motos, setMotos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [motoPrincipalId, setMotoPrincipalId] = useState<string | null>(null);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
-  // useEffect que se recarga cada vez que la pantalla gana el foco (por si agregas una moto nueva y regresas)
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      cargarMotos();
-    });
-    return unsubscribe;
-  }, [navigation]);
-
-  const cargarMotos = async () => {
+  const cargarMotos = useCallback(async () => {
+    setErrorCarga(null);
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
 
       if (session?.user) {
         const userId = session.user.id;
@@ -57,11 +53,19 @@ export default function MisMotosScreen({ navigation }: any) {
         setMotoPrincipalId(null);
       }
     } catch (error: any) {
-      Alert.alert('Error al cargar garaje', error.message);
+      setErrorCarga(error instanceof Error ? error.message : 'No se pudo cargar el garaje.');
+      if (Platform.OS === 'web') window.alert(`Error al cargar garaje: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
+      else Alert.alert('Error al cargar garaje', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void cargarMotos();
+    }, [cargarMotos]),
+  );
 
   // Componente visual para cada motocicleta en la lista
 // Componente visual para cada motocicleta en la lista
@@ -114,10 +118,9 @@ export default function MisMotosScreen({ navigation }: any) {
             style={styles.setPrincipalButton}
             onPress={() => {
               void seleccionarMotoPrincipal(item.id).catch((error) => {
-                Alert.alert(
-                  'No se pudo guardar la moto principal',
-                  error instanceof Error ? error.message : 'Inténtalo de nuevo.',
-                );
+                const mensaje = error instanceof Error ? error.message : 'Inténtalo de nuevo.';
+                if (Platform.OS === 'web') window.alert(`No se pudo guardar la moto principal: ${mensaje}`);
+                else Alert.alert('No se pudo guardar la moto principal', mensaje);
               });
             }}
             accessibilityRole="button"
@@ -154,6 +157,15 @@ export default function MisMotosScreen({ navigation }: any) {
               <Skeleton width={20} height={20} borderRadius={10} />
             </View>
           ))}
+        </View>
+      ) : errorCarga ? (
+        <View style={styles.centerContent}>
+          <Ionicons name="cloud-offline-outline" size={64} color={theme.dangerText} />
+          <Text style={styles.emptyTitle}>No se pudo cargar tu garaje</Text>
+          <Text style={styles.emptyText}>{errorCarga}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => void cargarMotos()}>
+            <Text style={styles.retryText}>Reintentar</Text>
+          </TouchableOpacity>
         </View>
       ) : motos.length === 0 ? (
         // ESTADO VACÍO: Cuando no hay motos
@@ -199,6 +211,8 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 },
   emptyTitle: { fontSize: 22, fontWeight: 'bold', color: theme.textPrimary, marginTop: 20, marginBottom: 10 },
   emptyText: { fontSize: 16, color: theme.textSecondary, textAlign: 'center', lineHeight: 24 },
+  retryButton: { backgroundColor: theme.primary, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 11, marginTop: 18 },
+  retryText: { color: theme.onPrimary, fontSize: 15, fontWeight: '700' },
   
   listContainer: { padding: 20, paddingBottom: 100 }, // Padding bottom extra para que no estorbe el FAB
   motoCard: {

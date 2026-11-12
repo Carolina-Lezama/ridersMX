@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../../../assets/theme/ThemeContext';
 import { BarChart } from 'react-native-gifted-charts';
 import { obtenerMetricasSemanales, type BarDataPoint } from '../../../services/timeMetricsService';
@@ -25,11 +26,9 @@ export default function TiempoUsoScreen({ navigation }: any) {
   const [userId, setUserId] = useState<string | null>(null);
   const [cargandoLimites, setCargandoLimites] = useState(true);
   const [guardandoLimites, setGuardandoLimites] = useState(false);
+  const [errorLimites, setErrorLimites] = useState<string | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-
-    const cargarMetricas = async () => {
+  const cargarMetricas = useCallback(async (sigueActiva: () => boolean = () => true) => {
       setCargandoMetricas(true);
       setErrorMetricas(false);
       try {
@@ -39,60 +38,61 @@ export default function TiempoUsoScreen({ navigation }: any) {
           theme.dangerText,
         );
 
-        if (mounted) {
+        if (sigueActiva()) {
           setTiempoHoy(metricas.tiempoHoy);
           setPromedioSemanal(metricas.promedioSemanal);
           setBarData(metricas.barData);
         }
       } catch (error) {
         console.error('No se pudieron cargar las métricas de uso:', error);
-        if (mounted) setErrorMetricas(true);
+        if (sigueActiva()) setErrorMetricas(true);
       } finally {
-        if (mounted) setCargandoMetricas(false);
+        if (sigueActiva()) setCargandoMetricas(false);
       }
-    };
-
-    void cargarMetricas();
-    return () => {
-      mounted = false;
-    };
   }, [limiteBloqueo, theme.primary, theme.dangerText]);
 
-  useEffect(() => {
-    let mounted = true;
+  const cargarConfiguracion = useCallback(async (sigueActiva: () => boolean = () => true) => {
+    setCargandoLimites(true);
+    setErrorLimites(null);
+    setUserId(null);
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      if (!session?.user) throw new Error('Inicia sesión para cargar tus límites de uso.');
 
-    const cargarConfiguracion = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-
-        if (!session?.user) {
-          Alert.alert('Sesión no disponible', 'Inicia sesión para cargar tus límites de uso.');
-          return;
-        }
-
-        const currentUserId = session.user.id;
-        if (mounted) setUserId(currentUserId);
-
-        const limites = await obtenerLimites(currentUserId);
-        if (mounted && limites) {
-          setLimiteNotificacion(limites.limite_notificacion || 0);
-          setLimiteBloqueo(limites.limite_bloqueo || 0);
-        }
-      } catch (error: any) {
-        if (mounted) {
-          Alert.alert('Error al cargar límites', error?.message || 'No se pudo cargar la configuración.');
-        }
-      } finally {
-        if (mounted) setCargandoLimites(false);
+      const currentUserId = session.user.id;
+      const limites = await obtenerLimites(currentUserId);
+      if (!limites) throw new Error('No se encontró una configuración de límites disponible. Reintenta la carga.');
+      if (sigueActiva()) {
+        setUserId(currentUserId);
+        setLimiteNotificacion(limites.limite_notificacion);
+        setLimiteBloqueo(limites.limite_bloqueo);
       }
-    };
-
-    void cargarConfiguracion();
-    return () => {
-      mounted = false;
-    };
+    } catch (error) {
+      console.error('No se pudieron cargar los límites de uso:', error);
+      if (sigueActiva()) {
+        setErrorLimites(error instanceof Error ? error.message : 'No se pudo cargar la configuración.');
+      }
+    } finally {
+      if (sigueActiva()) setCargandoLimites(false);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let activa = true;
+      void cargarMetricas(() => activa);
+      void cargarConfiguracion(() => activa);
+      return () => {
+        activa = false;
+      };
+    }, [cargarMetricas, cargarConfiguracion]),
+  );
+
+  const mostrarAviso = (titulo: string, mensaje: string) => {
+    if (Platform.OS === 'web') window.alert(`${titulo}: ${mensaje}`);
+    else Alert.alert(titulo, mensaje);
+  };
 
   // Funciones para manejar los límites
   const ajustarLimite = (tipo: 'notificacion' | 'bloqueo', cantidad: number) => {
@@ -105,23 +105,25 @@ export default function TiempoUsoScreen({ navigation }: any) {
 
   const handleGuardarLimites = async () => {
     if (!userId) {
-      Alert.alert('Sesión no disponible', 'Inicia sesión para guardar tus límites de uso.');
+      mostrarAviso('Sesión no disponible', 'Inicia sesión para guardar tus límites de uso.');
       return;
     }
 
     setGuardandoLimites(true);
-    const exito = await guardarLimites(userId, {
-      limite_notificacion: limiteNotificacion,
-      limite_bloqueo: limiteBloqueo,
-    });
-    setGuardandoLimites(false);
-
-    Alert.alert(
-      exito ? 'Límites guardados' : 'Error',
-      exito
-        ? 'Tus límites de uso se han guardado correctamente.'
-        : 'No se pudieron guardar los límites. Inténtalo de nuevo.',
-    );
+    try {
+      const exito = await guardarLimites(userId, {
+        limite_notificacion: limiteNotificacion,
+        limite_bloqueo: limiteBloqueo,
+      });
+      mostrarAviso(
+        exito ? 'Límites guardados' : 'Error',
+        exito
+          ? 'Tus límites de uso se han guardado correctamente.'
+          : 'No se pudieron guardar los límites. Inténtalo de nuevo.',
+      );
+    } finally {
+      setGuardandoLimites(false);
+    }
   };
 
   return (
@@ -144,7 +146,7 @@ export default function TiempoUsoScreen({ navigation }: any) {
               <Skeleton width={90} height={34} />
             ) : (
               <>
-                <Text style={styles.resumenValor}>{tiempoHoy}</Text>
+                <Text style={styles.resumenValor}>{errorMetricas ? '—' : tiempoHoy}</Text>
                 <Text style={styles.resumenMinutos}> min</Text>
               </>
             )}
@@ -154,7 +156,9 @@ export default function TiempoUsoScreen({ navigation }: any) {
             {cargandoMetricas ? (
               <Skeleton width={145} height={14} />
             ) : (
-              <Text style={styles.textoPromedio}>Promedio semanal: {promedioSemanal} min</Text>
+              <Text style={styles.textoPromedio}>
+                Promedio semanal: {errorMetricas ? '—' : `${promedioSemanal} min`}
+              </Text>
             )}
           </View>
         </View>
@@ -165,9 +169,14 @@ export default function TiempoUsoScreen({ navigation }: any) {
           {cargandoMetricas ? (
             <Skeleton width="100%" height={180} borderRadius={12} />
           ) : errorMetricas ? (
-            <Text style={{ color: theme.dangerText, padding: 20 }}>
-              No se pudieron cargar las métricas. Comprueba tu conexión e inténtalo de nuevo.
-            </Text>
+            <View>
+              <Text style={{ color: theme.dangerText, padding: 20 }}>
+                No se pudieron cargar las métricas. Comprueba tu conexión e inténtalo de nuevo.
+              </Text>
+              <TouchableOpacity onPress={() => void cargarMetricas()}>
+                <Text style={{ color: theme.primary, textAlign: 'center', paddingBottom: 16 }}>Reintentar</Text>
+              </TouchableOpacity>
+            </View>
           ) : barData.length > 0 ? (
             <BarChart
               data={barData}
@@ -190,6 +199,14 @@ export default function TiempoUsoScreen({ navigation }: any) {
 
         {/* CONTROLES DE LÍMITES (Paso 3.1) */}
         <Text style={styles.sectionTitle}>Ajustes de Restricción</Text>
+        {errorLimites && (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorText}>{errorLimites}</Text>
+            <TouchableOpacity onPress={() => void cargarConfiguracion()}>
+              <Text style={styles.retryText}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={styles.card}>
           
           {/* Límite de Notificación */}
@@ -203,7 +220,7 @@ export default function TiempoUsoScreen({ navigation }: any) {
             </View>
             
             <View style={styles.stepper}>
-              <TouchableOpacity disabled={cargandoLimites || guardandoLimites} onPress={() => ajustarLimite('notificacion', -5)} style={styles.stepperBtn}>
+              <TouchableOpacity disabled={cargandoLimites || guardandoLimites || !!errorLimites} onPress={() => ajustarLimite('notificacion', -5)} style={styles.stepperBtn}>
                 <Ionicons name="remove" size={18} color={theme.iconPrimary} />
               </TouchableOpacity>
               {cargandoLimites ? (
@@ -211,7 +228,7 @@ export default function TiempoUsoScreen({ navigation }: any) {
               ) : (
                 <Text style={styles.stepperValue}>{limiteNotificacion}m</Text>
               )}
-              <TouchableOpacity disabled={cargandoLimites || guardandoLimites} onPress={() => ajustarLimite('notificacion', 5)} style={styles.stepperBtn}>
+              <TouchableOpacity disabled={cargandoLimites || guardandoLimites || !!errorLimites} onPress={() => ajustarLimite('notificacion', 5)} style={styles.stepperBtn}>
                 <Ionicons name="add" size={18} color={theme.iconPrimary} />
               </TouchableOpacity>
             </View>
@@ -230,7 +247,7 @@ export default function TiempoUsoScreen({ navigation }: any) {
             </View>
             
             <View style={styles.stepper}>
-              <TouchableOpacity disabled={cargandoLimites || guardandoLimites} onPress={() => ajustarLimite('bloqueo', -5)} style={styles.stepperBtn}>
+              <TouchableOpacity disabled={cargandoLimites || guardandoLimites || !!errorLimites} onPress={() => ajustarLimite('bloqueo', -5)} style={styles.stepperBtn}>
                 <Ionicons name="remove" size={18} color={theme.iconPrimary} />
               </TouchableOpacity>
               {cargandoLimites ? (
@@ -238,7 +255,7 @@ export default function TiempoUsoScreen({ navigation }: any) {
               ) : (
                 <Text style={styles.stepperValue}>{limiteBloqueo}m</Text>
               )}
-              <TouchableOpacity disabled={cargandoLimites || guardandoLimites} onPress={() => ajustarLimite('bloqueo', 5)} style={styles.stepperBtn}>
+              <TouchableOpacity disabled={cargandoLimites || guardandoLimites || !!errorLimites} onPress={() => ajustarLimite('bloqueo', 5)} style={styles.stepperBtn}>
                 <Ionicons name="add" size={18} color={theme.iconPrimary} />
               </TouchableOpacity>
             </View>
@@ -248,9 +265,9 @@ export default function TiempoUsoScreen({ navigation }: any) {
 
         {/* Guardar límites en Supabase */}
         <TouchableOpacity
-          style={[styles.saveButton, (cargandoLimites || guardandoLimites || !userId) && { opacity: 0.6 }]}
+          style={[styles.saveButton, (cargandoLimites || guardandoLimites || !userId || !!errorLimites) && { opacity: 0.6 }]}
           onPress={handleGuardarLimites}
-          disabled={cargandoLimites || guardandoLimites || !userId}
+          disabled={cargandoLimites || guardandoLimites || !userId || !!errorLimites}
         >
           {guardandoLimites ? (
             <ActivityIndicator color={theme.onPrimary} />
@@ -317,5 +334,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.primary, borderRadius: 12, padding: 16,
     alignItems: 'center', marginTop: 20
   },
-  saveButtonText: { color: theme.onPrimary, fontSize: 16, fontWeight: 'bold' }
+  saveButtonText: { color: theme.onPrimary, fontSize: 16, fontWeight: 'bold' },
+  errorCard: { backgroundColor: theme.card, borderColor: theme.dangerText, borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 12 },
+  errorText: { color: theme.dangerText, marginBottom: 8 },
+  retryText: { color: theme.primary, fontWeight: '700' },
 });

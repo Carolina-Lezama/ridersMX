@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -50,6 +51,11 @@ const LIMITE_ELIMINACIONES_DUENO = 2;
 const TABLA_PERFILES = 'perfiles';
 
 const TIPO_ENTIDAD_MOTO = 'Moto';
+
+const mostrarAlerta = (titulo: string, mensaje: string) => {
+  if (Platform.OS === 'web') window.alert(`${titulo}: ${mensaje}`);
+  else Alert.alert(titulo, mensaje);
+};
 
 // ─── TIPOS ───────────────────────────────────────────────────────────────────
 
@@ -136,9 +142,10 @@ const subirFotoMoto = async (uri: string, perfilId: string): Promise<string | nu
     // La carpeta es el id del usuario: así lo exige la política del bucket
     const ruta = `${perfilId}/${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from(BUCKET_MOTOS).upload(ruta, buffer, { contentType });
-    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
-    console.log('[Moto] subida de foto → ruta:', ruta, '| error:', error?.message ?? null);
-    if (error) return null;
+    if (error) {
+      console.warn('No se pudo subir la foto de la moto:', error.message);
+      return null;
+    }
     return supabase.storage.from(BUCKET_MOTOS).getPublicUrl(ruta).data.publicUrl;
   } catch (e: any) {
     console.warn('[Moto] no se pudo subir la foto:', e?.message);
@@ -154,8 +161,7 @@ const borrarFotoMoto = async (url: string) => {
     if (i === -1) return; // foto de otra página: no está en nuestro bucket
     const ruta = decodeURIComponent(url.slice(i + marcador.length).split('?')[0]);
     const { error } = await supabase.storage.from(BUCKET_MOTOS).remove([ruta]);
-    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
-    console.log('[Moto] borrar foto →', ruta, '| error:', error?.message ?? null);
+    if (error) console.warn('No se pudo borrar la foto de la moto:', error.message);
   } catch (e: any) {
     console.warn('[Moto] no se pudo borrar la foto:', e?.message);
   }
@@ -1126,25 +1132,31 @@ function DetalleResena({
   const enviarResena = async () => {
     if (enviando) return;
     if (estrellaSeleccionada === 0) {
-      Alert.alert('Falta la calificación', 'Elige de 1 a 5 estrellas para calificar la moto.');
+      mostrarAlerta('Falta la calificación', 'Elige de 1 a 5 estrellas para calificar la moto.');
       return;
     }
     if (!textoResena.trim()) {
-      Alert.alert('Falta tu comentario', 'Cuéntanos tu experiencia antes de publicar.');
+      mostrarAlerta('Falta tu comentario', 'Cuéntanos tu experiencia antes de publicar.');
       return;
     }
     setEnviando(true);
-    // El nombre que se muestra sale de `perfiles.username`; la pantalla principal lo completa.
-    const guardada = editandoId
-      ? await onEditarResena(editandoId, { texto: textoResena.trim(), puntuacion: estrellaSeleccionada })
-      : await onPublicar({
-          usuario: '',
-          texto: textoResena.trim(),
-          puntuacion: estrellaSeleccionada,
-          esPropia: true,
-        });
-    setEnviando(false);
-    if (guardada) limpiarFormulario();
+    try {
+      // El nombre que se muestra sale de `perfiles.username`; la pantalla principal lo completa.
+      const guardada = editandoId
+        ? await onEditarResena(editandoId, { texto: textoResena.trim(), puntuacion: estrellaSeleccionada })
+        : await onPublicar({
+            usuario: '',
+            texto: textoResena.trim(),
+            puntuacion: estrellaSeleccionada,
+            esPropia: true,
+          });
+      if (guardada) limpiarFormulario();
+    } catch (error) {
+      const mensaje = error instanceof Error ? error.message : 'Inténtalo de nuevo.';
+      mostrarAlerta('No se pudo guardar la opinión', mensaje);
+    } finally {
+      setEnviando(false);
+    }
   };
 
   const specs: { icon: IconName; label: string; valor: string }[] = [
@@ -1510,7 +1522,7 @@ function FormularioMoto({
       const r = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, aspect: [4, 3], quality: 0.7 });
       if (!r.canceled && r.assets?.length) setFoto(r.assets[0].uri);
     } catch (e: any) {
-      Alert.alert('No se pudo abrir la galería', e?.message ?? 'Inténtalo de nuevo.');
+      mostrarAlerta('No se pudo abrir la galería', e?.message ?? 'Inténtalo de nuevo.');
     }
   };
 
@@ -1518,13 +1530,13 @@ function FormularioMoto({
     try {
       const permiso = await ImagePicker.requestCameraPermissionsAsync();
       if (!permiso.granted) {
-        Alert.alert('Permiso de cámara', 'Activa el permiso de cámara en los ajustes del teléfono para tomar la foto.');
+        mostrarAlerta('Permiso de cámara', 'Activa el permiso de cámara en los ajustes del teléfono para tomar la foto.');
         return;
       }
       const r = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [4, 3], quality: 0.7 });
       if (!r.canceled && r.assets?.length) setFoto(r.assets[0].uri);
     } catch (e: any) {
-      Alert.alert('No se pudo abrir la cámara', e?.message ?? 'Inténtalo de nuevo.');
+      mostrarAlerta('No se pudo abrir la cámara', e?.message ?? 'Inténtalo de nuevo.');
     }
   };
 
@@ -2260,14 +2272,25 @@ export default function ResenasScreen({ navigation }: any) {
   // Cuántas opiniones ajenas ha eliminado el usuario (como dueño) en cada una de sus motos
   const [eliminadasPorMoto, setEliminadasPorMoto] = useState<Record<string, number>>({});
 
-  // Carga el usuario logueado y todas las reseñas de motos al abrir la pantalla
-  useEffect(() => {
+  // Recarga los datos al volver a la pantalla para reflejar publicaciones y cambios recientes.
+  useFocusEffect(useCallback(() => {
     let activo = true;
+    setResenasBD({});
+    setEliminadasPorMoto({});
+    const avisarErrorCarga = (mensaje: string) => {
+      if (activo) setAviso({
+        icono: 'alert-circle',
+        tono: 'alerta',
+        titulo: 'No se pudieron actualizar las reseñas',
+        mensaje,
+      });
+    };
     (async () => {
       try {
         const { data: auth } = await supabase.auth.getUser();
         const uid: string | null = auth?.user?.id ?? null;
 
+        if (activo) setUsuarioActual(null);
         if (uid) {
           const { data: perfil } = await supabase.from(TABLA_PERFILES).select('username').eq('id', uid).maybeSingle();
           if (activo) setUsuarioActual({ id: uid, username: perfil?.username ?? 'Tú' });
@@ -2278,8 +2301,7 @@ export default function ResenasScreen({ navigation }: any) {
           .from('motos_catalogo')
           .select('*')
           .order('created_at', { ascending: false });
-        // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
-        console.log('[Catálogo] motos leídas:', filasMotos?.length, '| error:', errorMotos?.message ?? null);
+        if (errorMotos) avisarErrorCarga('No se pudo actualizar el catálogo de motos. Inténtalo de nuevo más tarde.');
         if (!errorMotos && filasMotos && activo) {
           setCatalogo([...filasMotos.map((f: any) => filaAMoto(f, uid)), ...MOTOS]);
         }
@@ -2291,8 +2313,7 @@ export default function ResenasScreen({ navigation }: any) {
             .select('moto_id')
             .eq('propietario_id', uid)
             .eq('bloqueada', false);
-          // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
-          console.log('[Moderación] eliminadas leídas:', filasElim?.length, '| error:', errorElim?.message ?? null);
+          if (errorElim) avisarErrorCarga('No se pudo actualizar el historial de moderación.');
           if (!errorElim && filasElim && activo) {
             const conteo: Record<string, number> = {};
             filasElim.forEach((f: any) => {
@@ -2308,12 +2329,9 @@ export default function ResenasScreen({ navigation }: any) {
           .select('id, perfil_id, entidad_evaluada, calificacion, comentario, created_at')
           .eq('tipo_entidad', TIPO_ENTIDAD_MOTO)
           .order('created_at', { ascending: true });
-        // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
-        console.log('[Reseñas] usuario logueado:', uid);
-        console.log('[Reseñas] filas leídas:', filas?.length, '| error:', error);
-
         if (error || !filas) {
           console.warn('No se pudieron cargar las reseñas:', error?.message);
+          avisarErrorCarga('No se pudieron cargar las opiniones guardadas. Inténtalo de nuevo más tarde.');
           return;
         }
 
@@ -2343,12 +2361,13 @@ export default function ResenasScreen({ navigation }: any) {
         if (activo) setResenasBD(agrupadas);
       } catch (e: any) {
         console.warn('Error al conectar con la base de datos:', e?.message);
+        avisarErrorCarga('Revisa tu conexión e inténtalo de nuevo más tarde.');
       }
     })();
     return () => {
       activo = false;
     };
-  }, []);
+  }, []));
 
   const motos = useMemo(
     () =>
@@ -2417,17 +2436,18 @@ export default function ResenasScreen({ navigation }: any) {
       setMotoEditandoId(null);
       return;
     }
+    const descartar = () => {
+      formularioSucio.current = false;
+      setMostrarFormulario(false);
+      setMotoEditandoId(null);
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm('¿Descartar tu publicación? Si sales ahora, se perderán los datos que ya escribiste.')) descartar();
+      return;
+    }
     Alert.alert('¿Descartar tu publicación?', 'Si sales ahora, se perderán los datos que ya escribiste.', [
       { text: 'Seguir editando', style: 'cancel' },
-      {
-        text: 'Descartar',
-        style: 'destructive',
-        onPress: () => {
-          formularioSucio.current = false;
-          setMostrarFormulario(false);
-          setMotoEditandoId(null);
-        },
-      },
+      { text: 'Descartar', style: 'destructive', onPress: descartar },
     ]);
   };
 
@@ -2464,19 +2484,12 @@ export default function ResenasScreen({ navigation }: any) {
       })
       .select(); // devuelve la fila guardada: si trae `id` y `created_at`, se escribió en la BD
 
-    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
-    console.log('[Reseñas] insert → data:', JSON.stringify(data));
-    if (error) {
-      console.log(
-        '[Reseñas] ERROR → code:', error.code,
-        '| message:', error.message,
-        '| details:', error.details,
-        '| hint:', error.hint
-      );
-    }
-
     if (error) {
       avisar('No se pudo publicar tu reseña', error.message);
+      return false;
+    }
+    if (!data?.[0]?.id) {
+      avisar('No se pudo confirmar la reseña', 'La base de datos no devolvió la opinión guardada. Actualiza la pantalla antes de volver a intentarlo.');
       return false;
     }
     setResenasBD((prev) => ({
@@ -2489,7 +2502,7 @@ export default function ResenasScreen({ navigation }: any) {
           puntuacion: nueva.puntuacion,
           esPropia: true,
           deBD: true,
-          id: data?.[0]?.id,
+          id: data[0].id,
           perfilId: usuarioActual.id,
         },
       ],
@@ -2513,8 +2526,6 @@ export default function ResenasScreen({ navigation }: any) {
       .eq('id', resenaId)
       .eq('perfil_id', usuarioActual.id)
       .select();
-    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
-    console.log('[Reseñas] update → filas:', data?.length, '| error:', error?.message ?? null);
     if (error) {
       avisar('No se pudo guardar tu cambio', error.message);
       return false;
@@ -2556,8 +2567,6 @@ export default function ResenasScreen({ navigation }: any) {
       .eq('id', resena.id)
       .eq('perfil_id', usuarioActual.id)
       .select();
-    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
-    console.log('[Reseñas] delete → filas:', data?.length, '| error:', error?.message ?? null);
     if (error) {
       avisar('No se pudo eliminar tu reseña', error.message);
       return;
@@ -2574,7 +2583,7 @@ export default function ResenasScreen({ navigation }: any) {
   // El correo es "lo mejor posible": el registro confiable es la tabla `resenas_eliminadas` de la BD.
   const enviarAlertaActividadSospechosa = async (moto: Moto, eliminadas: number, limite: number) => {
     if (!EMAILJS_ALERTA_CONFIGURADO || !usuarioActual) {
-      console.log('[Alerta] La plantilla de EmailJS para alertas no está configurada: se omite el correo.');
+      console.warn('[Alerta] La plantilla de EmailJS para alertas no está configurada; se omite el correo.');
       return;
     }
     try {
@@ -2593,7 +2602,7 @@ export default function ResenasScreen({ navigation }: any) {
         },
         { publicKey: EMAILJS.publicKey }
       );
-      console.log('[Alerta] correo de actividad sospechosa enviado');
+      console.info('[Alerta] Se envió el correo de actividad sospechosa.');
     } catch (e: any) {
       console.warn('[Alerta] no se pudo enviar el correo:', e?.text ?? e?.message);
     }
@@ -2622,9 +2631,6 @@ export default function ResenasScreen({ navigation }: any) {
     if (!continuar) return;
 
     const { data, error } = await supabase.rpc('eliminar_resena_como_dueno', { p_resena_id: resena.id });
-    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
-    console.log('[Moderación] rpc → data:', JSON.stringify(data), '| error:', error?.message ?? null);
-
     if (error) {
       // PGRST202 = la función aún no existe en la BD
       avisar(
@@ -2739,8 +2745,6 @@ export default function ResenasScreen({ navigation }: any) {
         .eq('id', editando.id)
         .select()
         .maybeSingle();
-      // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
-      console.log('[Moto] update → data:', JSON.stringify(data), '| error:', error?.message ?? null);
       if (error) {
         avisar('No se pudieron guardar los cambios', error.message);
         return;
@@ -2771,17 +2775,6 @@ export default function ResenasScreen({ navigation }: any) {
       .insert({ perfil_id: usuarioActual.id, ...campos })
       .select()
       .single();
-
-    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
-    console.log('[Moto] insert → data:', JSON.stringify(data));
-    if (error) {
-      console.log(
-        '[Moto] ERROR → code:', error.code,
-        '| message:', error.message,
-        '| details:', error.details,
-        '| hint:', error.hint
-      );
-    }
 
     if (error || !data) {
       avisar('No se pudo publicar tu moto', error?.message ?? 'Inténtalo de nuevo.');
@@ -2820,8 +2813,6 @@ export default function ResenasScreen({ navigation }: any) {
     if (!confirmado) return;
 
     const { data, error } = await supabase.from('motos_catalogo').delete().eq('id', moto.id).select();
-    // 🔎 DEBUG TEMPORAL: borrar cuando confirmes que funciona
-    console.log('[Moto] delete → filas:', data?.length, '| error:', error?.message ?? null);
     if (error) {
       avisar('No se pudo eliminar', error.message);
       return;

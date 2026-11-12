@@ -69,8 +69,13 @@ const separarTelefono = (telefonoGuardado: string) => {
 export default function PerfilScreen({ navigation }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
+  const mostrarAviso = (titulo: string, mensaje: string) => {
+    if (Platform.OS === 'web') window.alert(`${titulo}: ${mensaje}`);
+    else Alert.alert(titulo, mensaje);
+  };
 
   const [loading, setLoading] = useState(true);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [subiendoAvatar, setSubiendoAvatar] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -83,7 +88,7 @@ export default function PerfilScreen({ navigation }: any) {
   const [mostrarCodigosPais, setMostrarCodigosPais] = useState(false);
   const [telefonoInvalido, setTelefonoInvalido] = useState(false);
   const [ciudad, setCiudad] = useState('');
-  const [bio, setBio] = useState(':?');
+  const [bio, setBio] = useState('');
   
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [mostrarSelectorFecha, setMostrarSelectorFecha] = useState(false);
@@ -122,6 +127,8 @@ export default function PerfilScreen({ navigation }: any) {
     return Number.isNaN(fecha.getTime()) ? new Date(2000, 0, 1) : fecha;
   };
 
+  const maxDigitosTelefono = 15 - codigoPais.replace(/\D/g, '').length;
+
   useEffect(() => {
     cargarPerfil();
   }, []);
@@ -146,7 +153,7 @@ export default function PerfilScreen({ navigation }: any) {
     const unsubscribe = navigation.addListener('focus', () => {
       void cargarMotocicletasSeguro(userId).catch((error: unknown) => {
         console.error('Error al actualizar motocicletas del perfil:', error);
-        Alert.alert(
+        mostrarAviso(
           'Error al cargar motocicletas',
           error instanceof Error ? error.message : 'Inténtalo de nuevo más tarde.',
         );
@@ -183,7 +190,7 @@ export default function PerfilScreen({ navigation }: any) {
         }
       } catch (error: any) {
         if (!cancelada) {
-          Alert.alert('Error al cargar seguro', error.message);
+          mostrarAviso('Error al cargar seguro', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
         }
       } finally {
         if (!cancelada) setLoadingSeguro(false);
@@ -197,9 +204,11 @@ export default function PerfilScreen({ navigation }: any) {
   }, [motocicletaSeleccionada]);
 
   const cargarPerfil = async () => {
+    setErrorCarga(null);
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
 
       if (session?.user) {
         setUserId(session.user.id);
@@ -227,8 +236,10 @@ export default function PerfilScreen({ navigation }: any) {
           setNivelExperiencia(data.nivel_experiencia || '');
         }
       }
-    } catch (error: any) {
-      Alert.alert('Error al cargar perfil', error.message);
+    } catch (error) {
+      const mensaje = error instanceof Error ? error.message : 'Inténtalo de nuevo.';
+      console.error('Error al cargar perfil:', error);
+      setErrorCarga(mensaje);
     } finally {
       setLoading(false);
     }
@@ -240,7 +251,7 @@ export default function PerfilScreen({ navigation }: any) {
 
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso necesario', 'Permite el acceso a tus fotos para elegir una imagen de perfil.');
+        mostrarAviso('Permiso necesario', 'Permite el acceso a tus fotos para elegir una imagen de perfil.');
         return;
       }
 
@@ -299,7 +310,7 @@ export default function PerfilScreen({ navigation }: any) {
       setAvatarUrl(nuevaUrl);
     } catch (error) {
       console.error('Error al actualizar la foto de perfil:', error);
-      Alert.alert(
+      mostrarAviso(
         'No se pudo actualizar la foto',
         error instanceof Error ? error.message : 'Inténtalo de nuevo más tarde.',
       );
@@ -312,21 +323,20 @@ const guardarPerfil = async () => {
     // 1. Prevenir el fallo silencioso
     if (!userId) {
       const msg = 'No se pudo obtener la sesión del usuario. Intenta reiniciar la app.';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Error', msg);
+      mostrarAviso('Error', msg);
       return;
     }
 
-    if (telefono.length > 0 && telefono.length !== 10) {
+    const totalDigitosTelefono = codigoPais.replace(/\D/g, '').length + telefono.length;
+    if (telefono.length > 0 && (totalDigitosTelefono < 7 || totalDigitosTelefono > 15)) {
       setTelefonoInvalido(true);
-      const msg = 'Ingresa exactamente 10 dígitos en el número de teléfono.';
-      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Teléfono incompleto', msg);
+      const msg = 'El teléfono debe tener entre 7 y 15 dígitos contando el código de país.';
+      mostrarAviso('Teléfono incompleto', msg);
       return;
     }
 
     try {
       setSaving(true);
-      console.log("Iniciando guardado para el usuario:", userId); // Útil para depurar en PC
-
       let fechaValidada = fechaNacimiento.trim();
       if (fechaValidada !== '') {
         const [anio, mes, dia] = fechaValidada.split('-').map(Number);
@@ -337,13 +347,13 @@ const guardarPerfil = async () => {
           && formatearFechaISO(fecha) === fechaValidada;
         if (!fechaExiste || fecha > new Date()) {
           const msg = 'Selecciona una fecha de nacimiento válida que no sea futura.';
-          Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Formato incorrecto', msg);
+          mostrarAviso('Formato incorrecto', msg);
           setSaving(false);
           return;
         }
       }
 
-      const { error } = await supabase
+      const { data: perfilGuardado, error } = await supabase
         .from('perfiles')
         .update({
           username: username.trim(), 
@@ -354,20 +364,22 @@ const guardarPerfil = async () => {
           fecha_nacimiento: fechaValidada || null,
           nivel_experiencia: nivelExperiencia || null,
         })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select('id')
+        .maybeSingle();
 
       if (error) throw error;
+      if (!perfilGuardado) throw new Error('No se encontró tu perfil para guardar los cambios.');
 
-      console.log("¡Datos guardados correctamente en Supabase!");
       const exitoMsg = 'Tus datos personales han sido actualizados.';
-      Platform.OS === 'web' ? window.alert(exitoMsg) : Alert.alert('¡Éxito!', exitoMsg);
+      mostrarAviso('¡Éxito!', exitoMsg);
 
     } catch (error: any) {
       // 2. Mostrar el error real en la consola del navegador
       console.error("Error devuelto por Supabase:", error);
       
       const errorMsg = error.message || 'Ocurrió un error al guardar.';
-      Platform.OS === 'web' ? window.alert(errorMsg) : Alert.alert('Error al guardar', errorMsg);
+      mostrarAviso('Error al guardar', errorMsg);
     } finally {
       setSaving(false);
     }
@@ -375,7 +387,7 @@ const guardarPerfil = async () => {
 
   const guardarSeguro = async () => {
     if (!motocicletaSeleccionada) {
-      Alert.alert('Selecciona una motocicleta', 'Agrega o selecciona una motocicleta para guardar su seguro.');
+      mostrarAviso('Selecciona una motocicleta', 'Agrega o selecciona una motocicleta para guardar su seguro.');
       return;
     }
 
@@ -389,11 +401,11 @@ const guardarPerfil = async () => {
       if (error) throw error;
 
       const mensaje = 'Los datos del seguro se guardaron de forma segura.';
-      Platform.OS === 'web' ? window.alert(mensaje) : Alert.alert('¡Éxito!', mensaje);
+      mostrarAviso('¡Éxito!', mensaje);
     } catch (error: any) {
       console.error('Error al guardar seguro de motocicleta:', error);
       const mensaje = error.message || 'Ocurrió un error al guardar los datos del seguro.';
-      Platform.OS === 'web' ? window.alert(mensaje) : Alert.alert('Error al guardar seguro', mensaje);
+      mostrarAviso('Error al guardar seguro', mensaje);
     } finally {
       setSavingSeguro(false);
     }
@@ -423,6 +435,31 @@ const guardarPerfil = async () => {
           </View>
         ))}
       </ScrollView>
+    );
+  }
+
+  if (errorCarga) {
+    return (
+      <View style={[styles.container, { flex: 1, justifyContent: 'center', padding: 24 }]}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Regresar"
+          onPress={() => navigation.goBack()}
+          style={{ position: 'absolute', top: 24, left: 20, padding: 8 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={theme.iconPrimary} />
+        </TouchableOpacity>
+        <Ionicons name="cloud-offline-outline" size={56} color={theme.dangerText} style={{ alignSelf: 'center' }} />
+        <Text style={[styles.cardTitle, { textAlign: 'center', marginTop: 16 }]}>No se pudo cargar tu perfil</Text>
+        <Text style={[styles.label, { textAlign: 'center', marginTop: 8 }]}>{errorCarga}</Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => void cargarPerfil()}
+          style={{ backgroundColor: theme.primary, padding: 14, borderRadius: 10, marginTop: 20 }}
+        >
+          <Text style={{ color: theme.onPrimary, textAlign: 'center', fontWeight: '700' }}>Reintentar</Text>
+        </TouchableOpacity>
+      </View>
     );
   }
 
@@ -521,13 +558,13 @@ const guardarPerfil = async () => {
           <View style={styles.telefonoInput}>
             <CustomInput
               label="Teléfono"
-              placeholder="10 dígitos"
+              placeholder="Número local"
               keyboardType="numeric"
               value={telefono}
-              maxLength={10}
-              error={telefonoInvalido ? 'Ingresa exactamente 10 dígitos.' : undefined}
+              maxLength={maxDigitosTelefono}
+              error={telefonoInvalido ? 'El teléfono debe tener entre 7 y 15 dígitos con el código de país.' : undefined}
               onChangeText={(valor) => {
-                setTelefono(valor.replace(/\D/g, '').slice(0, 10));
+                setTelefono(valor.replace(/\D/g, '').slice(0, maxDigitosTelefono));
                 setTelefonoInvalido(false);
               }}
             />

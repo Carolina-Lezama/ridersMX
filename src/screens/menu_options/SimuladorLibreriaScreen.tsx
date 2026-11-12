@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Modal, Pressable, Alert, Platform } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { catalogoStickers, coloresTexto, textosRapidos, ItemCatalogo } from './catalogos';
 import { useTheme } from '../../../assets/theme/ThemeContext';
@@ -28,6 +28,7 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
   const [texto, setTexto] = useState('');
   const [colorTexto, setColorTexto] = useState('#ffffff');
   const [disenoPorBorrar, setDisenoPorBorrar] = useState<DisenoGuardado | null>(null);
+  const [eliminandoDiseno, setEliminandoDiseno] = useState(false);
   const { elementos, garaje } = useDiseno();
 
   useEffect(() => { cargarAlmacen(); }, []);
@@ -57,10 +58,19 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
     navigation.goBack(); // vuelve al editor con el diseño cargado
   };
 
-  const confirmarBorrar = () => {
-    if (!disenoPorBorrar) return;
-    eliminarDeGaraje(disenoPorBorrar.id);
-    setDisenoPorBorrar(null);
+  const confirmarBorrar = async () => {
+    if (!disenoPorBorrar || eliminandoDiseno) return;
+    setEliminandoDiseno(true);
+    try {
+      await eliminarDeGaraje(disenoPorBorrar.id);
+      setDisenoPorBorrar(null);
+    } catch (error) {
+      console.error('No se pudo eliminar el diseño del garaje:', error);
+      if (Platform.OS === 'web') window.alert('No se pudo eliminar el diseño: revisa el almacenamiento disponible e inténtalo de nuevo.');
+      else Alert.alert('No se pudo eliminar el diseño', 'Revisa el almacenamiento disponible e inténtalo de nuevo.');
+    } finally {
+      setEliminandoDiseno(false);
+    }
   };
 
   return (
@@ -221,11 +231,11 @@ export default function SimuladorLibreriaScreen({ navigation, route }: any) {
               ¿Eliminar “{disenoPorBorrar?.nombre}” de tu garaje? Esta acción no se puede deshacer.
             </Text>
             <View style={styles.modalBotones}>
-              <TouchableOpacity style={styles.botonCancelar} onPress={() => setDisenoPorBorrar(null)}>
+              <TouchableOpacity style={styles.botonCancelar} onPress={() => setDisenoPorBorrar(null)} disabled={eliminandoDiseno}>
                 <Text style={styles.textoCancelar}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.botonEliminar} onPress={confirmarBorrar}>
-                <Text style={styles.textoEliminar}>Eliminar</Text>
+              <TouchableOpacity style={styles.botonEliminar} onPress={() => { void confirmarBorrar(); }} disabled={eliminandoDiseno}>
+                <Text style={styles.textoEliminar}>{eliminandoDiseno ? 'Eliminando…' : 'Eliminar'}</Text>
               </TouchableOpacity>
             </View>
           </Pressable>

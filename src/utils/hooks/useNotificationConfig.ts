@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { 
@@ -18,6 +18,8 @@ import {
 export const useNotificationConfig = (userId: string | undefined, rachaCompletadaHoy: boolean) => {
   const [config, setConfig] = useState<NotificacionesConfig>(DEFAULT_NOTIF_CONFIG);
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  const updateInProgress = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -66,7 +68,9 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
   }, [userId]);
 
   const toggleCheckIn = useCallback(async (enabled: boolean) => {
-    if (!userId) return;
+    if (!userId || updateInProgress.current) return;
+    updateInProgress.current = true;
+    setUpdating(true);
     
     const nuevaConfig = { ...config, checkInEnabled: enabled };
     setConfig(nuevaConfig);
@@ -96,11 +100,16 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
         console.error('No se pudo restaurar la programación anterior de racha:', restoreError);
       }
       throw error;
+    } finally {
+      updateInProgress.current = false;
+      setUpdating(false);
     }
   }, [userId, config, rachaCompletadaHoy]);
 
   const toggleEventos = useCallback(async (enabled: boolean) => {
-    if (!userId) return;
+    if (!userId || updateInProgress.current) return;
+    updateInProgress.current = true;
+    setUpdating(true);
 
     const nuevaConfig = { ...config, eventosEnabled: enabled };
     setConfig(nuevaConfig);
@@ -137,11 +146,16 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
         console.error('No se pudieron restaurar los recordatorios de agenda:', restoreError);
       }
       throw error;
+    } finally {
+      updateInProgress.current = false;
+      setUpdating(false);
     }
   }, [userId, config]);
 
   const toggleLimite = useCallback(async (enabled: boolean) => {
-    if (!userId) return;
+    if (!userId || updateInProgress.current) return;
+    updateInProgress.current = true;
+    setUpdating(true);
     
     // Nota: El sistema de límites no programa alertas futuras, 
     // sino que dispara la alerta en tiempo real en base a este estado.
@@ -154,11 +168,16 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
     } catch (error) {
       setConfig(config);
       throw error;
+    } finally {
+      updateInProgress.current = false;
+      setUpdating(false);
     }
   }, [userId, config]);
 
   const actualizarHoraCheckIn = useCallback(async (nuevaHora: string) => {
-    if (!userId) return;
+    if (!userId || updateInProgress.current) return;
+    updateInProgress.current = true;
+    setUpdating(true);
     
     const nuevaConfig = { ...config, checkInTime: nuevaHora };
     setConfig(nuevaConfig);
@@ -183,12 +202,16 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
         console.error('No se pudo restaurar el horario anterior del recordatorio:', restoreError);
       }
       throw error;
+    } finally {
+      updateInProgress.current = false;
+      setUpdating(false);
     }
   }, [userId, config, rachaCompletadaHoy]);
 
   return {
     config,
     loading,
+    updating,
     toggleCheckIn,
     toggleLimite,
     toggleEventos,

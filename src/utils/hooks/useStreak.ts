@@ -84,14 +84,23 @@ export const useStreak = (userId: string | undefined) => {
     const estadoAnterior = streakState;
     try {
       const estadoOptimista = registrarCheckInExitoso(streakState);
-      setStreakState(estadoOptimista);
 
       const estadoConfirmado = await ejecutarCheckInDB(userId, estadoOptimista);
       setStreakState(estadoConfirmado);
       await sincronizarNotificacionesRacha(true, userId);
     } catch (error) {
-      setStreakState(estadoAnterior);
-      await sincronizarNotificacionesRacha(completadoHoy, userId);
+      let estadoRecuperado = estadoAnterior;
+      try {
+        estadoRecuperado = await obtenerEstadoRachaDB(userId);
+      } catch (errorRecuperacion) {
+        console.error('No se pudo reconciliar el estado de la racha tras el error:', errorRecuperacion);
+      }
+
+      setStreakState(estadoRecuperado);
+      await sincronizarNotificacionesRacha(
+        estadoRecuperado.ultimoCheckIn === obtenerFechaISO(),
+        userId,
+      );
       throw error;
     } finally {
       setProcesando(false);

@@ -79,6 +79,7 @@ export const obtenerEventoPendiente = async (userId: string): Promise<ReviewEven
   }
 
   const evento = (data ?? []).find((item) => {
+    if (item.estado === 'Cancelada' || item.estado === 'Reprogramada') return false;
     const fechaHora = parseEventoDateTime(item.fecha, item.hora);
     return !!fechaHora && fechaHora.getTime() <= fechaMinimaResena.getTime();
   });
@@ -180,24 +181,36 @@ export const guardarResenaRodada = async ({
     }
   }
 
-  const { data: bitacoraData, error: insertError } = await supabase
+  const { data: bitacoraExistente, error: consultaError } = await supabase
     .from('bitacoras_rodadas')
-    .insert([
-      {
-        evento_id: eventoId,
-        perfil_id: userId,
-        motocicleta_id: motocicletaId,
-        distancia_km: Number(distanciaKm) || 0,
-        duracion_minutos: Number(duracionMinutos) || 0,
-        calificacion: Number(calificacion) || 0,
-        comentarios_review: comentarios.trim(),
-        foto_url: fotoUrl,
-      },
-    ])
-    .select();
+    .select('id')
+    .eq('evento_id', eventoId)
+    .eq('perfil_id', userId)
+    .limit(1)
+    .maybeSingle();
 
-  if (insertError) {
-    throw insertError;
+  if (consultaError) throw consultaError;
+
+  let bitacora: { id: string } | null = bitacoraExistente;
+  if (!bitacora) {
+    const { data, error: insertError } = await supabase
+      .from('bitacoras_rodadas')
+      .insert([
+        {
+          evento_id: eventoId,
+          perfil_id: userId,
+          motocicleta_id: motocicletaId,
+          distancia_km: Number(distanciaKm) || 0,
+          duracion_minutos: Number(duracionMinutos) || 0,
+          calificacion: Number(calificacion) || 0,
+          comentarios_review: comentarios.trim(),
+          foto_url: fotoUrl,
+        },
+      ])
+      .select('id');
+
+    if (insertError) throw insertError;
+    bitacora = data?.[0] ?? null;
   }
 
   const { error: updateError } = await supabase
@@ -205,6 +218,7 @@ export const guardarResenaRodada = async ({
     .update({
       estado_review: 'completado',
       completado: true,
+      estado: 'Completada',
     })
     .eq('id', eventoId)
     .eq('perfil_id', userId);
@@ -213,7 +227,7 @@ export const guardarResenaRodada = async ({
     throw updateError;
   }
 
-  return bitacoraData?.[0] ?? null;
+  return bitacora;
 };
 
 export const guardarResenaMantenimiento = async ({
@@ -255,6 +269,7 @@ export const guardarResenaMantenimiento = async ({
     .update({
       estado_review: 'completado',
       completado: true,
+      estado: 'Completada',
     })
     .eq('id', eventoId)
     .eq('perfil_id', userId);

@@ -10,6 +10,7 @@ import {
   Share,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -24,6 +25,10 @@ import { supabase } from '../../../services/supabase';
 export default function InsigniasScreen({ navigation }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
+  const mostrarAviso = (titulo: string, mensaje: string) => {
+    if (Platform.OS === 'web') window.alert(`${titulo}: ${mensaje}`);
+    else Alert.alert(titulo, mensaje);
+  };
 
   const [insignias, setInsignias] = useState<Insignia[]>([]);
   const [perfilId, setPerfilId] = useState<string | null>(null);
@@ -33,7 +38,7 @@ export default function InsigniasScreen({ navigation }: any) {
   const [insigniaSeleccionada, setInsigniaSeleccionada] = useState<Insignia | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const cargarInsignias = useCallback(async () => {
+  const cargarInsignias = useCallback(async (sigueActiva: () => boolean = () => true) => {
     setLoading(true);
     setErrorCarga(null);
     try {
@@ -42,20 +47,28 @@ export default function InsigniasScreen({ navigation }: any) {
       if (!session?.user) throw new Error('Inicia sesión para consultar tus insignias.');
 
       const resumen = await obtenerResumenInsignias(session.user.id);
-      setPerfilId(session.user.id);
-      setInsignias(resumen.insignias);
-      setInsigniaFavoritaId(resumen.favoritaId);
+      if (sigueActiva()) {
+        setPerfilId(session.user.id);
+        setInsignias(resumen.insignias);
+        setInsigniaFavoritaId(resumen.favoritaId);
+      }
     } catch (error) {
       console.error('Error al cargar insignias:', error);
-      setErrorCarga(error instanceof Error ? error.message : 'No se pudieron cargar las insignias.');
+      if (sigueActiva()) {
+        setErrorCarga(error instanceof Error ? error.message : 'No se pudieron cargar las insignias.');
+      }
     } finally {
-      setLoading(false);
+      if (sigueActiva()) setLoading(false);
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      void cargarInsignias();
+      let activa = true;
+      void cargarInsignias(() => activa);
+      return () => {
+        activa = false;
+      };
     }, [cargarInsignias]),
   );
 
@@ -83,7 +96,7 @@ export default function InsigniasScreen({ navigation }: any) {
         message: `¡Desbloqueé la insignia "${insignia.nombre}" en RidersMX! ${insignia.descripcion}`,
       });
     } catch (error) {
-      Alert.alert(
+      mostrarAviso(
         'No se pudo compartir',
         error instanceof Error ? error.message : 'Inténtalo de nuevo más tarde.',
       );
@@ -99,7 +112,7 @@ export default function InsigniasScreen({ navigation }: any) {
       cerrarDetalle();
     } catch (error) {
       console.error('Error al guardar la insignia favorita:', error);
-      Alert.alert(
+      mostrarAviso(
         'No se pudo guardar',
         error instanceof Error ? error.message : 'Inténtalo de nuevo más tarde.',
       );

@@ -8,8 +8,6 @@ import { useTheme } from '../../../assets/theme/ThemeContext';
 import type { Theme } from '../../../assets/theme/theme';
 
 export default function ConfiguracionScreen({ navigation }: any) {
-  // Estados para probar la interacción de los switches
-  const [alertasMantenimiento, setAlertasMantenimiento] = useState(true);
   const [accountSwitcherVisible, setAccountSwitcherVisible] = useState(false);
   const { isDarkMode, toggleTheme, theme } = useTheme();
   const styles = createStyles(theme);
@@ -27,7 +25,9 @@ export default function ConfiguracionScreen({ navigation }: any) {
           routes: [{ name: nextAccountId ? 'MainApp' : 'Login' }],
         });
       } catch (error: any) {
-        Alert.alert('Error', 'Hubo un problema al intentar cerrar sesión. Inténtalo de nuevo.');
+        const mensaje = 'Hubo un problema al intentar cerrar sesión. Inténtalo de nuevo.';
+        if (Platform.OS === 'web') window.alert(mensaje);
+        else Alert.alert('Error', mensaje);
         console.error('Error en signOut:', error?.message ?? error);
       }
     };
@@ -120,13 +120,21 @@ export default function ConfiguracionScreen({ navigation }: any) {
           // 3. Transformamos el timestamp a una fecha legible en español
           if (data?.created_at) {
             const fecha = new Date(data.created_at);
-            const fechaFormateada = fecha.toLocaleDateString('es-MX', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            });
-            setUsuarioDesde(fechaFormateada);
+            if (Number.isNaN(fecha.getTime())) {
+              setUsuarioDesde('Fecha no disponible');
+            } else {
+              const fechaFormateada = fecha.toLocaleDateString('es-MX', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              });
+              setUsuarioDesde(fechaFormateada);
+            }
+          } else {
+            setUsuarioDesde('Fecha no disponible');
           }
+        } else {
+          setUsuarioDesde('Fecha no disponible');
         }
       } catch (error) {
         console.error("Error inesperado obteniendo fecha:", error);

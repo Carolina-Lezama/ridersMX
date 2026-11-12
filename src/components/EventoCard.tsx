@@ -3,12 +3,34 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../assets/theme/ThemeContext';
 
-export default function EventoCard({ evento, onPress }: any) {
+interface EventoCardProps {
+  evento: {
+    id: string;
+    titulo: string;
+    fecha: string;
+    hora: string | null;
+    descripcion: string | null;
+    tipo: string | null;
+    estado: string | null;
+    moto_asociada: string | null;
+  };
+  onPress: () => void;
+  mostrarFecha?: boolean;
+}
+
+export default function EventoCard({ evento, onPress, mostrarFecha = false }: EventoCardProps) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
   const esMantenimiento = evento.tipo === 'mantenimiento';
   const estado = evento.estado || 'Planeada'; // Fallback de seguridad
+  const fechaTexto = mostrarFecha
+    ? new Date(`${evento.fecha}T00:00:00`).toLocaleDateString('es-MX', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+    : null;
 
   // 1. Definir colores base por TIPO (Mantenimiento vs Rodada)
   let colorTema = esMantenimiento ? theme.dangerText : theme.primary;
@@ -71,6 +93,7 @@ export default function EventoCard({ evento, onPress }: any) {
         </View>
         
         <Text style={styles.descripcion} numberOfLines={2}>{evento.descripcion}</Text>
+        {fechaTexto && <Text style={styles.fecha}>{fechaTexto}</Text>}
         
         <View style={styles.footerRow}>
           {evento.moto_asociada ? (
@@ -98,6 +121,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   titulo: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, flex: 1, marginRight: 10 },
   hora: { fontSize: 12, fontWeight: '600', color: theme.primary },
   descripcion: { fontSize: 13, color: theme.textSecondary, marginBottom: 8 },
+  fecha: { fontSize: 12, color: theme.textSecondary, marginBottom: 4 },
   footerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 },
   motoTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.background, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: theme.border },
   motoText: { fontSize: 12, color: theme.textSecondary, marginLeft: 4, fontWeight: '500' },

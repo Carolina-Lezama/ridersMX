@@ -30,17 +30,27 @@ export default function AccountSwitcherModal({
   useEffect(() => {
     if (!visible) return;
 
+    let active = true;
     setLoading(true);
-    void loadAccounts()
-      .catch(error => showError('No se pudieron cargar las cuentas guardadas.', error))
-      .finally(() => setLoading(false));
+    void loadAccounts(() => active)
+      .catch(error => {
+        if (active) showError('No se pudieron cargar las cuentas guardadas.', error);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [visible]);
 
-  const loadAccounts = async () => {
+  const loadAccounts = async (isActive: () => boolean = () => true) => {
     const [list, currentId] = await Promise.all([
       MultiAccountService.getAccounts(),
       MultiAccountService.getActiveAccountId(),
     ]);
+    if (!isActive()) return;
     setAccounts(list);
     setActiveId(currentId);
   };

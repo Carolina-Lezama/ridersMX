@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import {
   Acabado, EstiloRin, TipoElemento, catalogoColores, catalogoMotos, catalogoMotosReales, catalogoRines,
@@ -26,6 +26,10 @@ try {
 
 const K_BORRADOR = '@ridersmx/simulador/borrador';
 const K_GARAJE = '@ridersmx/simulador/garaje';
+const mostrarAlerta = (titulo: string, mensaje: string) => {
+  if (Platform.OS === 'web') window.alert(`${titulo}: ${mensaje}`);
+  else Alert.alert(titulo, mensaje);
+};
 
 // Posición en fracciones del lienzo (0..1): el diseño se ve igual en cualquier pantalla
 export type ElementoDiseno = {
@@ -170,29 +174,64 @@ function persistirBorrador() {
       nombre: estado.nombre,
       paleta: estado.paleta,
     };
-    AsyncStorage.setItem(K_BORRADOR, JSON.stringify(data)).catch(() => {});
+    AsyncStorage.setItem(K_BORRADOR, JSON.stringify(data)).catch((error: unknown) => {
+      console.error('No se pudo guardar el borrador del simulador:', error);
+    });
   }, 500);
 }
 
-const persistirGaraje = () => {
-  if (!AsyncStorage) return;
-  AsyncStorage.setItem(K_GARAJE, JSON.stringify(estado.garaje)).catch(() => {});
+const persistirGaraje = async (garaje: DisenoGuardado[]) => {
+  if (!AsyncStorage) throw new Error('El almacenamiento local no está disponible.');
+  try {
+    await AsyncStorage.setItem(K_GARAJE, JSON.stringify(garaje));
+  } catch (error) {
+    console.error('No se pudo guardar el garaje del simulador:', error);
+    throw error;
+  }
 };
 
 let cargado = false;
+let cargaEnCurso: Promise<void> | null = null;
 export async function cargarAlmacen() {
   if (cargado || !AsyncStorage) return;
-  cargado = true;
-  try {
-    const [b, g] = await Promise.all([AsyncStorage.getItem(K_BORRADOR), AsyncStorage.getItem(K_GARAJE)]);
-    const parcial: Partial<Estado> = {};
-    if (b) Object.assign(parcial, JSON.parse(b));
-    if (g) parcial.garaje = (JSON.parse(g) as DisenoGuardado[]).map((x) => ({ ...x, diseno: { ...disenoInicial, ...x.diseno } }));
-    estado = { ...estado, ...parcial };
-    emitir();
-  } catch {
-    // si falla la lectura se arranca con el diseño inicial
-  }
+  if (cargaEnCurso) return cargaEnCurso;
+  cargaEnCurso = (async () => {
+    try {
+      const [b, g] = await Promise.all([AsyncStorage.getItem(K_BORRADOR), AsyncStorage.getItem(K_GARAJE)]);
+      const parcial: Partial<Estado> = {};
+      if (b) {
+        try {
+          const borrador: unknown = JSON.parse(b);
+          if (!borrador || typeof borrador !== 'object' || Array.isArray(borrador)) {
+            throw new Error('El borrador guardado no tiene un formato válido.');
+          }
+          Object.assign(parcial, borrador);
+        } catch (error) {
+          console.error('No se pudo leer el borrador guardado del simulador:', error);
+        }
+      }
+      if (g) {
+        try {
+          const garaje: unknown = JSON.parse(g);
+          if (!Array.isArray(garaje)) throw new Error('El garaje guardado no tiene un formato válido.');
+          parcial.garaje = garaje.map((x: DisenoGuardado) => ({
+            ...x,
+            diseno: { ...disenoInicial, ...x.diseno },
+          }));
+        } catch (error) {
+          console.error('No se pudo leer el garaje guardado del simulador:', error);
+        }
+      }
+      estado = { ...estado, ...parcial };
+      cargado = true;
+      emitir();
+    } catch (error) {
+      console.error('No se pudo cargar el almacenamiento del simulador; se volverá a intentar al abrirlo de nuevo:', error);
+    } finally {
+      cargaEnCurso = null;
+    }
+  })();
+  return cargaEnCurso;
 }
 
 export const hayPersistencia = () => AsyncStorage !== null;
@@ -282,7 +321,8 @@ async function guardarFotoPermanente(uri: string): Promise<string> {
     const destino = `${FileSystem.documentDirectory}moto-${Date.now()}.${ext}`;
     await FileSystem.copyAsync({ from: uri, to: destino });
     return destino;
-  } catch {
+  } catch (error) {
+    console.error('No se pudo copiar la foto al almacenamiento permanente:', error);
     return uri;
   }
 }
@@ -296,28 +336,34 @@ export async function pedirFotoMoto(nuevo = false, origen: 'galeria' | 'camara' 
     aspect: [5, 3], // mismo formato que el lienzo
   };
 
-  let r: ImagePicker.ImagePickerResult;
-  if (origen === 'camara') {
-    const permiso = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permiso.granted) {
-      Alert.alert('Permiso requerido', 'Necesitamos acceso a la cámara para tomarle una foto a tu moto.');
-      return false;
+  try {
+    let r: ImagePicker.ImagePickerResult;
+    if (origen === 'camara') {
+      const permiso = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permiso.granted) {
+        mostrarAlerta('Permiso requerido', 'Necesitamos acceso a la cámara para tomarle una foto a tu moto.');
+        return false;
+      }
+      r = await ImagePicker.launchCameraAsync(opciones);
+    } else {
+      const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permiso.granted) {
+        mostrarAlerta('Permiso requerido', 'Necesitamos acceso a tus fotos para subir tu moto.');
+        return false;
+      }
+      r = await ImagePicker.launchImageLibraryAsync(opciones);
     }
-    r = await ImagePicker.launchCameraAsync(opciones);
-  } else {
-    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permiso.granted) {
-      Alert.alert('Permiso requerido', 'Necesitamos acceso a tus fotos para subir tu moto.');
-      return false;
-    }
-    r = await ImagePicker.launchImageLibraryAsync(opciones);
-  }
 
-  if (r.canceled || !r.assets?.length) return false;
-  const uri = await guardarFotoPermanente(r.assets[0].uri);
-  if (nuevo) nuevoDiseno({ fuente: 'foto', fotoUri: uri });
-  else setEstado({ fuente: 'foto', fotoUri: uri });
-  return true;
+    if (r.canceled || !r.assets?.length) return false;
+    const uri = await guardarFotoPermanente(r.assets[0].uri);
+    if (nuevo) nuevoDiseno({ fuente: 'foto', fotoUri: uri });
+    else setEstado({ fuente: 'foto', fotoUri: uri });
+    return true;
+  } catch (error) {
+    console.error('No se pudo seleccionar la foto de la moto:', error);
+    mostrarAlerta('No se pudo abrir la imagen', 'Inténtalo de nuevo o revisa los permisos de la aplicación.');
+    return false;
+  }
 }
 
 export function quitarFoto() {
@@ -325,7 +371,7 @@ export function quitarFoto() {
 }
 
 // ---------- garaje ----------
-export function guardarEnGaraje(nombre: string, comoNuevo = false) {
+export async function guardarEnGaraje(nombre: string, comoNuevo = false) {
   const base = extraerDiseno(estado);
   const ahora = Date.now();
   let garaje = estado.garaje;
@@ -337,14 +383,14 @@ export function guardarEnGaraje(nombre: string, comoNuevo = false) {
     id = `d-${ahora}-${Math.random().toString(36).slice(2, 6)}`;
     garaje = [{ id, nombre, creado: ahora, actualizado: ahora, diseno: base }, ...garaje];
   }
+  await persistirGaraje(garaje);
   setEstado({ garaje, disenoId: id, nombre });
-  persistirGaraje();
 }
 
-export function eliminarDeGaraje(id: string) {
+export async function eliminarDeGaraje(id: string) {
   const garaje = estado.garaje.filter((g) => g.id !== id);
+  await persistirGaraje(garaje);
   setEstado({ garaje, disenoId: estado.disenoId === id ? null : estado.disenoId });
-  persistirGaraje();
 }
 
 export function abrirDiseno(id: string) {

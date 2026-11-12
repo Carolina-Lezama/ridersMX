@@ -47,6 +47,10 @@ export default function MotoFormScreen({ navigation, route }: any) {
 
   const marcaError = !marca.trim() && submitted ? 'La marca es obligatoria.' : undefined;
   const modeloError = !modelo.trim() && submitted ? 'El modelo es obligatorio.' : undefined;
+  const mostrarAviso = (titulo: string, mensaje: string) => {
+    if (Platform.OS === 'web') window.alert(`${titulo}: ${mensaje}`);
+    else Alert.alert(titulo, mensaje);
+  };
 
   useEffect(() => {
     if (esEdicion) {
@@ -88,7 +92,7 @@ export default function MotoFormScreen({ navigation, route }: any) {
       setAseguradora(seguro.aseguradora || '');
       setPoliza(seguro.numero_poliza || '');
     } catch (error: any) {
-      Alert.alert('Error al cargar vehículo', error.message);
+      mostrarAviso('Error al cargar vehículo', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -102,12 +106,24 @@ export default function MotoFormScreen({ navigation, route }: any) {
       return;
     }
 
+    const camposNumericos = [
+      ['cilindrada', cilindrada],
+      ['año', anio],
+      ['kilometraje', kilometraje],
+    ] as const;
+    const campoInvalido = camposNumericos.find(([, valor]) => valor !== '' && !/^\d+$/.test(valor));
+    if (campoInvalido) {
+      mostrarAviso('Dato inválido', `El campo ${campoInvalido[0]} debe ser un número entero no negativo.`);
+      return;
+    }
+
     try {
       setSaving(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
 
       if (!session?.user) {
-        Alert.alert('Error de sesión', 'No se encontró un usuario activo.');
+        mostrarAviso('Error de sesión', 'No se encontró un usuario activo.');
         return;
       }
 
@@ -127,7 +143,7 @@ export default function MotoFormScreen({ navigation, route }: any) {
       });
       if (error) throw error;
 
-      Alert.alert(
+      mostrarAviso(
         esEdicion ? '¡Actualizado!' : '¡Añadida!',
         esEdicion
           ? 'Los datos del vehículo se guardaron correctamente.'
@@ -135,7 +151,7 @@ export default function MotoFormScreen({ navigation, route }: any) {
       );
       navigation.goBack(); // Regresamos a la lista de motos automáticamente
     } catch (error: any) {
-      Alert.alert('Error al guardar', error.message);
+      mostrarAviso('Error al guardar', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
     } finally {
       setSaving(false);
     }
@@ -146,12 +162,15 @@ export default function MotoFormScreen({ navigation, route }: any) {
   const ejecutarBorrado = async () => {
     try {
       setSaving(true);
-      const { error } = await supabase
+      const { data: motoEliminada, error } = await supabase
         .from('motocicletas')
         .delete()
-        .eq('id', motoId);
+        .eq('id', motoId)
+        .select('id')
+        .maybeSingle();
 
       if (error) throw error;
+      if (!motoEliminada) throw new Error('No se encontró la motocicleta o no tienes permiso para eliminarla.');
       
       // Mensaje de éxito adaptado
       if (Platform.OS === 'web') {

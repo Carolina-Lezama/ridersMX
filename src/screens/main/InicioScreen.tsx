@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -180,10 +180,11 @@ export default function InicioScreen({ navigation }: any) {
     }, []),
   );
   
-  useEffect(() => {
-    const pregunta = getPreguntaDelDia();
-    setPreguntaDiaria(pregunta);
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      setPreguntaDiaria(getPreguntaDelDia());
+    }, []),
+  );
 
   const handleRachaPress = () => {
     if (completadoHoy) {

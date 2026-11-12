@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BarChart, PieChart } from 'react-native-gifted-charts';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../../../assets/theme/ThemeContext'; 
 import { supabase } from '../../../services/supabase';
 import {
@@ -26,56 +27,59 @@ export default function EstadisticasScreen({ navigation }: any) {
   const [gastosData, setGastosData] = useState<GastosDesgloseData>({ rutas: 0, mantenimiento: 0 });
   const [terrenosData, setTerrenosData] = useState<TerrenoDistribucionData[]>([]);
 
-  useEffect(() => {
-    cargarMotos();
-  }, []);
-
-  useEffect(() => {
-    cargarEstadisticas();
-  }, [motoSeleccionadaId]);
-
-  const cargarMotos = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
-
-      const { data } = await supabase
-        .from('motocicletas')
-        .select('id, alias, marca, modelo')
-        .eq('perfil_id', session.user.id);
-
-      if (data) setMotos(data);
-    } catch (error) {
-      console.error('Error al cargar motos:', error);
-    }
-  };
-
-  const cargarEstadisticas = async () => {
+  const cargarDatos = useCallback(async (sigueActiva: () => boolean = () => true) => {
     setLoading(true);
     setErrorCarga(null);
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) throw error;
-      if (!session?.user) return;
+      if (!session?.user) throw new Error('Inicia sesión para consultar las estadísticas.');
 
       const uid = session.user.id;
+      const { data: motosCargadas, error: errorMotos } = await supabase
+        .from('motocicletas')
+        .select('id, alias, marca, modelo')
+        .eq('perfil_id', uid);
+      if (errorMotos) throw errorMotos;
+      if (!sigueActiva()) return;
+
+      const motosDisponibles = motosCargadas ?? [];
+      setMotos(motosDisponibles);
+      const motoFiltro = motosDisponibles.some((moto) => moto.id === motoSeleccionadaId)
+        ? motoSeleccionadaId
+        : null;
+      if (motoFiltro !== motoSeleccionadaId) setMotoSeleccionadaId(motoFiltro);
 
       const [kmRes, gastosRes, terrenosRes] = await Promise.all([
-        obtenerKilometrosPorMes(uid, motoSeleccionadaId),
-        obtenerDesgloseGastos(uid, motoSeleccionadaId),
-        obtenerTerrenosFrecuentes(uid, motoSeleccionadaId),
+        obtenerKilometrosPorMes(uid, motoFiltro),
+        obtenerDesgloseGastos(uid, motoFiltro),
+        obtenerTerrenosFrecuentes(uid, motoFiltro),
       ]);
 
-      setKmMesData(kmRes);
-      setGastosData(gastosRes);
-      setTerrenosData(terrenosRes);
+      if (sigueActiva()) {
+        setKmMesData(kmRes);
+        setGastosData(gastosRes);
+        setTerrenosData(terrenosRes);
+      }
     } catch (error) {
       console.error('Error cargando estadísticas:', error);
-      setErrorCarga(error instanceof Error ? error.message : 'No se pudieron cargar las estadísticas.');
+      if (sigueActiva()) {
+        setErrorCarga(error instanceof Error ? error.message : 'No se pudieron cargar las estadísticas.');
+      }
     } finally {
-      setLoading(false);
+      if (sigueActiva()) setLoading(false);
     }
-  };
+  }, [motoSeleccionadaId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let activa = true;
+      void cargarDatos(() => activa);
+      return () => {
+        activa = false;
+      };
+    }, [cargarDatos]),
+  );
 
   // Formato de datos para react-native-gifted-charts (BarChart)
   const barData = kmMesData.map((item) => ({
@@ -143,7 +147,7 @@ export default function EstadisticasScreen({ navigation }: any) {
         ) : errorCarga ? (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{errorCarga}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={cargarEstadisticas}>
+            <TouchableOpacity style={styles.retryButton} onPress={() => void cargarDatos()}>
               <Text style={styles.retryButtonText}>Reintentar</Text>
             </TouchableOpacity>
           </View>
