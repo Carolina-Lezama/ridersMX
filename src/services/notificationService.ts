@@ -15,11 +15,16 @@ interface EventoProgramable {
   estado: string | null;
 }
 
+export interface PreferenciasNotificacionesAgenda {
+  rodadasEnabled: boolean;
+  mantenimientosEnabled: boolean;
+}
+
 // Configuración para que la alerta se muestre en pantalla incluso si la app está en primer plano
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
+    shouldShowBanner: false,
+    shouldShowList: false,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -86,8 +91,17 @@ export const obtenerTotalNotificacionesProgramadas = async (): Promise<number> =
   return notifications.length;
 };
 
-export const programarNotificacionesEventos = async (userId: string): Promise<boolean> => {
+export const programarNotificacionesEventos = async (
+  userId: string,
+  preferencias: PreferenciasNotificacionesAgenda = {
+    rodadasEnabled: true,
+    mantenimientosEnabled: true,
+  },
+): Promise<boolean> => {
   if (Platform.OS === 'web') return false;
+
+  await limpiarNotificacionesEventos();
+  if (!preferencias.rodadasEnabled && !preferencias.mantenimientosEnabled) return true;
 
   const { status } = await Notifications.getPermissionsAsync();
   if (status !== 'granted') return false;
@@ -106,16 +120,19 @@ export const programarNotificacionesEventos = async (userId: string): Promise<bo
 
   if (error) throw error;
 
-  await limpiarNotificacionesEventos();
   const ahora = Date.now();
 
   for (const evento of (eventos ?? []) as EventoProgramable[]) {
     if (!evento.hora) continue;
 
+    const esMantenimiento = evento.tipo === 'mantenimiento';
+    if (esMantenimiento ? !preferencias.mantenimientosEnabled : !preferencias.rodadasEnabled) {
+      continue;
+    }
+
     const fechaRecordatorio = obtenerFechaRecordatorioEvento(evento.fecha, evento.hora);
     if (!fechaRecordatorio || fechaRecordatorio.getTime() <= ahora) continue;
 
-    const esMantenimiento = evento.tipo === 'mantenimiento';
     await Notifications.scheduleNotificationAsync({
       identifier: `${PREFIJO_NOTIFICACION_EVENTO}${evento.id}`,
       content: {

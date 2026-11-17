@@ -744,18 +744,64 @@ export default function ForoScreen({ navigation }: any) {
         <View style={styles.notificationOverlay}>
           <View style={styles.notificationPanel}>
             <View style={styles.notificationHeader}>
-              <Text style={styles.editTitle}>Notificaciones del foro</Text>
-              <TouchableOpacity onPress={() => setModalNotificaciones(false)}><Ionicons name="close" size={24} color={theme.textPrimary} /></TouchableOpacity>
+              <View style={styles.notificationHeaderText}>
+                <Text style={styles.notificationTitle}>Actividad del foro</Text>
+                <Text style={styles.notificationSubtitle}>Comentarios y reacciones a tus publicaciones.</Text>
+              </View>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar notificaciones"
+                onPress={() => setModalNotificaciones(false)}
+                style={styles.notificationClose}
+              >
+                <Ionicons name="close" size={22} color={theme.textPrimary} />
+              </TouchableOpacity>
             </View>
             <FlatList
               data={notificaciones}
               keyExtractor={(item) => item.id}
-              ListEmptyComponent={<Text style={styles.noNotifications}>Aún no tienes notificaciones.</Text>}
+              contentContainerStyle={!notificaciones.length && styles.notificationEmptyList}
+              ListEmptyComponent={(
+                <View style={styles.notificationEmpty}>
+                  <View style={styles.notificationEmptyIcon}>
+                    <Ionicons name="notifications-off-outline" size={26} color={theme.iconSecondary} />
+                  </View>
+                  <Text style={styles.notificationEmptyTitle}>Todo al día</Text>
+                  <Text style={styles.noNotifications}>Cuando alguien comente o reaccione a una publicación tuya, aparecerá aquí.</Text>
+                </View>
+              )}
               renderItem={({ item }) => (
-                <TouchableOpacity style={[styles.notificationItem, !item.leida && styles.unreadNotification]}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={[styles.notificationItem, !item.leida && styles.unreadNotification]}
                   onPress={() => marcarNotificacionLeida(item)}>
-                  <Text style={styles.notificationMessage}>{item.mensaje}</Text>
-                  <Text style={styles.notificationDate}>{new Date(item.created_at).toLocaleString('es-MX')}</Text>
+                  <View style={[
+                    styles.notificationItemIcon,
+                    { backgroundColor: item.tipo === 'comentario' ? theme.infoBg : theme.accentBg },
+                  ]}>
+                    <Ionicons
+                      name={item.tipo === 'comentario' ? 'chatbubble-ellipses' : 'heart'}
+                      size={19}
+                      color={item.tipo === 'comentario' ? theme.infoText : theme.accent}
+                    />
+                  </View>
+                  <View style={styles.notificationItemBody}>
+                    <View style={styles.notificationItemHeading}>
+                      <Text style={styles.notificationType}>
+                        {item.tipo === 'comentario' ? 'Nuevo comentario' : 'Nueva reacción'}
+                      </Text>
+                      {!item.leida && <View style={styles.notificationUnreadDot} />}
+                    </View>
+                    <Text style={styles.notificationMessage}>{item.mensaje}</Text>
+                    <Text style={styles.notificationDate}>
+                      {new Date(item.created_at).toLocaleString('es-MX', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               )}
             />
@@ -885,14 +931,27 @@ const createStyles = (theme: any) =>
     cancelEditText: { color: theme.textPrimary, fontWeight: '600' },
     saveEditButton: { minWidth: 90, alignItems: 'center', paddingVertical: 11, paddingHorizontal: 16, borderRadius: 10, backgroundColor: theme.primary },
     saveEditText: { color: '#ffffff', fontWeight: '700' },
-    notificationOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' },
-    notificationPanel: { maxHeight: '75%', padding: 18, backgroundColor: theme.card, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
-    notificationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    noNotifications: { color: theme.textSecondary, textAlign: 'center', paddingVertical: 30 },
-    notificationItem: { padding: 13, borderRadius: 12, marginTop: 9, backgroundColor: theme.background },
-    unreadNotification: { borderWidth: 1, borderColor: theme.primary },
-    notificationMessage: { color: theme.textPrimary, fontSize: 14 },
-    notificationDate: { color: theme.textSecondary, fontSize: 11, marginTop: 5 },
+    notificationOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: theme.overlay, paddingTop: 40 },
+    notificationPanel: { maxHeight: '78%', padding: 20, backgroundColor: theme.card, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+    notificationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+    notificationHeaderText: { flex: 1, paddingRight: 14 },
+    notificationTitle: { color: theme.textPrimary, fontSize: 20, fontWeight: '800' },
+    notificationSubtitle: { color: theme.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 3 },
+    notificationClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' },
+    notificationEmptyList: { flexGrow: 1, justifyContent: 'center' },
+    notificationEmpty: { alignItems: 'center', paddingHorizontal: 20, paddingVertical: 24 },
+    notificationEmptyIcon: { width: 56, height: 56, borderRadius: 20, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' },
+    notificationEmptyTitle: { color: theme.textPrimary, fontSize: 16, fontWeight: '700', marginTop: 12 },
+    noNotifications: { color: theme.textSecondary, textAlign: 'center', fontSize: 13, lineHeight: 19, marginTop: 5 },
+    notificationItem: { flexDirection: 'row', alignItems: 'flex-start', padding: 13, borderRadius: 15, marginTop: 9, backgroundColor: theme.background, borderWidth: 1, borderColor: 'transparent' },
+    unreadNotification: { borderColor: theme.primary, backgroundColor: theme.cardHeader },
+    notificationItemIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 11 },
+    notificationItemBody: { flex: 1 },
+    notificationItemHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    notificationType: { color: theme.textPrimary, fontSize: 13, fontWeight: '700' },
+    notificationUnreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.primary },
+    notificationMessage: { color: theme.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 4 },
+    notificationDate: { color: theme.iconSecondary, fontSize: 11, marginTop: 7 },
     emptyContainer: { alignItems: 'center', justifyContent: 'center', marginTop: 60 },
     emptyText: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, marginTop: 12 },
     emptySubtext: { fontSize: 14, color: theme.textSecondary, marginTop: 4 },

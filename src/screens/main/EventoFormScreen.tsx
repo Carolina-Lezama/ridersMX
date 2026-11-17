@@ -28,7 +28,10 @@ type Recurrencia = 'none' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
 const sincronizarRecordatoriosAgenda = async (userId: string): Promise<boolean> => {
   const config = await obtenerConfigNotificaciones(userId);
   if (!config.eventosEnabled) return true;
-  return programarNotificacionesEventos(userId);
+  return programarNotificacionesEventos(userId, {
+    rodadasEnabled: config.rodadasEnabled,
+    mantenimientosEnabled: config.mantenimientosEnabled,
+  });
 };
 
 const generarIdSerie = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (caracter) => {

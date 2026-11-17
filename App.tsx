@@ -5,6 +5,7 @@ import * as Notifications from 'expo-notifications';
 import { ThemeProvider } from './assets/theme/ThemeContext';
 import { useAppTimeTracker } from './src/utils/hooks/useAppTimeTracker';
 import { AvisoTiempoModal } from './src/components/AvisoTiempoModal';
+import InAppNotificationHost from './src/components/InAppNotificationHost';
 import RootNavigator from './src/navigation/RootNavigator';
 import { supabase } from './src/services/supabase';
 import { MultiAccountService } from './src/services/MultiAccountService';
@@ -58,7 +59,9 @@ function AppContent({ isFirstLaunch, hasSession }: { isFirstLaunch: boolean; has
 
   return (
     <>
-      <RootNavigator isFirstLaunch={isFirstLaunch} hasSession={hasSession} />
+      <InAppNotificationHost>
+        <RootNavigator isFirstLaunch={isFirstLaunch} hasSession={hasSession} />
+      </InAppNotificationHost>
       <AvisoTiempoModal
         visible={mostrarModalAviso}
         minutos={minutosAvisoActual}
