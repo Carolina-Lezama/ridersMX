@@ -213,7 +213,11 @@ export default function RootNavigator({ isFirstLaunch, hasSession }: { isFirstLa
           {/* ============================================================================ */}
           {/* ZONA DE PANTALLAS: CARO */}
           {/* ============================================================================ */}
-          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+          <Stack.Screen
+            name="Onboarding"
+            component={OnboardingScreen}
+            initialParams={{ hasSession }}
+          />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
           

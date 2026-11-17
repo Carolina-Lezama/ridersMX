@@ -5,7 +5,7 @@ import { ONBOARDING_DATA } from '../../constants/onboardingData';
 import Paginator from '../../components/Paginator'; 
 import { useTheme } from '../../../assets/theme/ThemeContext';
 
-export default function OnboardingScreen({ navigation }: any) {
+export default function OnboardingScreen({ navigation, route }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
@@ -43,7 +43,7 @@ export default function OnboardingScreen({ navigation }: any) {
     } else {
       try {
         await AsyncStorage.setItem('@ya_vio_onboarding', 'true');
-        navigation.replace('Login'); 
+        navigation.replace(route?.params?.hasSession ? 'MainApp' : 'Login');
       } catch (error) {
         console.error('No se pudo guardar que el onboarding fue completado:', error);
         const mensaje = 'No se pudo guardar el inicio. Revisa el almacenamiento disponible e inténtalo de nuevo.';
