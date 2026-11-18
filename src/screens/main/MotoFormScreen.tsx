@@ -6,6 +6,7 @@ import CustomButton from '../../components/CustomButton';
 import Skeleton from '../../components/Skeleton';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import { platformShadow } from '../../utils/platformShadow';
 
 interface DatosSeguroMotocicleta {
   aseguradora: string | null;
@@ -330,7 +331,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   
   scrollContent: { padding: 20, paddingBottom: 40 },
-  card: { backgroundColor: theme.card, padding: 20, borderRadius: 16, marginBottom: 20, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  card: { backgroundColor: theme.card, padding: 20, borderRadius: 16, marginBottom: 20, ...platformShadow(theme.shadow, 0.05, { width: 0, height: 2 }, 8, 2) },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.divider, paddingBottom: 10 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginLeft: 10 },
   

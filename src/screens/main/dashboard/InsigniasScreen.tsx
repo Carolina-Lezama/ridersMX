@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   FlatList,
   Modal,
   Pressable,
@@ -21,6 +20,8 @@ import {
   type Insignia,
 } from '../../../services/badgeService';
 import { supabase } from '../../../services/supabase';
+import { platformShadow } from '../../../utils/platformShadow';
+import { AnimatedTouchableOpacity as TouchableOpacity } from '../../../components/AnimatedTouchableOpacity';
 
 export default function InsigniasScreen({ navigation }: any) {
   const { theme } = useTheme();
@@ -432,11 +433,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
     },
     cardUnlocked: {
       borderColor: theme.warningText,
-      shadowColor: theme.warningText,
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.15,
-      shadowRadius: 6,
-      elevation: 3,
+      ...platformShadow(theme.warningText, 0.15, { width: 0, height: 3 }, 6, 3),
     },
     cardLocked: {
       borderColor: theme.border,

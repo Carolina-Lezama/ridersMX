@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../assets/theme/ThemeContext';
 import { supabase } from '../services/supabase';
+import { escucharNotificacionesRecibidas } from '../services/notificationListeners';
 import { navigate } from '../utils/helper/navigationRef';
+import { platformShadow } from '../utils/platformShadow';
 
 type FloatingNotificationKind = 'comentario' | 'reaccion' | 'app';
 
@@ -91,7 +92,7 @@ export default function InAppNotificationHost({ children }: Props) {
   useEffect(() => {
     if (Platform.OS === 'web') return;
 
-    const subscription = Notifications.addNotificationReceivedListener((notification) => {
+    return escucharNotificacionesRecibidas((notification) => {
       const { title, body, data } = notification.request.content;
       if (!body?.trim()) return;
 
@@ -106,8 +107,6 @@ export default function InAppNotificationHost({ children }: Props) {
       };
       setNotifications((current) => [...current, item].slice(-2));
     });
-
-    return () => subscription.remove();
   }, []);
 
   const descartarNotificacion = useCallback((id: string) => {
@@ -127,9 +126,9 @@ export default function InAppNotificationHost({ children }: Props) {
     <View style={styles.root}>
       {children}
       <View
-        pointerEvents="box-none"
         style={[
           styles.toastStack,
+          { pointerEvents: 'box-none' },
           { top: Platform.OS === 'web' ? 16 : Platform.OS === 'ios' ? 56 : 42 },
         ]}
       >
@@ -287,11 +286,7 @@ const createToastStyles = (theme: ReturnType<typeof useTheme>['theme']) => Style
     borderWidth: 1,
     borderColor: theme.border,
     backgroundColor: theme.card,
-    shadowColor: theme.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
-    elevation: 8,
+    ...platformShadow(theme.shadow, 0.18, { width: 0, height: 6 }, 14, 8),
   },
   toastContent: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   iconBadge: {

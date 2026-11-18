@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import { platformShadow } from '../../utils/platformShadow';
 
 export default function ForoScreen({ navigation }: any) {
   const { isDarkMode, theme } = useTheme();
@@ -965,10 +966,6 @@ const createStyles = (theme: any) =>
       borderRadius: 28,
       justifyContent: 'center',
       alignItems: 'center',
-      elevation: 5,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.25,
-      shadowRadius: 5,
+      ...platformShadow('#000000', 0.25, { width: 0, height: 4 }, 5, 5),
     },
   });

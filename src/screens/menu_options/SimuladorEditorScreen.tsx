@@ -469,7 +469,7 @@ const CapaBase = React.memo(function CapaBase(p: BaseProps) {
       {fuenteImg && <Image source={fuenteImg} style={imgStyle} resizeMode="contain" />}
       {fuenteImg && tinte && (
         // Misma imagen encima, pintada de un color. Respeta la transparencia del PNG
-        <Image source={fuenteImg} style={[imgStyle, { tintColor: p.colorPrincipal, opacity: INTENSIDAD_TINTE }]} resizeMode="contain" />
+        <Image source={fuenteImg} tintColor={p.colorPrincipal} style={[imgStyle, { opacity: INTENSIDAD_TINTE }]} resizeMode="contain" />
       )}
       {(p.trazos.length > 0 || p.vivo) && (
         <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>

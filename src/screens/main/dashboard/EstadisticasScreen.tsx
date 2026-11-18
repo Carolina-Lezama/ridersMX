@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BarChart, PieChart } from 'react-native-gifted-charts';
 import { useFocusEffect } from '@react-navigation/native';
@@ -13,6 +13,8 @@ import {
   GastosDesgloseData,
   TerrenoDistribucionData,
 } from '../../../services/estadisticasService';
+import { AnimatedTouchableOpacity as TouchableOpacity } from '../../../components/AnimatedTouchableOpacity';
+import { AnimatedSection } from '../../../components/AnimatedSection';
 
 export default function EstadisticasScreen({ navigation }: any) {
   const { theme } = useTheme();
@@ -154,6 +156,7 @@ export default function EstadisticasScreen({ navigation }: any) {
         ) : (
           <>
             {/* GRÁFICA 1: KILÓMETROS POR MES */}
+            <AnimatedSection>
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <Ionicons name="speedometer-outline" size={20} color={theme.primary} />
@@ -182,8 +185,10 @@ export default function EstadisticasScreen({ navigation }: any) {
                 )}
               </View>
             </View>
+            </AnimatedSection>
 
             {/* GRÁFICA 2: GASTOS DE OPERACIÓN */}
+            <AnimatedSection delay={70}>
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <Ionicons name="wallet-outline" size={20} color="#10b981" />
@@ -223,29 +228,32 @@ export default function EstadisticasScreen({ navigation }: any) {
                 </View>
               )}
             </View>
+            </AnimatedSection>
 
             {/* GRÁFICA 3: TERRENOS RECORRIDOS */}
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Ionicons name="map-outline" size={20} color="#f59e0b" />
-                <Text style={styles.cardTitle}>Terrenos más Frecuentados</Text>
-              </View>
-
-              {terrenosData.length === 0 ? (
-                <Text style={styles.emptyText}>Registra rodadas para ver analítica de ruta.</Text>
-              ) : (
-                <View style={styles.terrenosList}>
-                  {terrenosData.map((item, idx) => (
-                    <View key={idx} style={styles.terrenoItem}>
-                      <Text style={styles.terrenoNombre}>{item.terreno}</Text>
-                      <View style={styles.badgeCount}>
-                        <Text style={styles.badgeCountText}>{item.total} rodada(s)</Text>
-                      </View>
-                    </View>
-                  ))}
+            <AnimatedSection delay={140}>
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="map-outline" size={20} color="#f59e0b" />
+                  <Text style={styles.cardTitle}>Terrenos más Frecuentados</Text>
                 </View>
-              )}
-            </View>
+
+                {terrenosData.length === 0 ? (
+                  <Text style={styles.emptyText}>Registra rodadas para ver analítica de ruta.</Text>
+                ) : (
+                  <View style={styles.terrenosList}>
+                    {terrenosData.map((item, idx) => (
+                      <View key={idx} style={styles.terrenoItem}>
+                        <Text style={styles.terrenoNombre}>{item.terreno}</Text>
+                        <View style={styles.badgeCount}>
+                          <Text style={styles.badgeCountText}>{item.total} rodada(s)</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </AnimatedSection>
           </>
         )}
       </ScrollView>

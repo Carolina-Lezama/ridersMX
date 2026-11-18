@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, BackHandler, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../../assets/theme/ThemeContext';
+import { platformShadow } from '../../../utils/platformShadow';
 
 export default function LimiteAlcanzadoScreen({ navigation, route }: any) {
   const { theme } = useTheme();
@@ -75,11 +76,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     maxWidth: 400,
     borderWidth: 1,
     borderColor: theme.border,
-    ...Platform.select({
-      ios: { shadowColor: theme.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 8 },
-      web: { boxShadow: `0px 10px 25px ${theme.shadow}1a` }
-    }),
+    ...platformShadow(theme.shadow, 0.15, { width: 0, height: 8 }, 12, 8),
   },
   iconCircle: {
     width: 100,

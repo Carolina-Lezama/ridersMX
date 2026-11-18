@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, Modal, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../assets/theme/ThemeContext';
@@ -17,6 +17,9 @@ import { obtenerTotalNotificacionesProgramadas } from '../../services/notificati
 import { navigate } from '../../utils/helper/navigationRef';
 import { useStreak } from '../../utils/hooks/useStreak';
 import Skeleton from '../../components/Skeleton';
+import { platformShadow } from '../../utils/platformShadow';
+import { AnimatedTouchableOpacity as TouchableOpacity } from '../../components/AnimatedTouchableOpacity';
+import { AnimatedSection } from '../../components/AnimatedSection';
 
 interface DashboardMoto {
   id: string;
@@ -212,6 +215,7 @@ export default function InicioScreen({ navigation }: any) {
 
   return (
     <>
+    <AnimatedSection style={{ flex: 1 }}>
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       
       {/* 1. ENCABEZADO */}
@@ -482,6 +486,7 @@ export default function InicioScreen({ navigation }: any) {
       {/* Espaciado inferior para la barra de navegación */}
       <View style={{ height: 40 }} />
     </ScrollView>
+    </AnimatedSection>
     <QuizModal
       visible={quizVisible}
       preguntaData={preguntaDiaria}
@@ -684,16 +689,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     padding: 18,
     borderWidth: 1,
     borderColor: theme.border,
-    ...Platform.select({
-      web: { boxShadow: `0px 4px 8px ${theme.shadow}08` },
-      default: {
-        shadowColor: theme.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.03,
-        shadowRadius: 8,
-        elevation: 2,
-      },
-    }),
+    ...platformShadow(theme.shadow, 0.03, { width: 0, height: 4 }, 8, 2),
   },
   cardHeaderRow: {
     flexDirection: 'row',

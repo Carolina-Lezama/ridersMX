@@ -58,6 +58,12 @@ export const solicitarPermisosNotificaciones = async (): Promise<boolean> => {
   return finalStatus === 'granted';
 };
 
+export const tienePermisosNotificaciones = async (): Promise<boolean> => {
+  if (Platform.OS === 'web') return false;
+  const { status } = await Notifications.getPermissionsAsync();
+  return status === 'granted';
+};
+
 /**
  * Limpia únicamente las notificaciones relacionadas con la racha
  * (Deja intactas las futuras de vehículos o comunidad)

@@ -5,6 +5,7 @@ import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import Skeleton from '../../components/Skeleton';
 import { useFocusEffect } from '@react-navigation/native';
+import { platformShadow } from '../../utils/platformShadow';
 import {
   clearSelectedMotorcycleId,
   getSelectedMotorcycleId,
@@ -220,7 +221,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     padding: 15,
     borderRadius: 16,
     marginBottom: 15,
-    shadowColor: theme.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3
+    ...platformShadow(theme.shadow, 0.05, { width: 0, height: 4 }, 10, 3)
   },
   motoCardContent: { flexDirection: 'row', alignItems: 'center' },
   motoIconContainer: {
@@ -240,6 +241,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     position: 'absolute', bottom: 30, right: 20,
     backgroundColor: theme.primary, width: 60, height: 60, borderRadius: 30,
     justifyContent: 'center', alignItems: 'center',
-    shadowColor: theme.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6
+    ...platformShadow(theme.primary, 0.4, { width: 0, height: 6 }, 10, 6)
   }
 });

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import { 
   obtenerConfigNotificaciones, 
   guardarConfigNotificaciones, 
@@ -13,6 +12,7 @@ import {
   limpiarNotificacionesEventos,
   programarNotificacionesEventos,
   solicitarPermisosNotificaciones,
+  tienePermisosNotificaciones,
 } from '../../services/notificationService';
 
 type PreferenciaAgenda = 'rodadasEnabled' | 'mantenimientosEnabled';
@@ -55,8 +55,7 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
         if (!mounted) return;
 
         if (Platform.OS !== 'web' && (data.checkInEnabled || data.eventosEnabled)) {
-          const permissions = await Notifications.getPermissionsAsync();
-          const permisosConcedidos = permissions.status === 'granted';
+          const permisosConcedidos = await tienePermisosNotificaciones();
           if (mounted) {
             setConfig(permisosConcedidos
               ? data

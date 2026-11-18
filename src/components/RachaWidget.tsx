@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../assets/theme/ThemeContext'; // Ajusta la ruta según tu proyecto
 import Skeleton from './Skeleton';
+import { AnimatedTouchableOpacity as TouchableOpacity } from './AnimatedTouchableOpacity';
 
 interface RachaWidgetProps {
   diasRacha: number;
