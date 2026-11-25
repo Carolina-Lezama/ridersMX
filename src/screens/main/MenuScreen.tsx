@@ -26,7 +26,14 @@ export default function MenuScreen({ navigation }: any) {
     { id: 'Diagnostico', icon: 'pulse-outline', label: 'Diagnóstico', color: theme.teal },
   ];
 
-  // SECCIÓN 3: Ajustes y ayuda
+  // SECCIÓN 3: Seguridad vial
+  const seccionSeguridadVial = [
+    { id: 'PreRideChecklist', icon: 'checkbox-outline', label: 'Checklist pre-rodada', color: theme.successText },
+    { id: 'EmergencyServices', icon: 'call-outline', label: 'Auxilio en carretera', color: theme.dangerText },
+    { id: 'DiarioRutas', icon: 'map-outline', label: 'Diario de rutas', color: theme.primary },
+  ];
+
+  // SECCIÓN 4: Ajustes y ayuda
   const seccionAjustesAyuda = [
     { id: 'Ayuda', icon: 'help-circle-outline', label: 'Ayuda y Soporte', color: theme.cyan },
     { id: 'Configuracion', icon: 'settings-outline', label: 'Configuración', color: theme.textSecondary },
@@ -103,6 +110,15 @@ export default function MenuScreen({ navigation }: any) {
       </AnimatedSection>
 
       <AnimatedSection delay={140}>
+        <Text style={styles.seccionTitulo}>Seguridad vial</Text>
+        <View style={styles.tarjetaSeccion}>
+          {seccionSeguridadVial.map((item, index) =>
+            renderItem(item, index === seccionSeguridadVial.length - 1)
+          )}
+        </View>
+      </AnimatedSection>
+
+      <AnimatedSection delay={210}>
         <Text style={styles.seccionTitulo}>Ajustes y ayuda</Text>
         <View style={styles.tarjetaSeccion}>
           {seccionAjustesAyuda.map((item, index) =>
@@ -112,7 +128,7 @@ export default function MenuScreen({ navigation }: any) {
       </AnimatedSection>
 
       {/* Botón de Cerrar Sesión */}
-      <AnimatedSection delay={210}>
+      <AnimatedSection delay={280}>
         <TouchableOpacity
           style={styles.botonCerrarSesion}
           onPress={handleCerrarSesion}

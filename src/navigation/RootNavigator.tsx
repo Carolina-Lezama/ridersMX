@@ -21,6 +21,8 @@ import OnboardingScreen from '../screens/main/OnboardingScreen';
 import InicioScreen from '../screens/main/InicioScreen';
 import MenuScreen from '../screens/main/MenuScreen';
 import PerfilScreen from '../screens/main/PerfilScreen';
+import ReferenciasMotoScreen from '../screens/main/ReferenciasMotoScreen';
+import DiarioRutasScreen from '../screens/main/DiarioRutasScreen';
 
 import AyudaScreen from '../screens/main/AyudaScreen';
 import ConfiguracionScreen from '../screens/main/ConfiguracionScreen';
@@ -89,6 +91,8 @@ import DiagnosticoScreen from '../screens/menu_options/DiagnosticoScreen';
 // ZONA DE IMPORTACIONES: LEONARDO
 // ============================================================================
 import ResenasScreen from '../screens/menu_options/ResenasScreen';
+import PreRideChecklistScreen from '../screens/menu_options/PreRideChecklistScreen';
+import EmergencyServicesScreen from '../screens/menu_options/EmergencyServicesScreen';
 
 
 
@@ -234,6 +238,8 @@ export default function RootNavigator({ isFirstLaunch, hasSession }: { isFirstLa
 
           <Stack.Screen name="MisMotos" component={MisMotosScreen} />
           <Stack.Screen name="MotoForm" component={MotoFormScreen} />
+          <Stack.Screen name="ReferenciasMoto" component={ReferenciasMotoScreen} />
+          <Stack.Screen name="DiarioRutas" component={DiarioRutasScreen} />
           <Stack.Screen name="Calendario" component={CalendarioScreen} />
           <Stack.Screen name="EventoForm" component={EventoFormScreen} />
 
@@ -293,6 +299,8 @@ export default function RootNavigator({ isFirstLaunch, hasSession }: { isFirstLa
           {/* ZONA DE PANTALLAS: FERNANDO       */}
           {/* ============================================================================ */}
           <Stack.Screen name="Diagnostico" component={DiagnosticoScreen} />
+          <Stack.Screen name="PreRideChecklist" component={PreRideChecklistScreen} />
+          <Stack.Screen name="EmergencyServices" component={EmergencyServicesScreen} />
 
 
 
