@@ -5,6 +5,10 @@ export interface NotificacionesConfig {
   checkInEnabled: boolean;
   limiteEnabled: boolean;
   eventosEnabled: boolean;
+  rodadasEnabled: boolean;
+  mantenimientosEnabled: boolean;
+  comunidadComentariosEnabled: boolean;
+  comunidadReaccionesEnabled: boolean;
   checkInTime: string; // ej: "19:00"
 }
 
@@ -12,15 +16,32 @@ export const DEFAULT_NOTIF_CONFIG: NotificacionesConfig = {
   checkInEnabled: true,
   limiteEnabled: true,
   eventosEnabled: false,
+  rodadasEnabled: false,
+  mantenimientosEnabled: false,
+  comunidadComentariosEnabled: true,
+  comunidadReaccionesEnabled: true,
   checkInTime: '19:00',
 };
 
 const getStorageKey = (userId: string) => `notif_config_${userId}`;
 
-const normalizarConfig = (value: unknown): NotificacionesConfig => {
+export const normalizarConfigNotificaciones = (value: unknown): NotificacionesConfig => {
   if (!value || typeof value !== 'object') return DEFAULT_NOTIF_CONFIG;
 
   const candidate = value as Partial<NotificacionesConfig>;
+  const agendaHabilitada =
+    typeof candidate.eventosEnabled === 'boolean'
+      ? candidate.eventosEnabled
+      : DEFAULT_NOTIF_CONFIG.eventosEnabled;
+  const rodadasEnabled =
+    typeof candidate.rodadasEnabled === 'boolean'
+      ? candidate.rodadasEnabled
+      : agendaHabilitada;
+  const mantenimientosEnabled =
+    typeof candidate.mantenimientosEnabled === 'boolean'
+      ? candidate.mantenimientosEnabled
+      : agendaHabilitada;
+
   return {
     checkInEnabled:
       typeof candidate.checkInEnabled === 'boolean'
@@ -31,9 +52,17 @@ const normalizarConfig = (value: unknown): NotificacionesConfig => {
         ? candidate.limiteEnabled
         : DEFAULT_NOTIF_CONFIG.limiteEnabled,
     eventosEnabled:
-      typeof candidate.eventosEnabled === 'boolean'
-        ? candidate.eventosEnabled
-        : DEFAULT_NOTIF_CONFIG.eventosEnabled,
+      rodadasEnabled || mantenimientosEnabled,
+    rodadasEnabled,
+    mantenimientosEnabled,
+    comunidadComentariosEnabled:
+      typeof candidate.comunidadComentariosEnabled === 'boolean'
+        ? candidate.comunidadComentariosEnabled
+        : DEFAULT_NOTIF_CONFIG.comunidadComentariosEnabled,
+    comunidadReaccionesEnabled:
+      typeof candidate.comunidadReaccionesEnabled === 'boolean'
+        ? candidate.comunidadReaccionesEnabled
+        : DEFAULT_NOTIF_CONFIG.comunidadReaccionesEnabled,
     checkInTime:
       typeof candidate.checkInTime === 'string' &&
       /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(candidate.checkInTime)
@@ -52,7 +81,7 @@ export const obtenerConfigNotificaciones = async (userId: string): Promise<Notif
 
     if (error) throw error;
 
-    const config = normalizarConfig(data?.notificaciones_config);
+    const config = normalizarConfigNotificaciones(data?.notificaciones_config);
 
     await AsyncStorage.setItem(getStorageKey(userId), JSON.stringify(config));
     return config;
@@ -62,7 +91,7 @@ export const obtenerConfigNotificaciones = async (userId: string): Promise<Notif
     if (!localData) return DEFAULT_NOTIF_CONFIG;
 
     try {
-      return normalizarConfig(JSON.parse(localData));
+      return normalizarConfigNotificaciones(JSON.parse(localData));
     } catch (parseError) {
       console.error('La configuración local de notificaciones no es válida:', parseError);
       return DEFAULT_NOTIF_CONFIG;

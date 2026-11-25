@@ -65,7 +65,7 @@ export default function DiagnosticoScreen({ navigation }: any) {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: false,
         allowsMultipleSelection: true,
         quality: 0.9,

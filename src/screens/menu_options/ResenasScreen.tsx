@@ -31,6 +31,7 @@ import { supabase } from '../../services/supabase';
 // Tema global (el mismo que usa Configuración)
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import type { Theme } from '../../../assets/theme/theme';
+import { platformShadow } from '../../utils/platformShadow';
 
 // ─── CONFIGURACIÓN DEL CORREO DE SOPORTE (EmailJS) ───────────────────────────
 
@@ -674,11 +675,7 @@ function SliderPrecio({
           backgroundColor: C.surface,
           borderWidth: 3,
           borderColor: C.accent,
-          shadowColor: C.shadow,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.2,
-          shadowRadius: 4,
-          elevation: 4,
+          ...platformShadow(C.shadow, 0.2, { width: 0, height: 2 }, 4, 4),
         }}
       />
     </View>
@@ -3151,11 +3148,7 @@ const crearEstilos = (C: Paleta) =>
     borderRadius: 18,
     borderWidth: 1,
     borderColor: C.border,
-    shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    elevation: 2,
+    ...platformShadow(C.shadow, 0.06, { width: 0, height: 6 }, 14, 2),
   },
   motoImagen: { width: 108, height: 132, borderRadius: 12 },
   imagenVacia: { backgroundColor: C.surfaceAlt, justifyContent: 'center', alignItems: 'center' },
@@ -3271,11 +3264,7 @@ const crearEstilos = (C: Paleta) =>
     padding: 16,
     borderWidth: 1,
     borderColor: C.border,
-    elevation: 10,
-    shadowColor: C.shadow,
-    shadowOpacity: 0.2,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
+    ...platformShadow(C.shadow, 0.2, { width: 0, height: 6 }, 14, 10),
   },
   avisoCabecera: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   avisoIconoWrap: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
@@ -3467,11 +3456,7 @@ const crearEstilos = (C: Paleta) =>
     paddingRight: 20,
     borderRadius: 26,
     backgroundColor: C.accent,
-    shadowColor: C.accent,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 6,
+    ...platformShadow(C.accent, 0.35, { width: 0, height: 8 }, 14, 6),
   },
   fabText: { fontSize: 15, fontWeight: '800', color: C.onPrimary },
   tagPropia: { backgroundColor: C.accentSoft },
@@ -3498,11 +3483,7 @@ const crearEstilos = (C: Paleta) =>
     borderRadius: 22,
     padding: 20,
     width: '100%',
-    shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 8,
+    ...platformShadow(C.shadow, 0.15, { width: 0, height: 10 }, 24, 8),
   },
   ayudaHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
   ayudaTitulo: { flex: 1, fontSize: 16, fontWeight: '800', color: C.textPri },
@@ -3577,11 +3558,7 @@ const crearEstilos = (C: Paleta) =>
     padding: 14,
     borderRadius: 14,
     borderWidth: 1,
-    shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    ...platformShadow(C.shadow, 0.15, { width: 0, height: 6 }, 12, 8),
   },
   toastTexto: { flex: 1, fontSize: 14, fontWeight: '700', lineHeight: 19 },
   problemaOverlay: { flex: 1, backgroundColor: C.overlay },
@@ -3593,10 +3570,6 @@ const crearEstilos = (C: Paleta) =>
     padding: 20,
     borderWidth: 1,
     borderColor: C.border,
-    shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 10,
+    ...platformShadow(C.shadow, 0.2, { width: 0, height: 10 }, 24, 10),
   },
 });

@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../assets/theme/ThemeContext';
+import { AnimatedTouchableOpacity as TouchableOpacity } from './AnimatedTouchableOpacity';
 
 interface Props {
   icon: React.ComponentProps<typeof Ionicons>['name'];

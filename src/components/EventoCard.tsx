@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../assets/theme/ThemeContext';
+import { platformShadow } from '../utils/platformShadow';
+import { AnimatedTouchableOpacity as TouchableOpacity } from './AnimatedTouchableOpacity';
 
 interface EventoCardProps {
   evento: {
@@ -114,7 +116,7 @@ export default function EventoCard({ evento, onPress, mostrarFecha = false }: Ev
 }
 
 const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
-  card: { flexDirection: 'row', backgroundColor: theme.card, borderRadius: 16, padding: 15, marginBottom: 15, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: theme.border },
+  card: { flexDirection: 'row', backgroundColor: theme.card, borderRadius: 16, padding: 15, marginBottom: 15, ...platformShadow(theme.shadow, 0.05, { width: 0, height: 2 }, 8, 2), borderWidth: 1, borderColor: theme.border },
   iconContainer: { width: 50, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   contentContainer: { flex: 1, justifyContent: 'center' },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },

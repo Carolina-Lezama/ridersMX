@@ -7,6 +7,7 @@ import { supabase } from '../../services/supabase';
 import EventoCard from '../../components/EventoCard';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import Skeleton from '../../components/Skeleton';
+import { platformShadow } from '../../utils/platformShadow';
 
 // Configuración del idioma del calendario a Español
 LocaleConfig.locales['es'] = {
@@ -261,11 +262,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   },
   tabButtonActive: {
     backgroundColor: theme.card,
-    shadowColor: theme.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    ...platformShadow(theme.shadow, 0.1, { width: 0, height: 1 }, 2, 2),
   },
   tabText: {
     fontSize: 14,
@@ -293,10 +290,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     borderRadius: 30, 
     justifyContent: 'center', 
     alignItems: 'center', 
-    shadowColor: theme.primary,
-    shadowOffset: { width: 0, height: 6 }, 
-    shadowOpacity: 0.4, 
-    shadowRadius: 10, 
-    elevation: 6 
+    ...platformShadow(theme.primary, 0.4, { width: 0, height: 6 }, 10, 6),
   }
 });

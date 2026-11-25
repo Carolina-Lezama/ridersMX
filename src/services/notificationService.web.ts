@@ -1,5 +1,7 @@
 export const solicitarPermisosNotificaciones = async (): Promise<boolean> => false;
 
+export const tienePermisosNotificaciones = async (): Promise<boolean> => false;
+
 export const limpiarNotificacionesRacha = async (): Promise<void> => {};
 
 export const limpiarNotificacionesEventos = async (): Promise<void> => {};

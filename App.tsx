@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
 import { ThemeProvider } from './assets/theme/ThemeContext';
 import { useAppTimeTracker } from './src/utils/hooks/useAppTimeTracker';
 import { AvisoTiempoModal } from './src/components/AvisoTiempoModal';
+import InAppNotificationHost from './src/components/InAppNotificationHost';
 import RootNavigator from './src/navigation/RootNavigator';
 import { supabase } from './src/services/supabase';
 import { MultiAccountService } from './src/services/MultiAccountService';
-import { navigate } from './src/utils/helper/navigationRef';
+import { navigate, navigationRef } from './src/utils/helper/navigationRef';
+import { escucharRespuestasNotificacion } from './src/services/notificationListeners';
 
 function AppContent({ isFirstLaunch, hasSession }: { isFirstLaunch: boolean; hasSession: boolean }) {
   const { mostrarModalAviso, minutosAvisoActual, cerrarModalAviso } = useAppTimeTracker();
@@ -16,7 +17,7 @@ function AppContent({ isFirstLaunch, hasSession }: { isFirstLaunch: boolean; has
   useEffect(() => {
     if (Platform.OS === 'web') return;
 
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+    return escucharRespuestasNotificacion((response) => {
       const eventId = response.notification.request.content.data?.eventId;
       if (typeof eventId === 'string') {
         navigate('EventoForm', { eventoId: eventId });
@@ -24,12 +25,17 @@ function AppContent({ isFirstLaunch, hasSession }: { isFirstLaunch: boolean; has
         navigate('Notificaciones');
       }
     });
-
-    return () => subscription.remove();
   }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        if (navigationRef.isReady() && navigationRef.getCurrentRoute()?.name !== 'Login') {
+          navigationRef.resetRoot({ index: 0, routes: [{ name: 'Login' }] });
+        }
+        return;
+      }
+
       if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED')) {
         void MultiAccountService.updateKnownSession(session).catch(error => {
           console.error('No se pudieron actualizar los tokens de la cuenta guardada:', error);
@@ -51,7 +57,9 @@ function AppContent({ isFirstLaunch, hasSession }: { isFirstLaunch: boolean; has
 
   return (
     <>
-      <RootNavigator isFirstLaunch={isFirstLaunch} hasSession={hasSession} />
+      <InAppNotificationHost>
+        <RootNavigator isFirstLaunch={isFirstLaunch} hasSession={hasSession} />
+      </InAppNotificationHost>
       <AvisoTiempoModal
         visible={mostrarModalAviso}
         minutos={minutosAvisoActual}

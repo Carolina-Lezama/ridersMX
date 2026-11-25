@@ -4,8 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ONBOARDING_DATA } from '../../constants/onboardingData';
 import Paginator from '../../components/Paginator'; 
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import { platformShadow } from '../../utils/platformShadow';
 
-export default function OnboardingScreen({ navigation }: any) {
+export default function OnboardingScreen({ navigation, route }: any) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
 
@@ -43,7 +44,7 @@ export default function OnboardingScreen({ navigation }: any) {
     } else {
       try {
         await AsyncStorage.setItem('@ya_vio_onboarding', 'true');
-        navigation.replace('Login'); 
+        navigation.replace(route?.params?.hasSession ? 'MainApp' : 'Login');
       } catch (error) {
         console.error('No se pudo guardar que el onboarding fue completado:', error);
         const mensaje = 'No se pudo guardar el inicio. Revisa el almacenamiento disponible e inténtalo de nuevo.';
@@ -72,7 +73,8 @@ export default function OnboardingScreen({ navigation }: any) {
         <View style={styles.imagePlaceholder}>
           <Image 
             source={item.image} 
-            style={{ width: '80%', height: '80%', resizeMode: 'contain' }}
+            style={{ width: '80%', height: '80%' }}
+            resizeMode="contain"
           />
         </View>
         <View style={styles.textContainer}>
@@ -201,11 +203,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 30,
-    shadowColor: theme.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
+    ...platformShadow(theme.primary, 0.3, { width: 0, height: 4 }, 10, 5),
   },
   nextButtonText: {
     fontSize: 16,

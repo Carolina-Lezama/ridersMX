@@ -364,7 +364,7 @@ export default function ForoCrearPublicacion({ navigation }: any) {
 
           {imagen && (
             <View style={styles.previewContainer}>
-              <Image source={{ uri: imagen.uri }} style={styles.previewImage} />
+              <Image source={{ uri: imagen.uri }} style={styles.previewImage} resizeMode="contain" />
               <TouchableOpacity style={styles.removeImageBtn} onPress={() => setImagen(null)}>
                 <Ionicons name="close-circle" size={24} color="#ff4d4d" />
               </TouchableOpacity>
@@ -618,7 +618,7 @@ const createStyles = (theme: Theme) =>
     },
     imagePickerButtonText: { fontSize: 15, fontWeight: '600', color: theme.textPrimary },
     previewContainer: { position: 'relative', marginBottom: 15, alignItems: 'center' },
-    previewImage: { width: '100%', height: 280, borderRadius: 14, resizeMode: 'contain', backgroundColor: '#111318' },
+    previewImage: { width: '100%', height: 280, borderRadius: 14, backgroundColor: '#111318' },
     removeImageBtn: { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12 },
 
     locationContainer: {

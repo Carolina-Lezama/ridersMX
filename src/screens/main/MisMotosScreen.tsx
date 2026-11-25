@@ -5,6 +5,7 @@ import { supabase } from '../../services/supabase';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import Skeleton from '../../components/Skeleton';
 import { useFocusEffect } from '@react-navigation/native';
+import { platformShadow } from '../../utils/platformShadow';
 import {
   clearSelectedMotorcycleId,
   getSelectedMotorcycleId,
@@ -113,22 +114,33 @@ export default function MisMotosScreen({ navigation }: any) {
           </View>
           <Ionicons name="chevron-forward" size={24} color={theme.iconSecondary} />
         </TouchableOpacity>
-        {!isPrincipal && (
+        <View style={styles.cardActions}>
           <TouchableOpacity
-            style={styles.setPrincipalButton}
-            onPress={() => {
-              void seleccionarMotoPrincipal(item.id).catch((error) => {
-                const mensaje = error instanceof Error ? error.message : 'Inténtalo de nuevo.';
-                if (Platform.OS === 'web') window.alert(`No se pudo guardar la moto principal: ${mensaje}`);
-                else Alert.alert('No se pudo guardar la moto principal', mensaje);
-              });
-            }}
+            style={styles.referencesButton}
+            onPress={() => navigation.navigate('ReferenciasMoto', { motoId: item.id })}
             accessibilityRole="button"
-            accessibilityLabel={`Elegir ${item.alias || `${item.marca} ${item.modelo}`} como moto principal`}
+            accessibilityLabel={`Ficha técnica de ${item.alias || `${item.marca} ${item.modelo}`}`}
           >
-            <Text style={styles.setPrincipalText}>Hacer principal</Text>
+            <Ionicons name="construct-outline" size={16} color={theme.primary} />
+            <Text style={styles.referencesButtonText}>Ficha técnica</Text>
           </TouchableOpacity>
-        )}
+          {!isPrincipal && (
+            <TouchableOpacity
+              style={styles.setPrincipalButton}
+              onPress={() => {
+                void seleccionarMotoPrincipal(item.id).catch((error) => {
+                  const mensaje = error instanceof Error ? error.message : 'Inténtalo de nuevo.';
+                  if (Platform.OS === 'web') window.alert(`No se pudo guardar la moto principal: ${mensaje}`);
+                  else Alert.alert('No se pudo guardar la moto principal', mensaje);
+                });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Elegir ${item.alias || `${item.marca} ${item.modelo}`} como moto principal`}
+            >
+              <Text style={styles.setPrincipalText}>Hacer principal</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     );
   };
@@ -220,7 +232,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     padding: 15,
     borderRadius: 16,
     marginBottom: 15,
-    shadowColor: theme.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3
+    ...platformShadow(theme.shadow, 0.05, { width: 0, height: 4 }, 10, 3)
   },
   motoCardContent: { flexDirection: 'row', alignItems: 'center' },
   motoIconContainer: {
@@ -232,7 +244,10 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   motoSubtitulo: { fontSize: 14, color: theme.textSecondary },
   principalLabel: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
   principalLabelText: { fontSize: 12, fontWeight: '700', color: theme.primary },
-  setPrincipalButton: { alignSelf: 'flex-end', paddingHorizontal: 12, paddingVertical: 7, marginTop: 10 },
+  cardActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
+  referencesButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 8 },
+  referencesButtonText: { color: theme.primary, fontSize: 13, fontWeight: '700' },
+  setPrincipalButton: { alignSelf: 'flex-end', paddingHorizontal: 12, paddingVertical: 7 },
   setPrincipalText: { color: theme.primary, fontSize: 13, fontWeight: '700' },
 
   // Estilo del botón flotante (FAB)
@@ -240,6 +255,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     position: 'absolute', bottom: 30, right: 20,
     backgroundColor: theme.primary, width: 60, height: 60, borderRadius: 30,
     justifyContent: 'center', alignItems: 'center',
-    shadowColor: theme.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6
+    ...platformShadow(theme.primary, 0.4, { width: 0, height: 6 }, 10, 6)
   }
 });

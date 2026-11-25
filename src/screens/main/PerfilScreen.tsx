@@ -7,6 +7,7 @@ import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import Skeleton from '../../components/Skeleton';
 import { supabase } from '../../services/supabase';
+import { platformShadow } from '../../utils/platformShadow';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 
 const CODIGOS_PAIS = [
@@ -256,7 +257,7 @@ export default function PerfilScreen({ navigation }: any) {
       }
 
       const seleccion = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -766,13 +767,13 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   container: { backgroundColor: theme.background, flexGrow: 1, paddingBottom: 20 },
   headerBackground: { backgroundColor: theme.primary, height: 120, width: '100%', position: 'absolute', top: 0, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
   avatarContainer: { alignItems: 'center', marginTop: 60, marginBottom: 20 },
-  avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: theme.card, justifyContent: 'center', alignItems: 'center', shadowColor: theme.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, borderWidth: 3, borderColor: theme.background, overflow: 'hidden' },
+  avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: theme.card, justifyContent: 'center', alignItems: 'center', ...platformShadow(theme.shadow, 0.1, { width: 0, height: 4 }, 10, 5), borderWidth: 3, borderColor: theme.background, overflow: 'hidden' },
   avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: 36, fontWeight: 'bold', color: theme.iconSecondary },
   editBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: theme.primary, width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: theme.card },
   nombreUsuario: { fontSize: 22, fontWeight: 'bold', color: theme.textPrimary, marginTop: 10 },
   rolUsuario: { fontSize: 14, color: theme.textSecondary, fontWeight: '500' },
-  card: { backgroundColor: theme.card, marginHorizontal: 20, marginTop: 15, padding: 20, borderRadius: 16, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  card: { backgroundColor: theme.card, marginHorizontal: 20, marginTop: 15, padding: 20, borderRadius: 16, ...platformShadow(theme.shadow, 0.05, { width: 0, height: 2 }, 8, 2) },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.divider, paddingBottom: 10 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginLeft: 10 },
   label: { fontSize: 14, fontWeight: '600', color: theme.textPrimary, marginBottom: 10 },
@@ -806,7 +807,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   dividerLine: { flex: 1, height: 1, backgroundColor: theme.border },
   dividerText: { marginHorizontal: 15, fontSize: 14, fontWeight: 'bold', color: theme.iconSecondary, letterSpacing: 1 },
   
-  btnGaraje: { backgroundColor: theme.card, marginHorizontal: 20, borderRadius: 16, padding: 15, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3, borderWidth: 1, borderColor: theme.border },
+  btnGaraje: { backgroundColor: theme.card, marginHorizontal: 20, borderRadius: 16, padding: 15, ...platformShadow(theme.shadow, 0.05, { width: 0, height: 4 }, 10, 3), borderWidth: 1, borderColor: theme.border },
   btnGarajeContent: { flexDirection: 'row', alignItems: 'center' },
   btnGarajeIcon: { backgroundColor: theme.background, width: 50, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   btnGarajeText: { flex: 1 },

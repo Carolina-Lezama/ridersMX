@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Modal, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../assets/theme/ThemeContext';
 import { obtenerFechaISO } from '../services/streakService';
 import { supabase } from '../services/supabase';
+import { AnimatedTouchableOpacity as TouchableOpacity } from './AnimatedTouchableOpacity';
 
 interface RachaCalendarModalProps {
   visible: boolean;

@@ -1,8 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MultiAccountService } from '../../services/MultiAccountService';
 import { useTheme } from '../../../assets/theme/ThemeContext';
+import { platformShadow } from '../../utils/platformShadow';
+import { AnimatedTouchableOpacity as TouchableOpacity } from '../../components/AnimatedTouchableOpacity';
+import { AnimatedSection } from '../../components/AnimatedSection';
 
 export default function MenuScreen({ navigation }: any) {
   const { theme } = useTheme();
@@ -23,7 +26,14 @@ export default function MenuScreen({ navigation }: any) {
     { id: 'Diagnostico', icon: 'pulse-outline', label: 'Diagnóstico', color: theme.teal },
   ];
 
-  // SECCIÓN 3: Ajustes y ayuda
+  // SECCIÓN 3: Seguridad vial
+  const seccionSeguridadVial = [
+    { id: 'PreRideChecklist', icon: 'checkbox-outline', label: 'Checklist pre-rodada', color: theme.successText },
+    { id: 'EmergencyServices', icon: 'call-outline', label: 'Auxilio en carretera', color: theme.dangerText },
+    { id: 'DiarioRutas', icon: 'map-outline', label: 'Diario de rutas', color: theme.primary },
+  ];
+
+  // SECCIÓN 4: Ajustes y ayuda
   const seccionAjustesAyuda = [
     { id: 'Ayuda', icon: 'help-circle-outline', label: 'Ayuda y Soporte', color: theme.cyan },
     { id: 'Configuracion', icon: 'settings-outline', label: 'Configuración', color: theme.textSecondary },
@@ -81,38 +91,52 @@ export default function MenuScreen({ navigation }: any) {
         <Text style={styles.tituloMenu}>Menú</Text>
       </View>
 
-      {/* BLOQUE 1: Sobre mí */}
-      <Text style={styles.seccionTitulo}>Sobre mí</Text>
-      <View style={styles.tarjetaSeccion}>
-        {seccionSobreMi.map((item, index) => 
-          renderItem(item, index === seccionSobreMi.length - 1)
-        )}
-      </View>
+      <AnimatedSection>
+        <Text style={styles.seccionTitulo}>Sobre mí</Text>
+        <View style={styles.tarjetaSeccion}>
+          {seccionSobreMi.map((item, index) =>
+            renderItem(item, index === seccionSobreMi.length - 1)
+          )}
+        </View>
+      </AnimatedSection>
 
-      {/* BLOQUE 2: Comunidad */}
-      <Text style={styles.seccionTitulo}>Comunidad</Text>
-      <View style={styles.tarjetaSeccion}>
-        {seccionComunidad.map((item, index) => 
-          renderItem(item, index === seccionComunidad.length - 1)
-        )}
-      </View>
+      <AnimatedSection delay={70}>
+        <Text style={styles.seccionTitulo}>Comunidad</Text>
+        <View style={styles.tarjetaSeccion}>
+          {seccionComunidad.map((item, index) =>
+            renderItem(item, index === seccionComunidad.length - 1)
+          )}
+        </View>
+      </AnimatedSection>
 
-      {/* BLOQUE 3: Ajustes y ayuda */}
-      <Text style={styles.seccionTitulo}>Ajustes y ayuda</Text>
-      <View style={styles.tarjetaSeccion}>
-        {seccionAjustesAyuda.map((item, index) => 
-          renderItem(item, index === seccionAjustesAyuda.length - 1)
-        )}
-      </View>
+      <AnimatedSection delay={140}>
+        <Text style={styles.seccionTitulo}>Seguridad vial</Text>
+        <View style={styles.tarjetaSeccion}>
+          {seccionSeguridadVial.map((item, index) =>
+            renderItem(item, index === seccionSeguridadVial.length - 1)
+          )}
+        </View>
+      </AnimatedSection>
+
+      <AnimatedSection delay={210}>
+        <Text style={styles.seccionTitulo}>Ajustes y ayuda</Text>
+        <View style={styles.tarjetaSeccion}>
+          {seccionAjustesAyuda.map((item, index) =>
+            renderItem(item, index === seccionAjustesAyuda.length - 1)
+          )}
+        </View>
+      </AnimatedSection>
 
       {/* Botón de Cerrar Sesión */}
-      <TouchableOpacity 
-        style={styles.botonCerrarSesion}
-        onPress={handleCerrarSesion}
-      >
-        <Ionicons name="log-out-outline" size={24} color={theme.dangerText} />
-        <Text style={styles.textoCerrarSesion}>Cerrar Sesión</Text>
-      </TouchableOpacity>
+      <AnimatedSection delay={280}>
+        <TouchableOpacity
+          style={styles.botonCerrarSesion}
+          onPress={handleCerrarSesion}
+        >
+          <Ionicons name="log-out-outline" size={24} color={theme.dangerText} />
+          <Text style={styles.textoCerrarSesion}>Cerrar Sesión</Text>
+        </TouchableOpacity>
+      </AnimatedSection>
 
       <View style={{ height: 40 }} />
     </ScrollView>
@@ -124,7 +148,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   header: { marginTop: 60, marginBottom: 20 },
   tituloMenu: { fontSize: 28, fontWeight: 'bold', color: theme.textPrimary },
   seccionTitulo: { fontSize: 14, fontWeight: 'bold', color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, marginTop: 15, marginLeft: 5 },
-  tarjetaSeccion: { backgroundColor: theme.card, borderRadius: 20, paddingHorizontal: 15, marginBottom: 20, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
+  tarjetaSeccion: { backgroundColor: theme.card, borderRadius: 20, paddingHorizontal: 15, marginBottom: 20, ...platformShadow(theme.shadow, 0.05, { width: 0, height: 4 }, 10, 3) },
   opcion: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: theme.divider },
   opcionSinBorde: { borderBottomWidth: 0 },
   iconContainer: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },

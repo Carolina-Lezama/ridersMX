@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../assets/theme/ThemeContext';
 import { useDiseno, nuevoDiseno, pedirFotoMoto, cargarAlmacen, nombreDeMoto } from './diseñostore';
 import { LienzoEstatico } from './SimuladorEditorScreen';
+import { platformShadow } from '../../utils/platformShadow';
 
 export default function MantenimientoScreen({ navigation }: any) {
   const { theme } = useTheme();
@@ -160,7 +161,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   backButton: { padding: 5 },
   titulo: { fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
   content: { padding: 20, paddingBottom: 40 },
-  mainButton: { backgroundColor: theme.card, height: 160, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 25, borderWidth: 1, borderColor: theme.border, elevation: 2, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3 },
+  mainButton: { backgroundColor: theme.card, height: 160, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 25, borderWidth: 1, borderColor: theme.border, ...platformShadow(theme.shadow, 0.05, { width: 0, height: 1 }, 3, 2) },
   mainButtonText: { color: theme.textPrimary, fontSize: 18, fontWeight: 'bold', marginTop: 10 },
   subButtonText: { color: theme.textSecondary, fontSize: 14, marginTop: 5 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: theme.textPrimary, marginBottom: 15 },

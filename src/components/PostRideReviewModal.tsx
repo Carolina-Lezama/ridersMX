@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +21,7 @@ import {
   posponerEventoPendiente,
 } from '../services/reviewService';
 import { supabase } from '../services/supabase';
+import { AnimatedTouchableOpacity as TouchableOpacity } from './AnimatedTouchableOpacity';
 
 export interface ReviewEventLike {
   id: string;
@@ -147,7 +147,7 @@ export default function PostRideReviewModal({
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -428,7 +428,7 @@ export default function PostRideReviewModal({
                 <Ionicons name={fotoUri ? 'image' : 'camera-outline'} size={22} color={theme.primary} />
                 <Text style={styles.photoButtonText}>{fotoUri ? 'Cambiar foto' : 'Añadir foto del día (opcional)'}</Text>
               </TouchableOpacity>
-              {fotoUri ? <Image source={{ uri: fotoUri }} style={styles.previewImage} /> : null}
+              {fotoUri ? <Image source={{ uri: fotoUri }} style={styles.previewImage} resizeMode="cover" /> : null}
             </>
           )}
 
@@ -502,7 +502,7 @@ const createStyles = (theme: any) =>
     textArea: { minHeight: 96, backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border, borderRadius: 14, padding: 14, color: theme.textPrimary, fontSize: 15, textAlignVertical: 'top', marginBottom: 14 },
     photoButton: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: `${theme.primary}18`, borderRadius: 12, paddingVertical: 13, marginBottom: 12 },
     photoButtonText: { color: theme.primary, fontSize: 15, fontWeight: '700', marginLeft: 8 },
-    previewImage: { width: '100%', height: 170, borderRadius: 14, marginBottom: 14, resizeMode: 'cover' },
+    previewImage: { width: '100%', height: 170, borderRadius: 14, marginBottom: 14 },
     saveBtn: { backgroundColor: theme.primary, borderRadius: 12, paddingVertical: 15, alignItems: 'center', marginBottom: 12 },
     saveBtnText: { color: theme.onPrimary, fontSize: 16, fontWeight: '700' },
     secondaryActionsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },

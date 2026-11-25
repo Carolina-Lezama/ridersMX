@@ -21,10 +21,11 @@ export default function LoginScreen({ navigation, addingAccount = false }: Props
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const normalizedEmail = email.trim();
 
-  const emailError = email.length > 0 && !isValidEmail(email)
+  const emailError = normalizedEmail.length > 0 && !isValidEmail(normalizedEmail)
     ? 'Ingresa un correo electrónico válido.'
-    : submitted && !email
+    : submitted && !normalizedEmail
       ? 'El correo electrónico es obligatorio.'
       : undefined;
   const passwordError = password.length > 0 && !isValidPassword(password)
@@ -35,7 +36,7 @@ export default function LoginScreen({ navigation, addingAccount = false }: Props
 
   const handleLogin = async () => {
     setSubmitted(true);
-    if (!email || !password || !isValidEmail(email) || !isValidPassword(password)) {
+    if (!normalizedEmail || !password || !isValidEmail(normalizedEmail) || !isValidPassword(password)) {
       return;
     }
 
@@ -49,7 +50,7 @@ export default function LoginScreen({ navigation, addingAccount = false }: Props
       previousSession = previousSessionData.session;
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
+        email: normalizedEmail,
         password: password,
       });
 

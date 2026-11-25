@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import { 
   obtenerConfigNotificaciones, 
   guardarConfigNotificaciones, 
@@ -13,7 +12,24 @@ import {
   limpiarNotificacionesEventos,
   programarNotificacionesEventos,
   solicitarPermisosNotificaciones,
+  tienePermisosNotificaciones,
 } from '../../services/notificationService';
+
+type PreferenciaAgenda = 'rodadasEnabled' | 'mantenimientosEnabled';
+type PreferenciaComunidad = 'comunidadComentariosEnabled' | 'comunidadReaccionesEnabled';
+
+const obtenerPreferenciasAgenda = (config: NotificacionesConfig) => ({
+  rodadasEnabled: config.rodadasEnabled,
+  mantenimientosEnabled: config.mantenimientosEnabled,
+});
+
+const sincronizarAgenda = async (userId: string, config: NotificacionesConfig): Promise<boolean> => {
+  if (!config.eventosEnabled) {
+    await limpiarNotificacionesEventos();
+    return true;
+  }
+  return programarNotificacionesEventos(userId, obtenerPreferenciasAgenda(config));
+};
 
 export const useNotificationConfig = (userId: string | undefined, rachaCompletadaHoy: boolean) => {
   const [config, setConfig] = useState<NotificacionesConfig>(DEFAULT_NOTIF_CONFIG);
@@ -39,15 +55,20 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
         if (!mounted) return;
 
         if (Platform.OS !== 'web' && (data.checkInEnabled || data.eventosEnabled)) {
-          const permissions = await Notifications.getPermissionsAsync();
-          const permisosConcedidos = permissions.status === 'granted';
+          const permisosConcedidos = await tienePermisosNotificaciones();
           if (mounted) {
             setConfig(permisosConcedidos
               ? data
-              : { ...data, checkInEnabled: false, eventosEnabled: false });
+              : {
+                  ...data,
+                  checkInEnabled: false,
+                  eventosEnabled: false,
+                  rodadasEnabled: false,
+                  mantenimientosEnabled: false,
+                });
           }
           if (permisosConcedidos && data.eventosEnabled) {
-            void programarNotificacionesEventos(userId).catch((error) => {
+            void sincronizarAgenda(userId, data).catch((error) => {
               console.error('No se pudieron sincronizar recordatorios de agenda:', error);
             });
           }
@@ -106,12 +127,18 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
     }
   }, [userId, config, rachaCompletadaHoy]);
 
-  const toggleEventos = useCallback(async (enabled: boolean) => {
+  const toggleAgenda = useCallback(async (preferencia: PreferenciaAgenda, enabled: boolean) => {
     if (!userId || updateInProgress.current) return;
     updateInProgress.current = true;
     setUpdating(true);
 
-    const nuevaConfig = { ...config, eventosEnabled: enabled };
+    const nuevaConfig = {
+      ...config,
+      [preferencia]: enabled,
+      eventosEnabled: preferencia === 'rodadasEnabled'
+        ? enabled || config.mantenimientosEnabled
+        : config.rodadasEnabled || enabled,
+    };
     setConfig(nuevaConfig);
 
     try {
@@ -124,9 +151,12 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
               : 'Concede permisos de notificación en tu dispositivo para activar los recordatorios.',
           );
         }
-
-        const programadas = await programarNotificacionesEventos(userId);
-        if (!programadas) throw new Error('No se pudieron programar los recordatorios de agenda.');
+      }
+      if (nuevaConfig.eventosEnabled) {
+        const programadas = await sincronizarAgenda(userId, nuevaConfig);
+        if (enabled && !programadas) {
+          throw new Error('No se pudieron programar los recordatorios de agenda.');
+        }
       } else {
         await limpiarNotificacionesEventos();
       }
@@ -138,7 +168,7 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
       setConfig(config);
       try {
         if (config.eventosEnabled) {
-          await programarNotificacionesEventos(userId);
+          await sincronizarAgenda(userId, config);
         } else {
           await limpiarNotificacionesEventos();
         }
@@ -151,6 +181,38 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
       setUpdating(false);
     }
   }, [userId, config]);
+
+  const togglePreferenciaComunidad = useCallback(async (
+    preferencia: PreferenciaComunidad,
+    enabled: boolean,
+  ) => {
+    if (!userId || updateInProgress.current) return;
+    updateInProgress.current = true;
+    setUpdating(true);
+
+    const nuevaConfig = { ...config, [preferencia]: enabled };
+    setConfig(nuevaConfig);
+    try {
+      if (!(await guardarConfigNotificaciones(userId, nuevaConfig))) {
+        throw new Error('No se pudo guardar la configuración de notificaciones.');
+      }
+    } catch (error) {
+      setConfig(config);
+      throw error;
+    } finally {
+      updateInProgress.current = false;
+      setUpdating(false);
+    }
+  }, [userId, config]);
+
+  const toggleComunidadComentarios = useCallback(
+    (enabled: boolean) => togglePreferenciaComunidad('comunidadComentariosEnabled', enabled),
+    [togglePreferenciaComunidad],
+  );
+  const toggleComunidadReacciones = useCallback(
+    (enabled: boolean) => togglePreferenciaComunidad('comunidadReaccionesEnabled', enabled),
+    [togglePreferenciaComunidad],
+  );
 
   const toggleLimite = useCallback(async (enabled: boolean) => {
     if (!userId || updateInProgress.current) return;
@@ -214,7 +276,9 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
     updating,
     toggleCheckIn,
     toggleLimite,
-    toggleEventos,
+    toggleAgenda,
+    toggleComunidadComentarios,
+    toggleComunidadReacciones,
     actualizarHoraCheckIn
   };
 };

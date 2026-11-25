@@ -4,13 +4,13 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  Pressable,
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../assets/theme/ThemeContext'; // Ajusta la ruta a tu ThemeContext
+import { platformShadow } from '../utils/platformShadow';
+import { AnimatedTouchableOpacity as TouchableOpacity } from './AnimatedTouchableOpacity';
 
 export interface PreguntaQuiz {
   id: string;
@@ -146,15 +146,12 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 }
 
                 return (
-                  <Pressable
+                  <TouchableOpacity
                     key={index}
                     disabled={respondido}
                     onPress={() => seleccionarOpcion(index)}
-                    style={({ pressed }) => [
-                      styles.opcionBtnBase,
-                      buttonStyle,
-                      pressed && !respondido && styles.opcionBtnPressed,
-                    ]}
+                    activeOpacity={0.85}
+                    style={[styles.opcionBtnBase, buttonStyle]}
                   >
                     <Text style={[styles.opcionTextoBase, textStyle]}>
                       {opcionText}
@@ -162,7 +159,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                     {iconName && (
                       <Ionicons name={iconName} size={22} color={iconColor} />
                     )}
-                  </Pressable>
+                  </TouchableOpacity>
                 );
               })}
             </View>
@@ -277,11 +274,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       borderRadius: 16,
       borderWidth: 1.5,
     },
-    opcionBtnPressed: {
-      opacity: 0.8,
-      transform: [{ scale: 0.99 }],
-    },
-
     // Estado 1: Reposo
     opcionBtnReposo: {
       backgroundColor: theme.background,
@@ -358,11 +350,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
       borderRadius: 16,
       alignItems: 'center',
       marginTop: 8,
-      shadowColor: theme.accent,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 4,
+      ...platformShadow(theme.accent, 0.3, { width: 0, height: 4 }, 8, 4),
     },
     btnReclamarTexto: {
       color: theme.onPrimary,

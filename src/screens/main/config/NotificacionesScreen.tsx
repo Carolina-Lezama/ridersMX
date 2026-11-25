@@ -61,7 +61,9 @@ export const NotificacionesScreen = ({ navigation }: any) => {
     updating,
     toggleCheckIn,
     toggleLimite,
-    toggleEventos,
+    toggleAgenda,
+    toggleComunidadComentarios,
+    toggleComunidadReacciones,
     actualizarHoraCheckIn,
   } = useNotificationConfig(userId, completadoHoy);
 
@@ -277,28 +279,59 @@ export const NotificacionesScreen = ({ navigation }: any) => {
       <Section
         title="AGENDA Y VEHÍCULO"
         icon="calendar-outline"
-        isComingSoon={Platform.OS === 'web'}
       >
         <SwitchRow
-          label="Recordatorios de agenda"
-          value={config.eventosEnabled}
+          label="Rodadas"
+          value={config.rodadasEnabled}
           disabled={updating || Platform.OS === 'web'}
           onValueChange={(enabled: boolean) => {
-            void toggleEventos(enabled).catch((error) => {
-              console.error('Error actualizando recordatorios de agenda:', error);
-              mostrarError(error instanceof Error ? error.message : 'No se pudieron actualizar los recordatorios de agenda.');
+            void toggleAgenda('rodadasEnabled', enabled).catch((error) => {
+              console.error('Error actualizando recordatorios de rodadas:', error);
+              mostrarError(error instanceof Error ? error.message : 'No se pudieron actualizar los recordatorios de rodadas.');
             });
           }}
         />
+        <SwitchRow
+          label="Mantenimientos"
+          value={config.mantenimientosEnabled}
+          disabled={updating || Platform.OS === 'web'}
+          onValueChange={(enabled: boolean) => {
+            void toggleAgenda('mantenimientosEnabled', enabled).catch((error) => {
+              console.error('Error actualizando recordatorios de mantenimiento:', error);
+              mostrarError(error instanceof Error ? error.message : 'No se pudieron actualizar los recordatorios de mantenimiento.');
+            });
+          }}
+        />
+        {Platform.OS === 'web' && (
+          <Text style={styles.sectionHint}>
+            Los recordatorios de agenda requieren la aplicación en iOS o Android.
+          </Text>
+        )}
       </Section>
 
       {/* SECCIÓN 4: COMUNIDAD */}
-      <Section title="COMUNIDAD" icon="chatbubbles-outline" isComingSoon>
-        <SwitchRow 
-          label="Respuestas a tus publicaciones" 
-          value={false} 
-          onValueChange={() => {}} 
-          disabled={true} 
+      <Section title="COMUNIDAD" icon="chatbubbles-outline">
+        <SwitchRow
+          label="Comentarios en tus publicaciones"
+          value={config.comunidadComentariosEnabled}
+          disabled={updating}
+          onValueChange={(enabled: boolean) => {
+            void toggleComunidadComentarios(enabled).catch((error) => {
+              console.error('Error actualizando notificaciones de comentarios:', error);
+              mostrarError(error instanceof Error ? error.message : 'No se pudieron actualizar las notificaciones de comentarios.');
+            });
+          }}
+        />
+        <SwitchRow
+          label="Reacciones a tus publicaciones"
+          value={config.comunidadReaccionesEnabled}
+          disabled={updating}
+          onValueChange={(enabled: boolean) => {
+            void toggleComunidadReacciones(enabled).catch((error) => {
+              console.error('Error actualizando notificaciones de reacciones:', error);
+              mostrarError(error instanceof Error ? error.message : 'No se pudieron actualizar las notificaciones de reacciones.');
+            });
+          }}
         />
       </Section>
 
