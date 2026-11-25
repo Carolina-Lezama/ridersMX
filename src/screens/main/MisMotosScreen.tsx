@@ -151,6 +151,16 @@ export default function MisMotosScreen({ navigation }: any) {
           <Text style={styles.referencesButtonText}>Mejoras y accesorios</Text>
           <Ionicons name="chevron-forward" size={16} color={theme.iconSecondary} />
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.modificationsButton}
+          onPress={() => navigation.navigate('MotoGallery', { motoId: item.id })}
+          accessibilityRole="button"
+          accessibilityLabel={`Galería de ${item.alias || `${item.marca} ${item.modelo}`}`}
+        >
+          <Ionicons name="images-outline" size={16} color={theme.primary} />
+          <Text style={styles.referencesButtonText}>Galería visual</Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.iconSecondary} />
+        </TouchableOpacity>
       </View>
     );
   };
