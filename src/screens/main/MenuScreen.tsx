@@ -30,6 +30,7 @@ export default function MenuScreen({ navigation }: any) {
   const seccionSeguridadVial = [
     { id: 'PreRideChecklist', icon: 'checkbox-outline', label: 'Checklist pre-rodada', color: theme.successText },
     { id: 'EmergencyServices', icon: 'call-outline', label: 'Auxilio en carretera', color: theme.dangerText },
+    { id: 'FuelRangeCalculator', icon: 'speedometer-outline', label: 'Calculadora de autonomía', color: theme.primary },
     { id: 'DiarioRutas', icon: 'map-outline', label: 'Diario de rutas', color: theme.primary },
   ];
 
