@@ -8,6 +8,7 @@ export interface KmPorMesData {
 export interface GastosDesgloseData {
   rutas: number;
   mantenimiento: number;
+  equipamiento: number;
 }
 
 export interface TerrenoDistribucionData {
@@ -75,17 +76,23 @@ export const obtenerDesgloseGastos = async (perfilId: string, motoId?: string | 
   if (resMotos.error) throw resMotos.error;
 
   const motocicletaIds = (resMotos.data || []).map((moto) => moto.id);
-  const resMant = motocicletaIds.length > 0
-    ? await supabase.from('mantenimientos').select('costo').in('motocicleta_id', motocicletaIds)
-    : { data: [], error: null };
+  const [resMant, resEquipamiento] = motocicletaIds.length > 0
+    ? await Promise.all([
+      supabase.from('mantenimientos').select('costo').in('motocicleta_id', motocicletaIds),
+      supabase.from('modificaciones_motocicleta').select('costo').in('motocicleta_id', motocicletaIds),
+    ])
+    : [{ data: [], error: null }, { data: [], error: null }];
   if (resMant.error) throw resMant.error;
+  if (resEquipamiento.error) throw resEquipamiento.error;
 
   const totalRutas = (resRutas.data || []).reduce((acc, row) => acc + Number(row.gastos_ruta || 0), 0);
   const totalMant = (resMant.data || []).reduce((acc, row) => acc + Number(row.costo || 0), 0);
+  const totalEquipamiento = (resEquipamiento.data || []).reduce((acc, row) => acc + Number(row.costo || 0), 0);
 
   return {
     rutas: totalRutas,
     mantenimiento: totalMant,
+    equipamiento: totalEquipamiento,
   };
 };
 

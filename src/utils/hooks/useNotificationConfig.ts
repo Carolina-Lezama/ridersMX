@@ -54,7 +54,7 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
         const data = await obtenerConfigNotificaciones(userId);
         if (!mounted) return;
 
-        if (Platform.OS !== 'web' && (data.checkInEnabled || data.eventosEnabled)) {
+        if (data.checkInEnabled || data.eventosEnabled) {
           const permisosConcedidos = await tienePermisosNotificaciones();
           if (mounted) {
             setConfig(permisosConcedidos
@@ -67,10 +67,17 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
                   mantenimientosEnabled: false,
                 });
           }
-          if (permisosConcedidos && data.eventosEnabled) {
-            void sincronizarAgenda(userId, data).catch((error) => {
-              console.error('No se pudieron sincronizar recordatorios de agenda:', error);
-            });
+          if (permisosConcedidos) {
+            if (data.eventosEnabled) {
+                void sincronizarAgenda(userId, data).catch((error) => {
+                  console.error('No se pudieron sincronizar recordatorios de agenda:', error);
+                });
+            }
+            if (data.checkInEnabled) {
+                void programarNotificacionesRacha(rachaCompletadaHoy, data.checkInTime).catch((error) => {
+                  console.error('No se pudo sincronizar el recordatorio de racha:', error);
+                });
+            }
           }
         } else {
           setConfig(data);
@@ -147,7 +154,7 @@ export const useNotificationConfig = (userId: string | undefined, rachaCompletad
         if (!permisosConcedidos) {
           throw new Error(
             Platform.OS === 'web'
-              ? 'Los recordatorios de agenda están disponibles en iOS y Android.'
+              ? 'Permite las notificaciones del navegador para activar los recordatorios.'
               : 'Concede permisos de notificación en tu dispositivo para activar los recordatorios.',
           );
         }

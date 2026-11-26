@@ -34,6 +34,9 @@ import AgregarCuentaScreen from '../screens/main/config/AgregarCuentaScreen';
 
 import MisMotosScreen from '../screens/main/MisMotosScreen';
 import MotoFormScreen from '../screens/main/MotoFormScreen';
+import MotoModificationsScreen from '../screens/main/MotoModificationsScreen';
+import FuelRangeCalculatorScreen from '../screens/main/FuelRangeCalculatorScreen';
+import MotoGalleryScreen from '../screens/main/MotoGalleryScreen';
 import CalendarioScreen from '../screens/main/CalendarioScreen';
 import EventoFormScreen from '../screens/main/EventoFormScreen';
 
@@ -238,6 +241,9 @@ export default function RootNavigator({ isFirstLaunch, hasSession }: { isFirstLa
 
           <Stack.Screen name="MisMotos" component={MisMotosScreen} />
           <Stack.Screen name="MotoForm" component={MotoFormScreen} />
+          <Stack.Screen name="MotoModifications" component={MotoModificationsScreen} />
+          <Stack.Screen name="FuelRangeCalculator" component={FuelRangeCalculatorScreen} />
+          <Stack.Screen name="MotoGallery" component={MotoGalleryScreen} />
           <Stack.Screen name="ReferenciasMoto" component={ReferenciasMotoScreen} />
           <Stack.Screen name="DiarioRutas" component={DiarioRutasScreen} />
           <Stack.Screen name="Calendario" component={CalendarioScreen} />

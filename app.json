@@ -25,15 +25,16 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/icon.jpeg"
-    },
+  "favicon": "./assets/icon.jpeg",
+  "output": "single"
+},
     "plugins": [
       "@react-native-community/datetimepicker",
       [
         "expo-image-picker",
         {
-          "photosPermission": "RidersMX necesita acceder a tus fotos para usar una imagen de perfil o adjuntarla a tus reseñas.",
-          "cameraPermission": "RidersMX necesita usar la cámara para tomar fotos de tus reseñas.",
+          "photosPermission": "RidersMX necesita acceder a tus fotos para tu perfil, reseñas y galería de motocicleta.",
+          "cameraPermission": "RidersMX necesita usar la cámara para tus reseñas y galería de motocicleta.",
           "microphonePermission": false,
           "colors": {
             "cropToolbarColor": "#3B82F6",

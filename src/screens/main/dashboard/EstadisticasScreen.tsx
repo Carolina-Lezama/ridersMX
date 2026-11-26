@@ -26,7 +26,7 @@ export default function EstadisticasScreen({ navigation }: any) {
   const [motoSeleccionadaId, setMotoSeleccionadaId] = useState<string | null>(null);
 
   const [kmMesData, setKmMesData] = useState<KmPorMesData[]>([]);
-  const [gastosData, setGastosData] = useState<GastosDesgloseData>({ rutas: 0, mantenimiento: 0 });
+  const [gastosData, setGastosData] = useState<GastosDesgloseData>({ rutas: 0, mantenimiento: 0, equipamiento: 0 });
   const [terrenosData, setTerrenosData] = useState<TerrenoDistribucionData[]>([]);
 
   const cargarDatos = useCallback(async (sigueActiva: () => boolean = () => true) => {
@@ -102,9 +102,10 @@ export default function EstadisticasScreen({ navigation }: any) {
   const pieData = [
     { value: gastosData.rutas, color: '#3b82f6', text: 'Rutas' },
     { value: gastosData.mantenimiento, color: '#ef4444', text: 'Mantenimiento' },
+    { value: gastosData.equipamiento, color: '#8b5cf6', text: 'Equipamiento' },
   ].filter(item => item.value > 0);
 
-  const totalGastos = gastosData.rutas + gastosData.mantenimiento;
+  const totalGastos = gastosData.rutas + gastosData.mantenimiento + gastosData.equipamiento;
 
   return (
     <View style={styles.container}>
@@ -223,6 +224,10 @@ export default function EstadisticasScreen({ navigation }: any) {
                     <View style={styles.legendItem}>
                       <View style={[styles.dot, { backgroundColor: '#ef4444' }]} />
                       <Text style={styles.legendText}>Taller: ${gastosData.mantenimiento.toLocaleString('es-MX')}</Text>
+                    </View>
+                    <View style={styles.legendItem}>
+                      <View style={[styles.dot, { backgroundColor: '#8b5cf6' }]} />
+                      <Text style={styles.legendText}>Equipamiento: ${gastosData.equipamiento.toLocaleString('es-MX')}</Text>
                     </View>
                   </View>
                 </View>

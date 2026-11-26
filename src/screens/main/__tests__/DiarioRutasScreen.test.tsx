@@ -60,6 +60,26 @@ const crearEntrada = (draft: JournalEntryDraft, perfilId = 'rider-1'): JournalEn
   created_at: '2026-11-24T18:00:00.000Z',
 });
 
+const crearPunto = (
+  id: string,
+  tipo: Exclude<JournalEntry['tipo_registro'], 'ruta'>,
+  nombre: string,
+  camino: JournalEntry['tipo_camino'],
+): JournalEntry => ({
+  id,
+  perfil_id: 'rider-1',
+  bitacora_id: null,
+  tipo_registro: tipo,
+  nombre,
+  tipo_camino: camino,
+  ubicacion_url: null,
+  latitud: null,
+  longitud: null,
+  notas_asfalto: null,
+  notas_clima: null,
+  created_at: '2026-11-24T18:00:00.000Z',
+});
+
 describe('DiarioRutasScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -163,5 +183,37 @@ describe('DiarioRutasScreen', () => {
 
     expect(getByText('Las coordenadas deben estar dentro de los rangos válidos de latitud y longitud.')).toBeTruthy();
     expect(guardarEntradaDiario).not.toHaveBeenCalled();
+  });
+
+  it('combina el filtro de tipo de punto con el de camino e incluye puntos sin clasificar', async () => {
+    jest.mocked(cargarDiarioRutas).mockResolvedValue({
+      rutasRevisadas: [],
+      entradas: [
+        crearPunto('gas-sin-camino', 'gasolinera', 'Gasolinera sin camino', null),
+        crearPunto('gas-curvas', 'gasolinera', 'Gasolinera en curvas', 'curvas'),
+        crearPunto('mirador-sin-camino', 'mirador', 'Mirador sin camino', null),
+      ],
+    });
+
+    const { getByRole, getByText, queryByText } = await render(
+      <DiarioRutasScreen navigation={{ goBack: jest.fn() }} />,
+    );
+
+    await waitFor(() => expect(getByText('Gasolinera sin camino')).toBeTruthy());
+    await fireEvent.press(getByRole('button', { name: 'Filtrar puntos por Gasolinera' }));
+    expect(getByText('Gasolinera sin camino')).toBeTruthy();
+    expect(getByText('Gasolinera en curvas')).toBeTruthy();
+    expect(queryByText('Mirador sin camino')).toBeNull();
+
+    await fireEvent.press(getByRole('button', { name: 'Filtrar por Curvas' }));
+    expect(getByText('Gasolinera en curvas')).toBeTruthy();
+    expect(queryByText('Gasolinera sin camino')).toBeNull();
+
+    await fireEvent.press(getByRole('button', { name: 'Filtrar puntos por Mirador' }));
+    expect(getByText('No hay puntos de interés que coincidan con los filtros seleccionados.')).toBeTruthy();
+
+    await fireEvent.press(getByRole('button', { name: 'Filtrar por Sin clasificar' }));
+    expect(getByText('Mirador sin camino')).toBeTruthy();
+    expect(queryByText('Gasolinera sin camino')).toBeNull();
   });
 });

@@ -57,6 +57,7 @@
     "test:watch": "jest --watchAll",
     "test:coverage": "jest --coverage --runInBand",
     "doctor": "expo-doctor",
+    "web:build": "expo export --platform web",
     "test:security": "npm audit --omit=dev",
     "test:quality": "npm run typecheck && npm test && npm run doctor && npm run test:security",
     "start": "expo start",

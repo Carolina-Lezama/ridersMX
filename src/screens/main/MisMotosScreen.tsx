@@ -141,6 +141,26 @@ export default function MisMotosScreen({ navigation }: any) {
             </TouchableOpacity>
           )}
         </View>
+        <TouchableOpacity
+          style={styles.modificationsButton}
+          onPress={() => navigation.navigate('MotoModifications', { motoId: item.id })}
+          accessibilityRole="button"
+          accessibilityLabel={`Mejoras y accesorios de ${item.alias || `${item.marca} ${item.modelo}`}`}
+        >
+          <Ionicons name="construct-outline" size={16} color={theme.primary} />
+          <Text style={styles.referencesButtonText}>Mejoras y accesorios</Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.iconSecondary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.modificationsButton}
+          onPress={() => navigation.navigate('MotoGallery', { motoId: item.id })}
+          accessibilityRole="button"
+          accessibilityLabel={`Galería de ${item.alias || `${item.marca} ${item.modelo}`}`}
+        >
+          <Ionicons name="images-outline" size={16} color={theme.primary} />
+          <Text style={styles.referencesButtonText}>Galería visual</Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.iconSecondary} />
+        </TouchableOpacity>
       </View>
     );
   };
@@ -246,6 +266,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   principalLabelText: { fontSize: 12, fontWeight: '700', color: theme.primary },
   cardActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
   referencesButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 8 },
+  modificationsButton: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'stretch', paddingHorizontal: 10, paddingVertical: 9, marginTop: 4, borderTopWidth: 1, borderTopColor: theme.divider },
   referencesButtonText: { color: theme.primary, fontSize: 13, fontWeight: '700' },
   setPrincipalButton: { alignSelf: 'flex-end', paddingHorizontal: 12, paddingVertical: 7 },
   setPrincipalText: { color: theme.primary, fontSize: 13, fontWeight: '700' },
