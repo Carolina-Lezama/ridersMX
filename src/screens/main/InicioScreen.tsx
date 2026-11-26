@@ -46,6 +46,7 @@ export default function InicioScreen({ navigation }: any) {
   const [proximosMantenimientos, setProximosMantenimientos] = useState<DashboardMaintenance[]>([]);
   const [insigniaFavorita, setInsigniaFavorita] = useState<Insignia | null>(null);
   const [favoritaElegida, setFavoritaElegida] = useState(false);
+  const [primeraRodadaAgendada, setPrimeraRodadaAgendada] = useState(false);
   const [notificacionesProgramadas, setNotificacionesProgramadas] = useState(0);
 
   const {
@@ -162,6 +163,9 @@ export default function InicioScreen({ navigation }: any) {
           setProximosMantenimientos(mantenimientoResult.data ?? []);
           setInsigniaFavorita(insigniasResult.favorita);
           setFavoritaElegida(Boolean(insigniasResult.favoritaId));
+          setPrimeraRodadaAgendada(
+            Boolean(insigniasResult.insignias.find((insignia) => insignia.id === 'primera-rodada')?.desbloqueada),
+          );
 
           await cargarEventoPendiente(uid);
         } catch (error) {
@@ -348,7 +352,7 @@ export default function InicioScreen({ navigation }: any) {
           <Skeleton width={150} height={18} />
           <Skeleton width="70%" height={14} style={{ marginTop: 10 }} />
         </View>
-      ) : kilometrosTotales === 0 ? (
+      ) : !primeraRodadaAgendada ? (
         <DashboardEmptyState
           icon="flag-outline"
           title="Tu primer logro está a una rodada"
@@ -363,8 +367,17 @@ export default function InicioScreen({ navigation }: any) {
             <Ionicons name="map-outline" size={26} color={theme.successText} />
           </View>
           <View style={styles.progressText}>
-            <Text style={styles.cardTitle}>{kilometrosTotales.toLocaleString('es-MX')} km en ruta</Text>
-            <Text style={styles.cardSubtitle}>Cada rodada suma a tu historial y a tus próximos logros.</Text>
+            {kilometrosTotales > 0 ? (
+              <>
+                <Text style={styles.cardTitle}>{kilometrosTotales.toLocaleString('es-MX')} km en ruta</Text>
+                <Text style={styles.cardSubtitle}>Cada rodada suma a tu historial y a tus próximos logros.</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.cardTitle}>¡Tu primera rodada está en agenda!</Text>
+                <Text style={styles.cardSubtitle}>Al terminarla, registra tus kilómetros para seguir avanzando.</Text>
+              </>
+            )}
           </View>
         </View>
       )}

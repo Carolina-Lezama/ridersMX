@@ -39,12 +39,25 @@ const filtros: Array<{ value: RoadType | 'todas'; label: string }> = [
   { value: 'otro', label: 'Otro' },
 ];
 
+const filtrosCamino = [
+  ...filtros,
+  { value: 'sin-clasificar' as const, label: 'Sin clasificar' },
+];
+
 const tiposPunto: Array<{ value: Exclude<JournalEntryType, 'ruta'>; label: string }> = [
   { value: 'gasolinera', label: 'Gasolinera' },
   { value: 'mirador', label: 'Mirador' },
   { value: 'taller', label: 'Taller' },
   { value: 'otro', label: 'Otro' },
 ];
+
+const filtrosTipoPunto = [
+  { value: 'todos' as const, label: 'Todos' },
+  ...tiposPunto,
+];
+
+type FiltroCamino = RoadType | 'todas' | 'sin-clasificar';
+type FiltroTipoPunto = Exclude<JournalEntryType, 'ruta'> | 'todos';
 
 const nombresTipo: Record<JournalEntryType, string> = {
   ruta: 'Ruta favorita',
@@ -89,7 +102,8 @@ export default function DiarioRutasScreen({ navigation }: DiarioRutasScreenProps
   const [perfilId, setPerfilId] = useState<string | null>(null);
   const [rutasRevisadas, setRutasRevisadas] = useState<RideJournalReview[]>([]);
   const [entradas, setEntradas] = useState<JournalEntry[]>([]);
-  const [filtroCamino, setFiltroCamino] = useState<RoadType | 'todas'>('todas');
+  const [filtroCamino, setFiltroCamino] = useState<FiltroCamino>('todas');
+  const [filtroTipoPunto, setFiltroTipoPunto] = useState<FiltroTipoPunto>('todos');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -142,13 +156,22 @@ export default function DiarioRutasScreen({ navigation }: DiarioRutasScreenProps
 
   const rutasFiltradas = useMemo(() => rutasRevisadas.filter(route => {
     if (filtroCamino === 'todas') return true;
-    return rutasFavoritasPorBitacora.get(route.id)?.tipo_camino === filtroCamino;
+    const favorita = rutasFavoritasPorBitacora.get(route.id);
+    if (!favorita) return false;
+    if (filtroCamino === 'sin-clasificar') return favorita.tipo_camino === null;
+    return favorita.tipo_camino === filtroCamino;
   }), [filtroCamino, rutasFavoritasPorBitacora, rutasRevisadas]);
 
   const puntosFiltrados = useMemo(() => entradas.filter(entry => (
     entry.tipo_registro !== 'ruta'
-    && (filtroCamino === 'todas' || entry.tipo_camino === filtroCamino)
-  )), [entradas, filtroCamino]);
+    && (filtroTipoPunto === 'todos' || entry.tipo_registro === filtroTipoPunto)
+    && (
+      filtroCamino === 'todas'
+      || (filtroCamino === 'sin-clasificar'
+        ? entry.tipo_camino === null
+        : entry.tipo_camino === filtroCamino)
+    )
+  )), [entradas, filtroCamino, filtroTipoPunto]);
 
   const abrirFormulario = (entry?: JournalEntry, route?: RideJournalReview) => {
     const currentEntry = entry;
@@ -321,9 +344,28 @@ export default function DiarioRutasScreen({ navigation }: DiarioRutasScreenProps
     }
   };
 
-  const renderFiltros = () => (
+  const renderFiltrosTipoPunto = () => (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
-      {filtros.map(filter => (
+      {filtrosTipoPunto.map(filter => (
+        <TouchableOpacity
+          key={filter.value}
+          style={[styles.filterChip, filtroTipoPunto === filter.value && styles.filterChipActive]}
+          onPress={() => setFiltroTipoPunto(filter.value)}
+          accessibilityRole="button"
+          accessibilityLabel={`Filtrar puntos por ${filter.label}`}
+          accessibilityState={{ selected: filtroTipoPunto === filter.value }}
+        >
+          <Text style={[styles.filterText, filtroTipoPunto === filter.value && styles.filterTextActive]}>
+            {filter.label}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  );
+
+  const renderFiltrosCamino = () => (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+      {filtrosCamino.map(filter => (
         <TouchableOpacity
           key={filter.value}
           style={[styles.filterChip, filtroCamino === filter.value && styles.filterChipActive]}
@@ -359,9 +401,13 @@ export default function DiarioRutasScreen({ navigation }: DiarioRutasScreenProps
         {errorMessage && <Text style={styles.errorText} accessibilityRole="alert">{errorMessage}</Text>}
 
         <View style={styles.filterHeading}>
+          <Text style={styles.sectionTitle}>Filtrar puntos por tipo</Text>
+        </View>
+        {renderFiltrosTipoPunto()}
+        <View>
           <Text style={styles.sectionTitle}>Filtrar por camino</Text>
         </View>
-        {renderFiltros()}
+        {renderFiltrosCamino()}
 
         {loading ? (
           <ActivityIndicator style={styles.loader} size="large" color={theme.primary} />
@@ -458,7 +504,11 @@ export default function DiarioRutasScreen({ navigation }: DiarioRutasScreenProps
             </View>
 
             {puntosFiltrados.length === 0 ? (
-              <Text style={styles.emptyText}>Guarda gasolineras, miradores o talleres recomendados desde aquí.</Text>
+              <Text style={styles.emptyText}>
+                {filtroTipoPunto !== 'todos' || filtroCamino !== 'todas'
+                  ? 'No hay puntos de interés que coincidan con los filtros seleccionados.'
+                  : 'Guarda gasolineras, miradores o talleres recomendados desde aquí.'}
+              </Text>
             ) : puntosFiltrados.map(point => {
               const mapUrl = getMapUrl(point);
               const roadLabel = filtros.find(filter => filter.value === point.tipo_camino)?.label;

@@ -74,8 +74,8 @@ const crearInsignias = (progreso: BadgeProgress): Insignia[] => [
   {
     id: 'primera-rodada',
     nombre: 'Kilómetros de libertad',
-    descripcion: 'Guardaste tu primera rodada en la bitácora.',
-    requisito: 'Registra una rodada.',
+    descripcion: 'Agendaste tu primera rodada.',
+    requisito: 'Agenda una rodada.',
     icono: 'map-outline',
     color: '#06b6d4',
     desbloqueada: progreso.rodadas >= 1,
@@ -192,12 +192,15 @@ export const obtenerResumenInsignias = async (perfilId: string) => {
   const racha = rachaResult.data;
   const eventos = eventosResult.data ?? [];
   const rodadas = rodadasResult.data ?? [];
+  const rodadasAgendadas = eventos.filter((evento) =>
+    evento.tipo === 'rodada' && evento.estado !== 'Cancelada',
+  ).length;
   const progreso: BadgeProgress = {
     rachaMaxima: Math.max(racha?.racha_maxima ?? 0, racha?.racha_actual ?? 0),
     checkins: checkinsResult.count ?? 0,
     kilometros: rodadas.reduce((total, rodada) => total + Number(rodada.distancia_km ?? 0), 0),
     motocicletas: motosResult.count ?? 0,
-    rodadas: rodadas.length,
+    rodadas: rodadasAgendadas,
     mantenimientos: eventos.filter((evento) =>
       evento.tipo === 'mantenimiento' && evento.estado !== 'Cancelada',
     ).length,

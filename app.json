@@ -25,8 +25,9 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/icon.jpeg"
-    },
+  "favicon": "./assets/icon.jpeg",
+  "output": "single"
+},
     "plugins": [
       "@react-native-community/datetimepicker",
       [
