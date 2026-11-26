@@ -74,7 +74,11 @@ export default function LoginScreen({ navigation, addingAccount = false }: Props
         if (signOutError) console.error('No se pudo cerrar la sesión que no se logró guardar:', signOutError);
       }
 
-      const message = error instanceof Error ? error.message : 'Ocurrió un error inesperado.';
+      const message = error instanceof Error && error.message === 'Invalid login credentials'
+        ? 'Correo o contraseña incorrectos. Verifica los datos o crea una cuenta.'
+        : error instanceof Error
+          ? error.message
+          : 'Ocurrió un error inesperado.';
       Alert.alert('Error de acceso', message);
     } finally {
       setLoading(false);

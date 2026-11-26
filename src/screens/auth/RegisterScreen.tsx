@@ -5,7 +5,7 @@ import CustomButton from '../../components/CustomButton';
 import { supabase } from '../../services/supabase';
 import { MultiAccountService } from '../../services/MultiAccountService';
 import { useTheme } from '../../../assets/theme/ThemeContext';
-import { isValidEmail, isValidPassword, MIN_PASSWORD_LENGTH } from '../../utils/validations';
+import { isValidEmail, isValidRegistrationPassword } from '../../utils/validations';
 
 function isExistingAccountError(error: unknown): error is { code: 'user_already_exists' } {
   return typeof error === 'object'
@@ -34,15 +34,15 @@ export default function RegisterScreen({ navigation, route }: any) {
     : submitted && !normalizedEmail
       ? 'El correo electrónico es obligatorio.'
       : undefined;
-  const passwordError = password.length > 0 && !isValidPassword(password)
-    ? `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`
+  const passwordError = password.length > 0 && !isValidRegistrationPassword(password)
+    ? 'Usa al menos 6 caracteres, incluyendo una minúscula, una mayúscula, un número y un símbolo.'
     : submitted && !password
       ? 'La contraseña es obligatoria.'
       : undefined;
 
   const handleRegister = async () => {
     setSubmitted(true);
-    if (!normalizedEmail || !password || !username.trim() || !isValidEmail(normalizedEmail) || !isValidPassword(password)) {
+    if (!normalizedEmail || !password || !username.trim() || !isValidEmail(normalizedEmail) || !isValidRegistrationPassword(password)) {
       return;
     }
 

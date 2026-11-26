@@ -98,7 +98,27 @@ describe('pantallas de autenticación', () => {
 
     expect(getByText('El nombre de usuario es obligatorio.')).toBeTruthy();
     expect(getByText('Ingresa un correo electrónico válido.')).toBeTruthy();
-    expect(getByText('La contraseña debe tener al menos 6 caracteres.')).toBeTruthy();
+    expect(getByText(
+      'Usa al menos 6 caracteres, incluyendo una minúscula, una mayúscula, un número y un símbolo.',
+    )).toBeTruthy();
+    expect(jest.mocked(supabase.auth.getSession)).not.toHaveBeenCalled();
+    expect(jest.mocked(supabase.auth.signUp)).not.toHaveBeenCalled();
+  });
+
+  it('impide enviar el registro si la contraseña no cumple la política de Supabase', async () => {
+    const navigation = { reset: jest.fn(), goBack: jest.fn() };
+    const { getByPlaceholderText, getByText } = await render(
+      <RegisterScreen navigation={navigation} route={{ params: {} }} />,
+    );
+
+    await fireEvent.changeText(getByPlaceholderText('ej. rider_pro'), 'rider_pro');
+    await fireEvent.changeText(getByPlaceholderText('correo@ejemplo.com'), 'rider@example.com');
+    await fireEvent.changeText(getByPlaceholderText('********'), 'password1');
+    await fireEvent.press(getByText('Registrarme'));
+
+    expect(getByText(
+      'Usa al menos 6 caracteres, incluyendo una minúscula, una mayúscula, un número y un símbolo.',
+    )).toBeTruthy();
     expect(jest.mocked(supabase.auth.getSession)).not.toHaveBeenCalled();
     expect(jest.mocked(supabase.auth.signUp)).not.toHaveBeenCalled();
   });
